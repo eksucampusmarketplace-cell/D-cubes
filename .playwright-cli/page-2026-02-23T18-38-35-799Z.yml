@@ -1,0 +1,626 @@
+- generic [ref=e49]:
+  - generic [ref=e57]:
+    - paragraph [ref=e58]: Good Evening
+    - heading "Welcome," [level=1] [ref=e59]: Welcome,
+    - paragraph [ref=e60]: Indulge in our curated selection of fine offerings
+  - generic [ref=e62]:
+    - generic [ref=e63]: D CUBES PLACE
+    - button "Chat with Staff" [ref=e65] [cursor=pointer]:
+      - generic [ref=e67]: Chat with Staff
+  - generic [ref=e68]:
+    - generic [ref=e69]: Staff Online
+    - generic [ref=e71]: 🕐 Service Open
+    - generic [ref=e72]: 🥂 Bar Open
+  - generic [ref=e74]:
+    - generic [ref=e75]:
+      - generic [ref=e77]: 🛎️
+      - generic [ref=e78]:
+        - heading "Quick Requests" [level=3] [ref=e79]
+        - paragraph [ref=e80]: Tap to request staff assistance
+    - generic [ref=e81]:
+      - button "🏊 Pool & Spa Access pool area" [ref=e82] [cursor=pointer]:
+        - generic [ref=e83]:
+          - generic [ref=e84]: 🏊
+          - generic [ref=e85]: Pool & Spa
+        - paragraph [ref=e86]: Access pool area
+      - button "🛋️ Lounge Entry VIP lounge access" [ref=e87] [cursor=pointer]:
+        - generic [ref=e88]:
+          - generic [ref=e89]: 🛋️
+          - generic [ref=e90]: Lounge Entry
+        - paragraph [ref=e91]: VIP lounge access
+      - button "🎵 VIP Dance Floor Dance floor entry" [ref=e92] [cursor=pointer]:
+        - generic [ref=e93]:
+          - generic [ref=e94]: 🎵
+          - generic [ref=e95]: VIP Dance Floor
+        - paragraph [ref=e96]: Dance floor entry
+      - button "🛎️ Call a Waiter Staff assistance" [ref=e97] [cursor=pointer]:
+        - generic [ref=e98]:
+          - generic [ref=e99]: 🛎️
+          - generic [ref=e100]: Call a Waiter
+        - paragraph [ref=e101]: Staff assistance
+      - button "🧊 Extra Ice/Cups Additional supplies" [ref=e102] [cursor=pointer]:
+        - generic [ref=e103]:
+          - generic [ref=e104]: 🧊
+          - generic [ref=e105]: Extra Ice/Cups
+        - paragraph [ref=e106]: Additional supplies
+      - button "🧾 Bill Request Request your bill" [ref=e107] [cursor=pointer]:
+        - generic [ref=e108]:
+          - generic [ref=e109]: 🧾
+          - generic [ref=e110]: Bill Request
+        - paragraph [ref=e111]: Request your bill
+    - button "📲 SEND REQUEST" [disabled] [ref=e112]:
+      - generic [ref=e113]:
+        - generic [ref=e114]: 📲
+        - generic [ref=e115]: SEND REQUEST
+  - generic [ref=e116]:
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - heading "Popular Picks" [level=3] [ref=e119]
+        - paragraph [ref=e120]: Guest favorites this evening
+      - generic [ref=e121]:
+        - generic [ref=e122]: View All
+        - generic [ref=e123]: →
+    - generic [ref=e124]:
+      - generic [ref=e125]:
+        - generic [ref=e126]:
+          - img "Nigerian Mule" [ref=e127]
+          - generic [ref=e129]: Popular
+        - generic [ref=e130]:
+          - heading "Nigerian Mule" [level=4] [ref=e131]
+          - paragraph [ref=e132]: ₦8,000
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - img "Hennessy VS" [ref=e135]
+          - generic [ref=e137]: Popular
+        - generic [ref=e138]:
+          - heading "Hennessy VS" [level=4] [ref=e139]
+          - paragraph [ref=e140]: ₦85,000
+      - generic [ref=e141]:
+        - generic [ref=e142]:
+          - img "Cîroc Vodka" [ref=e143]
+          - generic [ref=e145]: Popular
+        - generic [ref=e146]:
+          - heading "Cîroc Vodka" [level=4] [ref=e147]
+          - paragraph [ref=e148]: ₦65,000
+      - generic [ref=e149]:
+        - generic [ref=e150]:
+          - img "Whispering Angel" [ref=e151]
+          - generic [ref=e153]: Popular
+        - generic [ref=e154]:
+          - heading "Whispering Angel" [level=4] [ref=e155]
+          - paragraph [ref=e156]: ₦65,000
+  - generic [ref=e158]:
+    - button "All" [ref=e159] [cursor=pointer]: All
+    - button "🍸Cocktails" [ref=e161] [cursor=pointer]
+    - button "🥃Spirits" [ref=e162] [cursor=pointer]
+    - button "🍷Wine" [ref=e163] [cursor=pointer]
+    - button "🍽️Food" [ref=e164] [cursor=pointer]
+    - button "💨Shisha" [ref=e165] [cursor=pointer]
+    - button "🧃Non-Alcoholic" [ref=e166] [cursor=pointer]
+  - generic [ref=e167]:
+    - generic [ref=e168]:
+      - heading "Full Menu" [level=3] [ref=e169]
+      - generic [ref=e170]: 41 items
+    - generic [ref=e171]:
+      - generic [ref=e173]:
+        - generic [ref=e174]:
+          - img "Lagos Sunset" [ref=e175]
+          - generic [ref=e177]: Signature
+        - generic [ref=e178]:
+          - generic [ref=e179]:
+            - heading "Lagos Sunset" [level=3] [ref=e181]
+            - paragraph [ref=e182]: Campari, blood orange, prosecco, basil — a refreshing taste of the city
+            - generic [ref=e184]: Signature
+          - generic [ref=e185]:
+            - paragraph [ref=e186]: ₦8,500
+            - button "Add" [ref=e188] [cursor=pointer]
+      - generic [ref=e190]:
+        - generic [ref=e191]:
+          - img "Velour Noir" [ref=e192]
+          - generic [ref=e194]: Signature
+        - generic [ref=e195]:
+          - generic [ref=e196]:
+            - heading "Velour Noir" [level=3] [ref=e198]
+            - paragraph [ref=e199]: Dark rum, activated charcoal, coconut, lime — mysterious and alluring
+            - generic [ref=e200]:
+              - generic [ref=e201]: Signature
+              - generic [ref=e202]: Strong
+          - generic [ref=e203]:
+            - paragraph [ref=e204]: ₦12,000
+            - button "Add" [ref=e206] [cursor=pointer]
+      - generic [ref=e208]:
+        - img "Gold Rush" [ref=e210]
+        - generic [ref=e212]:
+          - generic [ref=e213]:
+            - heading "Gold Rush" [level=3] [ref=e215]
+            - paragraph [ref=e216]: Bourbon, lemon, honey, ginger — a modern classic reimagined
+            - generic [ref=e218]: Classic
+          - generic [ref=e219]:
+            - paragraph [ref=e220]: ₦9,500
+            - button "Add" [ref=e222] [cursor=pointer]
+      - generic [ref=e224]:
+        - generic [ref=e225]:
+          - img "Afro Spritz" [ref=e226]
+          - generic [ref=e228]: New
+        - generic [ref=e229]:
+          - generic [ref=e230]:
+            - heading "Afro Spritz" [level=3] [ref=e232]
+            - paragraph [ref=e233]: Zobo, aperol, sparkling water, mint — Nigerian heritage meets Italian flair
+            - generic [ref=e235]: Light
+          - generic [ref=e236]:
+            - paragraph [ref=e237]: ₦7,500
+            - button "Add" [ref=e239] [cursor=pointer]
+      - generic [ref=e241]:
+        - generic [ref=e242]:
+          - img "Midnight Velvet" [ref=e243]
+          - generic [ref=e245]: Signature
+        - generic [ref=e246]:
+          - generic [ref=e247]:
+            - heading "Midnight Velvet" [level=3] [ref=e249]
+            - paragraph [ref=e250]: Mezcal, blackberry, vanilla, lime — smoky sophistication
+            - generic [ref=e252]: Signature
+          - generic [ref=e253]:
+            - paragraph [ref=e254]: ₦11,000
+            - button "Add" [ref=e256] [cursor=pointer]
+      - generic [ref=e258]:
+        - generic [ref=e259]:
+          - img "Nigerian Mule" [ref=e260]
+          - generic [ref=e262]: Popular
+        - generic [ref=e263]:
+          - generic [ref=e264]:
+            - heading "Nigerian Mule" [level=3] [ref=e266]
+            - paragraph [ref=e267]: Ginger beer, lime, angostura bitters — local ginger, global style
+            - generic [ref=e269]: Classic
+          - generic [ref=e270]:
+            - paragraph [ref=e271]: ₦8,000
+            - button "Add" [ref=e273] [cursor=pointer]
+      - generic [ref=e275]:
+        - generic [ref=e276]:
+          - img "Hennessy VS" [ref=e277]
+          - generic [ref=e279]: Popular
+        - generic [ref=e280]:
+          - generic [ref=e281]:
+            - heading "Hennessy VS" [level=3] [ref=e283]
+            - paragraph [ref=e284]: Bottle service — cognac (700ml) — smooth and versatile
+            - generic [ref=e286]: Bottle
+          - generic [ref=e287]:
+            - paragraph [ref=e288]: ₦85,000
+            - button "Add" [ref=e290] [cursor=pointer]
+      - generic [ref=e292]:
+        - img "D'Ussé VSOP" [ref=e294]
+        - generic [ref=e296]:
+          - generic [ref=e297]:
+            - heading "D'Ussé VSOP" [level=3] [ref=e299]
+            - paragraph [ref=e300]: Bottle service — premium cognac (750ml) — rich and complex
+            - generic [ref=e302]: Bottle
+          - generic [ref=e303]:
+            - paragraph [ref=e304]: ₦95,000
+            - button "Add" [ref=e306] [cursor=pointer]
+      - generic [ref=e308]:
+        - generic [ref=e309]:
+          - img "Don Julio 1942" [ref=e310]
+          - generic [ref=e312]: Signature
+        - generic [ref=e313]:
+          - generic [ref=e314]:
+            - heading "Don Julio 1942" [level=3] [ref=e316]
+            - paragraph [ref=e317]: Bottle service — aged tequila (750ml) — ultra-premium experience
+            - generic [ref=e318]:
+              - generic [ref=e319]: Bottle
+              - generic [ref=e320]: Premium
+          - generic [ref=e321]:
+            - paragraph [ref=e322]: ₦180,000
+            - button "Add" [ref=e324] [cursor=pointer]
+      - generic [ref=e326]:
+        - img "Johnnie Walker Blue Label" [ref=e328]
+        - generic [ref=e330]:
+          - generic [ref=e331]:
+            - heading "Johnnie Walker Blue Label" [level=3] [ref=e333]
+            - paragraph [ref=e334]: Bottle service — blended scotch (750ml) — rare and exceptional
+            - generic [ref=e336]: Bottle
+          - generic [ref=e337]:
+            - paragraph [ref=e338]: ₦120,000
+            - button "Add" [ref=e340] [cursor=pointer]
+      - generic [ref=e342]:
+        - generic [ref=e343]:
+          - img "Macallan 18 Year" [ref=e344]
+          - generic [ref=e346]: Signature
+        - generic [ref=e347]:
+          - generic [ref=e348]:
+            - heading "Macallan 18 Year" [level=3] [ref=e350]
+            - paragraph [ref=e351]: Bottle service — single malt whisky (700ml) — legendary depth
+            - generic [ref=e352]:
+              - generic [ref=e353]: Bottle
+              - generic [ref=e354]: Premium
+          - generic [ref=e355]:
+            - paragraph [ref=e356]: ₦250,000
+            - button "Add" [ref=e358] [cursor=pointer]
+      - generic [ref=e360]:
+        - generic [ref=e361]:
+          - img "Cîroc Vodka" [ref=e362]
+          - generic [ref=e364]: Popular
+        - generic [ref=e365]:
+          - generic [ref=e366]:
+            - heading "Cîroc Vodka" [level=3] [ref=e368]
+            - paragraph [ref=e369]: Bottle service — premium vodka (750ml) — smooth French elegance
+            - generic [ref=e371]: Bottle
+          - generic [ref=e372]:
+            - paragraph [ref=e373]: ₦65,000
+            - button "Add" [ref=e375] [cursor=pointer]
+      - generic [ref=e377]:
+        - img "Remy Martin XO" [ref=e379]
+        - generic [ref=e381]:
+          - generic [ref=e382]:
+            - heading "Remy Martin XO" [level=3] [ref=e384]
+            - paragraph [ref=e385]: Bottle service — cognac (700ml) — exceptional smoothness
+            - generic [ref=e386]:
+              - generic [ref=e387]: Bottle
+              - generic [ref=e388]: Premium
+          - generic [ref=e389]:
+            - paragraph [ref=e390]: ₦150,000
+            - button "Add" [ref=e392] [cursor=pointer]
+      - generic [ref=e394]:
+        - generic [ref=e395]:
+          - img "Dom Pérignon 2013" [ref=e396]
+          - generic [ref=e398]: Signature
+        - generic [ref=e399]:
+          - generic [ref=e400]:
+            - heading "Dom Pérignon 2013" [level=3] [ref=e402]
+            - paragraph [ref=e403]: Champagne, France — bottle — the pinnacle of celebration
+            - generic [ref=e405]: Champagne
+          - generic [ref=e406]:
+            - paragraph [ref=e407]: ₦180,000
+            - button "Add" [ref=e409] [cursor=pointer]
+      - generic [ref=e411]:
+        - generic [ref=e412]:
+          - img "Whispering Angel" [ref=e413]
+          - generic [ref=e415]: Popular
+        - generic [ref=e416]:
+          - generic [ref=e417]:
+            - heading "Whispering Angel" [level=3] [ref=e419]
+            - paragraph [ref=e420]: Provence Rosé — bottle (2022) — elegant pale pink
+            - generic [ref=e422]: Rosé
+          - generic [ref=e423]:
+            - paragraph [ref=e424]: ₦65,000
+            - button "Add" [ref=e426] [cursor=pointer]
+      - generic [ref=e428]:
+        - img "Moët & Chandon Brut" [ref=e430]
+        - generic [ref=e432]:
+          - generic [ref=e433]:
+            - heading "Moët & Chandon Brut" [level=3] [ref=e435]
+            - paragraph [ref=e436]: Champagne, France — bottle — timeless celebration
+            - generic [ref=e438]: Champagne
+          - generic [ref=e439]:
+            - paragraph [ref=e440]: ₦75,000
+            - button "Add" [ref=e442] [cursor=pointer]
+      - generic [ref=e444]:
+        - generic [ref=e445]:
+          - img "Veuve Clicquot" [ref=e446]
+          - generic [ref=e448]: Popular
+        - generic [ref=e449]:
+          - generic [ref=e450]:
+            - heading "Veuve Clicquot" [level=3] [ref=e452]
+            - paragraph [ref=e453]: Yellow Label Champagne — bottle — vibrant and structured
+            - generic [ref=e455]: Champagne
+          - generic [ref=e456]:
+            - paragraph [ref=e457]: ₦90,000
+            - button "Add" [ref=e459] [cursor=pointer]
+      - generic [ref=e461]:
+        - img "Cloudy Bay Sauvignon Blanc" [ref=e463]
+        - generic [ref=e465]:
+          - generic [ref=e466]:
+            - heading "Cloudy Bay Sauvignon Blanc" [level=3] [ref=e468]
+            - paragraph [ref=e469]: Marlborough, New Zealand — bottle — crisp and vibrant
+            - generic [ref=e471]: White Wine
+          - generic [ref=e472]:
+            - paragraph [ref=e473]: ₦45,000
+            - button "Add" [ref=e475] [cursor=pointer]
+      - generic [ref=e477]:
+        - img "Meiomi Pinot Noir" [ref=e479]
+        - generic [ref=e481]:
+          - generic [ref=e482]:
+            - heading "Meiomi Pinot Noir" [level=3] [ref=e484]
+            - paragraph [ref=e485]: California — bottle — silky and layered
+            - generic [ref=e487]: Red Wine
+          - generic [ref=e488]:
+            - paragraph [ref=e489]: ₦55,000
+            - button "Add" [ref=e491] [cursor=pointer]
+      - generic [ref=e493]:
+        - generic [ref=e494]:
+          - img "Suya Platter" [ref=e495]
+          - generic [ref=e497]: Popular
+        - generic [ref=e498]:
+          - generic [ref=e499]:
+            - heading "Suya Platter" [level=3] [ref=e501]
+            - paragraph [ref=e502]: Grilled beef suya, onions, tomatoes, spiced groundnut — authentic Nigerian flavors
+            - generic [ref=e503]:
+              - generic [ref=e504]: Popular
+              - generic [ref=e505]: Nigerian
+          - generic [ref=e506]:
+            - paragraph [ref=e507]: ₦25,000
+            - button "Add" [ref=e509] [cursor=pointer]
+      - generic [ref=e511]:
+        - generic [ref=e512]:
+          - img "Grilled Lobster" [ref=e513]
+          - generic [ref=e515]: Signature
+        - generic [ref=e516]:
+          - generic [ref=e517]:
+            - heading "Grilled Lobster" [level=3] [ref=e519]
+            - paragraph [ref=e520]: Whole lobster, garlic butter, lemon, herbs — ocean luxury
+            - generic [ref=e521]:
+              - generic [ref=e522]: Premium
+              - generic [ref=e523]: Seafood
+          - generic [ref=e524]:
+            - paragraph [ref=e525]: ₦48,000
+            - button "Add" [ref=e527] [cursor=pointer]
+      - generic [ref=e529]:
+        - generic [ref=e530]:
+          - img "Wagyu Sliders" [ref=e531]
+          - generic [ref=e533]: Popular
+        - generic [ref=e534]:
+          - generic [ref=e535]:
+            - heading "Wagyu Sliders" [level=3] [ref=e537]
+            - paragraph [ref=e538]: 3 mini wagyu burgers, truffle mayo, caramelised onion — indulgent bites
+            - generic [ref=e539]:
+              - generic [ref=e540]: Popular
+              - generic [ref=e541]: Burger
+          - generic [ref=e542]:
+            - paragraph [ref=e543]: ₦32,000
+            - button "Add" [ref=e545] [cursor=pointer]
+      - generic [ref=e547]:
+        - generic [ref=e548]:
+          - img "Seafood Tower" [ref=e549]
+          - generic [ref=e551]: Signature
+        - generic [ref=e552]:
+          - generic [ref=e553]:
+            - heading "Seafood Tower" [level=3] [ref=e555]
+            - paragraph [ref=e556]: Oysters, prawns, lobster, scallops — serves 4 — coastal abundance
+            - generic [ref=e557]:
+              - generic [ref=e558]: Sharing
+              - generic [ref=e559]: Premium
+          - generic [ref=e560]:
+            - paragraph [ref=e561]: ₦95,000
+            - button "Add" [ref=e563] [cursor=pointer]
+      - generic [ref=e565]:
+        - generic [ref=e566]:
+          - img "Jollof Rice & Chicken" [ref=e567]
+          - generic [ref=e569]: Popular
+        - generic [ref=e570]:
+          - generic [ref=e571]:
+            - heading "Jollof Rice & Chicken" [level=3] [ref=e573]
+            - paragraph [ref=e574]: Premium smoked jollof rice, grilled chicken, plantain — party perfection
+            - generic [ref=e575]:
+              - generic [ref=e576]: Local
+              - generic [ref=e577]: Nigerian
+          - generic [ref=e578]:
+            - paragraph [ref=e579]: ₦18,000
+            - button "Add" [ref=e581] [cursor=pointer]
+      - generic [ref=e583]:
+        - img "Pepper Soup Platter" [ref=e585]
+        - generic [ref=e587]:
+          - generic [ref=e588]:
+            - heading "Pepper Soup Platter" [level=3] [ref=e590]
+            - paragraph [ref=e591]: Goat meat and catfish pepper soup, served hot — warming tradition
+            - generic [ref=e592]:
+              - generic [ref=e593]: Nigerian
+              - generic [ref=e594]: Spicy
+          - generic [ref=e595]:
+            - paragraph [ref=e596]: ₦22,000
+            - button "Add" [ref=e598] [cursor=pointer]
+      - generic [ref=e600]:
+        - img "Truffle Fries" [ref=e602]
+        - generic [ref=e604]:
+          - generic [ref=e605]:
+            - heading "Truffle Fries" [level=3] [ref=e607]
+            - paragraph [ref=e608]: Hand-cut fries, truffle oil, parmesan, herbs — elevated comfort
+            - generic [ref=e610]: Snack
+          - generic [ref=e611]:
+            - paragraph [ref=e612]: ₦12,000
+            - button "Add" [ref=e614] [cursor=pointer]
+      - generic [ref=e616]:
+        - generic [ref=e617]:
+          - img "Chicken Wings" [ref=e618]
+          - generic [ref=e620]: Popular
+        - generic [ref=e621]:
+          - generic [ref=e622]:
+            - heading "Chicken Wings" [level=3] [ref=e624]
+            - paragraph [ref=e625]: Spicy or BBQ glazed wings, ranch dip — classic satisfaction
+            - generic [ref=e626]:
+              - generic [ref=e627]: Snack
+              - generic [ref=e628]: Popular
+          - generic [ref=e629]:
+            - paragraph [ref=e630]: ₦15,000
+            - button "Add" [ref=e632] [cursor=pointer]
+      - generic [ref=e634]:
+        - img "Caesar Salad" [ref=e636]
+        - generic [ref=e638]:
+          - generic [ref=e639]:
+            - heading "Caesar Salad" [level=3] [ref=e641]
+            - paragraph [ref=e642]: Romaine lettuce, croutons, parmesan, anchovy dressing — classic fresh
+            - generic [ref=e644]: Salad
+          - generic [ref=e645]:
+            - paragraph [ref=e646]: ₦14,000
+            - button "Add" [ref=e648] [cursor=pointer]
+      - generic [ref=e650]:
+        - generic [ref=e651]:
+          - img "Grilled Lamb Chops" [ref=e652]
+          - generic [ref=e654]: Signature
+        - generic [ref=e655]:
+          - generic [ref=e656]:
+            - heading "Grilled Lamb Chops" [level=3] [ref=e658]
+            - paragraph [ref=e659]: Herb-crusted lamb, mint sauce, seasonal vegetables — refined protein
+            - generic [ref=e661]: Premium
+          - generic [ref=e662]:
+            - paragraph [ref=e663]: ₦42,000
+            - button "Add" [ref=e665] [cursor=pointer]
+      - generic [ref=e667]:
+        - img "Double Apple" [ref=e669]
+        - generic [ref=e671]:
+          - generic [ref=e672]:
+            - heading "Double Apple" [level=3] [ref=e674]
+            - paragraph [ref=e675]: Classic double apple flavour — 1 hour — timeless tradition
+            - generic [ref=e677]: Classic
+          - generic [ref=e678]:
+            - paragraph [ref=e679]: ₦15,000
+            - button "Add" [ref=e681] [cursor=pointer]
+      - generic [ref=e683]:
+        - generic [ref=e684]:
+          - img "Gummy Bear" [ref=e685]
+          - generic [ref=e687]: Popular
+        - generic [ref=e688]:
+          - generic [ref=e689]:
+            - heading "Gummy Bear" [level=3] [ref=e691]
+            - paragraph [ref=e692]: Fruity mixed flavour — 1 hour — playful sweetness
+            - generic [ref=e694]: Popular
+          - generic [ref=e695]:
+            - paragraph [ref=e696]: ₦18,000
+            - button "Add" [ref=e698] [cursor=pointer]
+      - generic [ref=e700]:
+        - img "Lemon Mint" [ref=e702]
+        - generic [ref=e704]:
+          - generic [ref=e705]:
+            - heading "Lemon Mint" [level=3] [ref=e707]
+            - paragraph [ref=e708]: Fresh lemon with cool mint — 1 hour — refreshing clarity
+            - generic [ref=e710]: Refreshing
+          - generic [ref=e711]:
+            - paragraph [ref=e712]: ₦15,000
+            - button "Add" [ref=e714] [cursor=pointer]
+      - generic [ref=e716]:
+        - img "Blue Mist" [ref=e718]
+        - generic [ref=e720]:
+          - generic [ref=e721]:
+            - heading "Blue Mist" [level=3] [ref=e723]
+            - paragraph [ref=e724]: Blueberry, mint, grape blend — 1 hour — cool and fruity
+            - generic [ref=e726]: Premium
+          - generic [ref=e727]:
+            - paragraph [ref=e728]: ₦20,000
+            - button "Add" [ref=e730] [cursor=pointer]
+      - generic [ref=e732]:
+        - img "Paan Shot" [ref=e734]
+        - generic [ref=e736]:
+          - generic [ref=e737]:
+            - heading "Paan Shot" [level=3] [ref=e739]
+            - paragraph [ref=e740]: Traditional Indian paan flavour — 1 hour — exotic tradition
+            - generic [ref=e742]: Exotic
+          - generic [ref=e743]:
+            - paragraph [ref=e744]: ₦18,000
+            - button "Add" [ref=e746] [cursor=pointer]
+      - generic [ref=e748]:
+        - generic [ref=e749]:
+          - img "Velour Special" [ref=e750]
+          - generic [ref=e752]: Signature
+        - generic [ref=e753]:
+          - generic [ref=e754]:
+            - heading "Velour Special" [level=3] [ref=e756]
+            - paragraph [ref=e757]: Custom blend with fresh fruits — 1 hour — house signature
+            - generic [ref=e758]:
+              - generic [ref=e759]: Signature
+              - generic [ref=e760]: Premium
+          - generic [ref=e761]:
+            - paragraph [ref=e762]: ₦25,000
+            - button "Add" [ref=e764] [cursor=pointer]
+      - generic [ref=e766]:
+        - img "Virgin Mojito" [ref=e768]
+        - generic [ref=e770]:
+          - generic [ref=e771]:
+            - heading "Virgin Mojito" [level=3] [ref=e773]
+            - paragraph [ref=e774]: Lime, mint, sugar, soda water — classic refreshment
+            - generic [ref=e776]: Mocktail
+          - generic [ref=e777]:
+            - paragraph [ref=e778]: ₦5,500
+            - button "Add" [ref=e780] [cursor=pointer]
+      - generic [ref=e782]:
+        - generic [ref=e783]:
+          - img "Zobo Punch" [ref=e784]
+          - generic [ref=e786]: Popular
+        - generic [ref=e787]:
+          - generic [ref=e788]:
+            - heading "Zobo Punch" [level=3] [ref=e790]
+            - paragraph [ref=e791]: Hibiscus, ginger, pineapple, sparkling water — Nigerian heritage
+            - generic [ref=e792]:
+              - generic [ref=e793]: Local
+              - generic [ref=e794]: Nigerian
+          - generic [ref=e795]:
+            - paragraph [ref=e796]: ₦4,500
+            - button "Add" [ref=e798] [cursor=pointer]
+      - generic [ref=e800]:
+        - img "Mango Lassi" [ref=e802]
+        - generic [ref=e804]:
+          - generic [ref=e805]:
+            - heading "Mango Lassi" [level=3] [ref=e807]
+            - paragraph [ref=e808]: Fresh mango, yoghurt, cardamom — creamy tropical
+            - generic [ref=e810]: Smoothie
+          - generic [ref=e811]:
+            - paragraph [ref=e812]: ₦5,000
+            - button "Add" [ref=e814] [cursor=pointer]
+      - generic [ref=e816]:
+        - img "Tropical Cooler" [ref=e818]
+        - generic [ref=e820]:
+          - generic [ref=e821]:
+            - heading "Tropical Cooler" [level=3] [ref=e823]
+            - paragraph [ref=e824]: Pineapple, coconut, lime, mint — island vibes
+            - generic [ref=e826]: Mocktail
+          - generic [ref=e827]:
+            - paragraph [ref=e828]: ₦6,000
+            - button "Add" [ref=e830] [cursor=pointer]
+      - generic [ref=e832]:
+        - img "Elderflower Spritz" [ref=e834]
+        - generic [ref=e836]:
+          - generic [ref=e837]:
+            - heading "Elderflower Spritz" [level=3] [ref=e839]
+            - paragraph [ref=e840]: Elderflower cordial, soda, cucumber, mint — floral elegance
+            - generic [ref=e841]:
+              - generic [ref=e842]: Mocktail
+              - generic [ref=e843]: Refreshing
+          - generic [ref=e844]:
+            - paragraph [ref=e845]: ₦5,500
+            - button "Add" [ref=e847] [cursor=pointer]
+      - generic [ref=e849]:
+        - img "Fresh Juice" [ref=e851]
+        - generic [ref=e853]:
+          - generic [ref=e854]:
+            - heading "Fresh Juice" [level=3] [ref=e856]
+            - paragraph [ref=e857]: Orange, pineapple or watermelon — fresh squeezed daily
+            - generic [ref=e859]: Fresh
+          - generic [ref=e860]:
+            - paragraph [ref=e861]: ₦4,000
+            - button "Add" [ref=e863] [cursor=pointer]
+  - generic [ref=e864]:
+    - paragraph [ref=e866]: D CUBES PLACE
+    - paragraph [ref=e867]: Resort · Lounge · Nightlife
+    - paragraph [ref=e868]:
+      - text: Crafted by
+      - link "Toluwase Christopher" [ref=e869] [cursor=pointer]:
+        - /url: https://wa.me/2348174143260
+  - generic [ref=e870]:
+    - generic [ref=e873]:
+      - generic [ref=e874]:
+        - heading "Your Order" [level=2] [ref=e875]
+        - paragraph [ref=e876]: Review and confirm your selections
+      - button [ref=e877] [cursor=pointer]:
+        - img [ref=e878]
+    - generic [ref=e881]:
+      - generic [ref=e883]: 🍽️
+      - paragraph [ref=e884]: Your cart is empty
+      - paragraph [ref=e885]: Browse our menu and add items
+  - generic [ref=e886]:
+    - generic [ref=e889]:
+      - generic [ref=e890]:
+        - generic [ref=e892]: 💬
+        - generic [ref=e893]:
+          - heading "Staff Chat" [level=2] [ref=e894]
+          - generic [ref=e897]: Online • Usually responds in 1 min
+      - button [ref=e898] [cursor=pointer]:
+        - img [ref=e899]
+    - generic [ref=e902]:
+      - button "Can I get the bill?" [ref=e903] [cursor=pointer]
+      - button "Need more water" [ref=e904] [cursor=pointer]
+      - button "Call a waiter" [ref=e905] [cursor=pointer]
+      - button "Order more items" [ref=e906] [cursor=pointer]
+    - generic [ref=e908]:
+      - generic [ref=e910]: 💬
+      - paragraph [ref=e911]: Start a conversation
+      - paragraph [ref=e912]: Our staff is ready to assist you
+    - generic [ref=e914]:
+      - textbox "Type a message..." [ref=e916]
+      - button [disabled] [ref=e917]:
+        - img [ref=e918]

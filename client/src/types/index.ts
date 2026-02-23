@@ -5,6 +5,10 @@ export interface MenuItem {
   price: number;
   category: 'cocktails' | 'spirits' | 'wine' | 'food' | 'shisha' | 'nonalc';
   tags: string[];
+  image?: string;
+  isPopular?: boolean;
+  isNew?: boolean;
+  isSignature?: boolean;
 }
 
 export interface CartItem extends MenuItem {
@@ -126,4 +130,39 @@ export interface AnalyticsData {
   hourlySales: { hour: number; orders: number; revenue: number }[];
   tablePerformance: { tableNumber: number; orders: number; revenue: number }[];
   popularItemsByCategory: Record<string, { name: string; quantity: number }[]>;
+}
+
+export interface ClubSettings {
+  name: string;
+  tagline: string;
+  logo?: string;
+  heroImage?: string;
+  heroVideo?: string;
+  aboutText?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+  };
+  galleryImages?: string[];
+  openingHours?: {
+    [key: string]: { open: string; close: string; closed?: boolean };
+  };
+  theme?: {
+    primaryColor: string;
+    accentColor: string;
+    fontFamily: string;
+  };
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  image?: string;
+  icon?: string;
+  displayOrder: number;
 }
