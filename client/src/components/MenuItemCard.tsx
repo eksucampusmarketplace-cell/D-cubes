@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { MenuItem } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { formatPrice } from '@/utils/format';
@@ -22,9 +22,42 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0 }) =
   const cartItem = items.find(i => i.id === item.id);
   const imageSrc = item.image || CATEGORY_IMAGES[item.category] || CATEGORY_IMAGES.cocktails;
 
+  const handleAdd = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem(item);
+  }, [addItem, item]);
+
+  const handleDecrease = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (cartItem) {
+      updateQuantity(item.id, cartItem.quantity - 1);
+    }
+  }, [cartItem, item.id, updateQuantity]);
+
+  const handleIncrease = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (cartItem) {
+      updateQuantity(item.id, cartItem.quantity + 1);
+    } else {
+      addItem(item);
+    }
+  }, [cartItem, item, addItem, updateQuantity]);
+
+  const getTagStyle = () => {
+    if (item.isNew) return { text: 'New', className: 'bg-emerald-500/90 text-white' };
+    if (item.isSignature || item.tags.includes('Signature')) return { text: 'Signature', className: 'bg-gold text-dark' };
+    if (item.isPopular) return { text: 'Popular', className: 'bg-rose-500/90 text-white' };
+    return null;
+  };
+
+  const tag = getTagStyle();
+
   return (
     <div 
-      className="luxury-card rounded-2xl overflow-hidden group"
+      className="luxury-card overflow-hidden group stagger-item"
       style={{ animationDelay: `${index * 0.05}s` }}
     >
       <div className="flex gap-0">
@@ -34,14 +67,15 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0 }) =
             src={imageSrc}
             alt={item.name}
             className="w-full h-full object-cover image-hover"
+            loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-dark-2/50" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-dark-2/60" />
           
           {/* Tags Overlay */}
-          {(item.isNew || item.isSignature || item.isPopular || item.tags.includes('Signature')) && (
-            <div className="absolute top-2 left-2">
-              <span className="px-2 py-0.5 bg-gold text-dark text-[9px] tracking-wider uppercase rounded-full font-semibold">
-                {item.isNew ? 'New' : item.isSignature || item.tags.includes('Signature') ? 'Signature' : 'Popular'}
+          {tag && (
+            <div className="absolute top-2 left-2 z-10">
+              <span className={`px-2.5 py-1 text-[9px] tracking-[0.15em] uppercase rounded-full font-semibold shadow-lg ${tag.className}`}>
+                {tag.text}
               </span>
             </div>
           )}
@@ -50,12 +84,12 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0 }) =
         {/* Content */}
         <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
           <div>
-            <div className="flex items-start justify-between gap-2 mb-1">
+            <div className="flex items-start justify-between gap-2 mb-1.5">
               <h3 className="font-serif text-lg text-white group-hover:text-gold transition-colors line-clamp-1">
                 {item.name}
               </h3>
             </div>
-            <p className="text-xs text-cream/40 leading-relaxed line-clamp-2 mb-2">
+            <p className="text-xs text-cream/45 leading-relaxed line-clamp-2 mb-2">
               {item.description}
             </p>
             
@@ -65,8 +99,8 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0 }) =
                 {item.tags.slice(0, 2).map(tag => (
                   <span 
                     key={tag}
-                    className="text-[9px] tracking-[0.1em] uppercase px-2 py-0.5 border border-gold/20 
-                               text-gold/70 rounded-full"
+                    className="text-[9px] tracking-[0.1em] uppercase px-2.5 py-1 border border-gold/25 
+                               text-gold/80 rounded-full bg-gold/5"
                   >
                     {tag}
                   </span>
@@ -76,38 +110,47 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0 }) =
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <p className="text-lg text-gold font-medium">
+            <p className="text-lg text-gold font-medium tracking-tight">
               {formatPrice(item.price)}
             </p>
 
             {/* Add/Quantity Controls */}
             <div className="flex items-center">
               {cartItem ? (
-                <div className="flex items-center bg-dark-3 rounded-xl overflow-hidden border border-gold/20">
+                <div className="flex items-center bg-dark-3 rounded-xl overflow-hidden border border-gold/25 shadow-lg">
                   <button
-                    onClick={() => updateQuantity(item.id, cartItem.quantity - 1)}
-                    className="w-9 h-9 flex items-center justify-center text-gold hover:bg-gold/10 
-                               transition-colors text-lg font-light"
+                    type="button"
+                    onClick={handleDecrease}
+                    className="btn-quantity border-0 rounded-none"
+                    aria-label="Decrease quantity"
                   >
                     −
                   </button>
-                  <span className="w-8 text-center text-sm text-cream font-medium">
+                  <span className="w-10 text-center text-sm text-cream font-semibold">
                     {cartItem.quantity}
                   </span>
                   <button
-                    onClick={() => updateQuantity(item.id, cartItem.quantity + 1)}
-                    className="w-9 h-9 flex items-center justify-center text-gold hover:bg-gold/10 
-                               transition-colors text-lg font-light"
+                    type="button"
+                    onClick={handleIncrease}
+                    className="btn-quantity border-0 rounded-none"
+                    aria-label="Increase quantity"
                   >
                     +
                   </button>
                 </div>
               ) : (
                 <button
-                  onClick={() => addItem(item)}
-                  className="btn-luxury px-5 py-2.5 rounded-xl text-[10px] relative overflow-hidden"
+                  type="button"
+                  onClick={handleAdd}
+                  className="btn-luxury px-6 py-2.5 text-[10px]"
+                  aria-label={`Add ${item.name} to cart`}
                 >
-                  <span className="relative z-10">Add</span>
+                  <span className="flex items-center gap-2">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add
+                  </span>
                 </button>
               )}
             </div>

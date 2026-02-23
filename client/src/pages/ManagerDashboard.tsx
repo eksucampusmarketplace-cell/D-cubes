@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSocket } from '@/context/SocketContext';
 import { Order, AccessRequest, ChatMessage, Table, OrderStatus, RefundRequest, AnalyticsData, PaymentStatus } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, getAccessTypeLabel } from '@/utils/format';
@@ -125,48 +125,66 @@ export const ManagerDashboard: React.FC = () => {
     setTelegramMessages(prev => [msg, ...prev].slice(0, 20));
   };
 
-  const handleConfirmOrder = (orderId: string, _tableNum: number) => {
+  const handleConfirmOrder = useCallback((orderId: string) => {
     updateOrderStatus(orderId, 'confirmed');
-  };
+  }, [updateOrderStatus]);
 
-  const handleMarkDelivering = (orderId: string, _tableNum: number) => {
+  const handleMarkDelivering = useCallback((orderId: string) => {
     updateOrderStatus(orderId, 'delivering');
-  };
+  }, [updateOrderStatus]);
 
-  const handleMarkDone = (orderId: string, tableNum: number) => {
+  const handleMarkDone = useCallback((orderId: string, tableNum: number) => {
     updateOrderStatus(orderId, 'delivered');
     updateTableStatus(tableNum, { hasPendingOrder: false });
-  };
+  }, [updateOrderStatus]);
 
-  const handleMarkPaid = (orderId: string) => {
+  const handleMarkPaid = useCallback((orderId: string) => {
     updatePayment(orderId, 'paid');
-  };
+  }, [updatePayment]);
 
-  const handleCancelOrder = (orderId: string) => {
-    cancelOrder(orderId, 'Cancelled by staff');
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
-  };
+  const handleCancelOrder = useCallback((orderId: string) => {
+    if (window.confirm('Are you sure you want to cancel this order?')) {
+      cancelOrder(orderId, 'Cancelled by staff');
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+    }
+  }, [cancelOrder]);
 
-  const handleEndSession = (tableNumber: number) => {
-    const tableOrders = orders.filter(o => o.tableNumber === tableNumber && o.status !== 'cancelled');
-    const totalBill = tableOrders.reduce((sum, o) => sum + o.total, 0);
-    endSession(tableNumber, totalBill);
-    updateTableStatus(tableNumber, { isActive: false, hasPendingOrder: false });
-  };
+  const handleEndSession = useCallback((tableNumber: number) => {
+    if (window.confirm(`End session for Table ${tableNumber}?`)) {
+      const tableOrders = orders.filter(o => o.tableNumber === tableNumber && o.status !== 'cancelled');
+      const totalBill = tableOrders.reduce((sum, o) => sum + o.total, 0);
+      endSession(tableNumber, totalBill);
+      updateTableStatus(tableNumber, { isActive: false, hasPendingOrder: false });
+    }
+  }, [endSession, orders]);
 
-  const handleGrantAccess = (requestId: string, tableNum: number) => {
+  const handleGrantAccess = useCallback((requestId: string, tableNum: number) => {
     respondToAccess(requestId, true);
     setAccessRequests(prev => prev.filter(r => r.id !== requestId));
     addTelegramMessage(`🎫 ACCESS GRANTED — Table ${tableNum}`);
-  };
+  }, [respondToAccess]);
 
-  const handleDenyAccess = (requestId: string) => {
+  const handleDenyAccess = useCallback((requestId: string) => {
     respondToAccess(requestId, false);
     setAccessRequests(prev => prev.filter(r => r.id !== requestId));
-  };
+  }, [respondToAccess]);
+
+  const handleProcessRefund = useCallback((requestId: string, approved: boolean) => {
+    processRefund(requestId, approved);
+    setRefundRequests(prev => prev.filter(r => r.id !== requestId));
+  }, [processRefund]);
 
   const selectedTableMessages = messages.filter(m => m.tableNumber === selectedTable);
   const selectedTableData = tables.find(t => t.number === selectedTable);
+
+  // Button style helpers
+  const btnBase = "inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-medium tracking-wide transition-all duration-200";
+  const btnGold = `${btnBase} bg-gradient-to-r from-gold to-gold-light text-dark hover:shadow-[0_4px_20px_rgba(201,168,76,0.4)] hover:-translate-y-0.5`;
+  const btnGreen = `${btnBase} bg-green-500 text-white hover:bg-green-400 hover:shadow-[0_4px_20px_rgba(46,204,113,0.4)]`;
+  const btnRed = `${btnBase} bg-red-500 text-white hover:bg-red-400 hover:shadow-[0_4px_20px_rgba(231,76,60,0.4)]`;
+  const btnBlue = `${btnBase} bg-blue-500 text-white hover:bg-blue-400 hover:shadow-[0_4px_20px_rgba(52,152,219,0.4)]`;
+  const btnGray = `${btnBase} bg-white/10 text-cream hover:bg-white/15`;
+  const btnDark = `${btnBase} bg-dark-3 border border-gold/20 text-gold hover:bg-gold/10`;
 
   return (
     <div className="min-h-screen bg-dark flex">
@@ -179,18 +197,18 @@ export const ManagerDashboard: React.FC = () => {
         
         <div className="p-4">
           <p className="text-[10px] tracking-[0.3em] uppercase text-cream/25 mb-3">Operations</p>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream border-l-2 border-gold bg-gold/6">
+          <button type="button" className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream border-l-2 border-gold bg-gold/6">
             📋 Live Orders
             {stats.newOrders > 0 && (
-              <span className="ml-auto bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">
+              <span className="ml-auto bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold">
                 {stats.newOrders}
               </span>
             )}
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream/50 hover:text-cream transition-colors">
+          <button type="button" className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream/50 hover:text-cream transition-colors">
             🪑 Tables
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream/50 hover:text-cream transition-colors">
+          <button type="button" className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream/50 hover:text-cream transition-colors">
             💬 Messages
           </button>
           <a
@@ -235,31 +253,31 @@ export const ManagerDashboard: React.FC = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-5 gap-0.5 p-6">
-          <div className="bg-dark-2 p-5 relative overflow-hidden">
+          <div className="bg-dark-2 p-5 relative overflow-hidden group hover:bg-dark-3 transition-colors">
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-red-500/80" />
             <p className="text-[10px] tracking-[0.25em] uppercase text-cream/35 mb-2">New Orders</p>
             <p className="font-display text-3xl text-red-500">{stats.newOrders}</p>
             <p className="text-[11px] text-cream/30 mt-1">Needs attention</p>
           </div>
-          <div className="bg-dark-2 p-5 relative overflow-hidden">
+          <div className="bg-dark-2 p-5 relative overflow-hidden group hover:bg-dark-3 transition-colors">
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-gold/30" />
             <p className="text-[10px] tracking-[0.25em] uppercase text-cream/35 mb-2">Active Tables</p>
             <p className="font-display text-3xl text-gold">{stats.activeTables}</p>
             <p className="text-[11px] text-cream/30 mt-1">of 50 tables</p>
           </div>
-          <div className="bg-dark-2 p-5 relative overflow-hidden">
+          <div className="bg-dark-2 p-5 relative overflow-hidden group hover:bg-dark-3 transition-colors">
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-green-500/80" />
             <p className="text-[10px] tracking-[0.25em] uppercase text-cream/35 mb-2">Tonight's Revenue</p>
             <p className="font-display text-3xl text-green-500">₦{(stats.revenue / 1000000).toFixed(2)}M</p>
             <p className="text-[11px] text-cream/30 mt-1">↑ 18% vs last Friday</p>
           </div>
-          <div className="bg-dark-2 p-5 relative overflow-hidden">
+          <div className="bg-dark-2 p-5 relative overflow-hidden group hover:bg-dark-3 transition-colors">
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-gold/30" />
             <p className="text-[10px] tracking-[0.25em] uppercase text-cream/35 mb-2">Orders Delivered</p>
             <p className="font-display text-3xl text-white">{stats.delivered}</p>
             <p className="text-[11px] text-cream/30 mt-1">Since 8PM</p>
           </div>
-          <div className="bg-dark-2 p-5 relative overflow-hidden">
+          <div className="bg-dark-2 p-5 relative overflow-hidden group hover:bg-dark-3 transition-colors">
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-orange-500/80" />
             <p className="text-[10px] tracking-[0.25em] uppercase text-cream/35 mb-2">Unpaid Orders</p>
             <p className="font-display text-3xl text-orange-500">{stats.unpaidOrders}</p>
@@ -273,30 +291,32 @@ export const ManagerDashboard: React.FC = () => {
           <div className="space-y-5">
             {/* Access Requests */}
             {accessRequests.length > 0 && (
-              <div className="bg-dark-2">
+              <div className="bg-dark-2 rounded-lg border border-gold/10">
                 <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
                   <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">🛎️ Access Requests</p>
-                  <span className="text-[10px] text-gold">{accessRequests.length} pending</span>
+                  <span className="text-[10px] text-gold font-medium">{accessRequests.length} pending</span>
                 </div>
                 <div className="p-4 space-y-2">
                   {accessRequests.map(req => (
-                    <div key={req.id} className="bg-dark-3 border border-gold/15 p-3 flex items-center justify-between rounded">
+                    <div key={req.id} className="bg-dark-3 border border-gold/15 p-4 flex items-center justify-between rounded-lg">
                       <div>
-                        <p className="text-sm text-cream">{getAccessTypeLabel(req.type)}</p>
+                        <p className="text-sm text-cream font-medium">{getAccessTypeLabel(req.type)}</p>
                         <p className="text-[10px] text-cream/35 mt-1">
                           Table {req.tableNumber} · {req.guestName}
                         </p>
                       </div>
                       <div className="flex gap-2">
                         <button
+                          type="button"
                           onClick={() => handleGrantAccess(req.id, req.tableNumber)}
-                          className="bg-green-500 text-white text-[10px] px-3 py-1.5 rounded"
+                          className={btnGreen}
                         >
-                          Grant
+                          ✓ Grant
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDenyAccess(req.id)}
-                          className="bg-white/5 text-cream text-[10px] px-2.5 py-1.5 rounded"
+                          className={btnGray}
                         >
                           ✕
                         </button>
@@ -309,30 +329,32 @@ export const ManagerDashboard: React.FC = () => {
 
             {/* Refund Requests */}
             {refundRequests.length > 0 && (
-              <div className="bg-dark-2">
+              <div className="bg-dark-2 rounded-lg border border-gold/10">
                 <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
                   <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">🔄 Refund Requests</p>
-                  <span className="text-[10px] text-gold">{refundRequests.length} pending</span>
+                  <span className="text-[10px] text-gold font-medium">{refundRequests.length} pending</span>
                 </div>
                 <div className="p-4 space-y-2">
                   {refundRequests.map(req => (
-                    <div key={req.id} className="bg-dark-3 border border-orange-500/15 p-3 flex items-center justify-between rounded">
+                    <div key={req.id} className="bg-dark-3 border border-orange-500/15 p-4 flex items-center justify-between rounded-lg">
                       <div>
-                        <p className="text-sm text-cream">Table {req.tableNumber} · {req.guestName}</p>
+                        <p className="text-sm text-cream font-medium">Table {req.tableNumber} · {req.guestName}</p>
                         <p className="text-[10px] text-cream/35 mt-1">
                           💰 {formatPrice(req.amount)} · {req.reason}
                         </p>
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => processRefund(req.id, true)}
-                          className="bg-green-500 text-white text-[10px] px-3 py-1.5 rounded"
+                          type="button"
+                          onClick={() => handleProcessRefund(req.id, true)}
+                          className={btnGreen}
                         >
-                          Approve
+                          ✓ Approve
                         </button>
                         <button
-                          onClick={() => processRefund(req.id, false)}
-                          className="bg-red-500 text-white text-[10px] px-2.5 py-1.5 rounded"
+                          type="button"
+                          onClick={() => handleProcessRefund(req.id, false)}
+                          className={btnRed}
                         >
                           Deny
                         </button>
@@ -344,10 +366,10 @@ export const ManagerDashboard: React.FC = () => {
             )}
 
             {/* Live Orders */}
-            <div className="bg-dark-2">
+            <div className="bg-dark-2 rounded-lg border border-gold/10">
               <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
                 <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">📋 Live Orders</p>
-                <button className="text-[10px] text-gold hover:underline">Clear Completed</button>
+                <button type="button" className="text-[10px] text-gold hover:text-gold-light transition-colors">Clear Completed</button>
               </div>
               <div>
                 {orders.length === 0 ? (
@@ -356,7 +378,7 @@ export const ManagerDashboard: React.FC = () => {
                   </div>
                 ) : (
                   orders.map(order => (
-                    <div key={order.id} className="grid grid-cols-[60px_1fr_auto] gap-4 px-5 py-4 border-b border-white/4 hover:bg-white/1 transition-colors">
+                    <div key={order.id} className="grid grid-cols-[60px_1fr_auto] gap-4 px-5 py-4 border-b border-white/4 hover:bg-white/[0.02] transition-colors">
                       <div>
                         <p className="font-display text-3xl text-gold leading-none">{order.tableNumber}</p>
                         <p className="text-[9px] tracking-[0.15em] uppercase text-cream/30 mt-1">Table</p>
@@ -366,75 +388,81 @@ export const ManagerDashboard: React.FC = () => {
                         <p className="text-xs text-cream/40 line-clamp-1">
                           {order.items.map(i => `${i.quantity}× ${i.name}`).join(' · ')}
                         </p>
-                        <p className="text-xs text-gold mt-1">{formatPrice(order.total)}</p>
+                        <p className="text-xs text-gold mt-1 font-medium">{formatPrice(order.total)}</p>
                         {order.note && (
                           <p className="text-[10px] text-cream/25 mt-1">📝 {order.note}</p>
                         )}
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-[9px] tracking-[0.12em] uppercase px-2 py-0.5 rounded-full border whitespace-nowrap
-                            ${order.status === 'pending' ? 'bg-red-500/15 text-red-500 border-red-500/30' : ''}
-                            ${order.status === 'confirmed' ? 'bg-orange-500/15 text-orange-500 border-orange-500/30' : ''}
-                            ${order.status === 'delivering' ? 'bg-blue-500/15 text-blue-500 border-blue-500/30' : ''}
-                            ${order.status === 'delivered' ? 'bg-green-500/12 text-green-500 border-green-500/25' : ''}
-                            ${order.status === 'cancelled' ? 'bg-gray-500/15 text-gray-500 border-gray-500/30' : ''}
-                            ${order.status === 'refunded' ? 'bg-purple-500/15 text-purple-500 border-purple-500/30' : ''}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`text-[9px] tracking-[0.12em] uppercase px-2.5 py-1 rounded-full border whitespace-nowrap font-medium
+                            ${order.status === 'pending' ? 'bg-red-500/15 text-red-400 border-red-500/30' : ''}
+                            ${order.status === 'confirmed' ? 'bg-orange-500/15 text-orange-400 border-orange-500/30' : ''}
+                            ${order.status === 'delivering' ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' : ''}
+                            ${order.status === 'delivered' ? 'bg-green-500/12 text-green-400 border-green-500/25' : ''}
+                            ${order.status === 'cancelled' ? 'bg-gray-500/15 text-gray-400 border-gray-500/30' : ''}
+                            ${order.status === 'refunded' ? 'bg-purple-500/15 text-purple-400 border-purple-500/30' : ''}
                           `}>
                             {getStatusLabel(order.status)}
                           </span>
-                          <span className={`text-[9px] tracking-[0.12em] uppercase px-2 py-0.5 rounded-full border whitespace-nowrap
-                            ${order.paymentStatus === 'unpaid' ? 'bg-orange-500/15 text-orange-500 border-orange-500/30' : ''}
-                            ${order.paymentStatus === 'paid' ? 'bg-green-500/15 text-green-500 border-green-500/30' : ''}
-                            ${order.paymentStatus === 'refunded' ? 'bg-purple-500/15 text-purple-500 border-purple-500/30' : ''}
+                          <span className={`text-[9px] tracking-[0.12em] uppercase px-2.5 py-1 rounded-full border whitespace-nowrap font-medium
+                            ${order.paymentStatus === 'unpaid' ? 'bg-orange-500/15 text-orange-400 border-orange-500/30' : ''}
+                            ${order.paymentStatus === 'paid' ? 'bg-green-500/15 text-green-400 border-green-500/30' : ''}
+                            ${order.paymentStatus === 'refunded' ? 'bg-purple-500/15 text-purple-400 border-purple-500/30' : ''}
                           `}>
                             {order.paymentStatus === 'paid' ? '✓ Paid' : order.paymentStatus}
                           </span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <div className="flex gap-1">
+                        <div className="flex gap-1.5 flex-wrap justify-end">
                           {order.status === 'pending' && (
                             <button
-                              onClick={() => handleConfirmOrder(order.id, order.tableNumber)}
-                              className="bg-gold text-dark text-[10px] px-2.5 py-1 rounded"
+                              type="button"
+                              onClick={() => handleConfirmOrder(order.id)}
+                              className={btnGold}
                             >
                               Confirm
                             </button>
                           )}
                           {order.status === 'confirmed' && (
                             <button
-                              onClick={() => handleMarkDelivering(order.id, order.tableNumber)}
-                              className="bg-blue-500 text-white text-[10px] px-2.5 py-1 rounded"
+                              type="button"
+                              onClick={() => handleMarkDelivering(order.id)}
+                              className={btnBlue}
                             >
                               On Way
                             </button>
                           )}
                           {order.status === 'delivering' && (
                             <button
+                              type="button"
                               onClick={() => handleMarkDone(order.id, order.tableNumber)}
-                              className="bg-green-500 text-white text-[10px] px-2.5 py-1 rounded"
+                              className={btnGreen}
                             >
                               Delivered
                             </button>
                           )}
                           {order.paymentStatus === 'unpaid' && order.status !== 'cancelled' && (
                             <button
+                              type="button"
                               onClick={() => handleMarkPaid(order.id)}
-                              className="bg-emerald-600 text-white text-[10px] px-2.5 py-1 rounded"
+                              className={btnDark}
                             >
-                              💳 Mark Paid
+                              💳 Paid
                             </button>
                           )}
                           {order.status === 'pending' && (
                             <button
+                              type="button"
                               onClick={() => handleCancelOrder(order.id)}
-                              className="bg-red-500/80 text-white text-[10px] px-2.5 py-1 rounded"
+                              className={btnRed}
                             >
                               Cancel
                             </button>
                           )}
                           <button
+                            type="button"
                             onClick={() => setSelectedTable(order.tableNumber)}
-                            className="bg-white/5 text-cream text-[10px] px-2.5 py-1 rounded"
+                            className={btnGray}
                           >
                             Reply
                           </button>
@@ -450,19 +478,20 @@ export const ManagerDashboard: React.FC = () => {
           {/* Right Sidebar */}
           <div className="space-y-5">
             {/* Tables Grid */}
-            <div className="bg-dark-2">
+            <div className="bg-dark-2 rounded-lg border border-gold/10">
               <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
                 <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">🪑 Tables</p>
-                <button className="text-[10px] text-gold hover:underline">View All</button>
+                <button type="button" className="text-[10px] text-gold hover:text-gold-light transition-colors">View All</button>
               </div>
               <div className="grid grid-cols-5 gap-0.5 p-4">
                 {tables.slice(0, 30).map(table => (
                   <div key={table.number} className="relative">
                     <button
+                      type="button"
                       onClick={() => setSelectedTable(table.number)}
-                      className={`w-full p-2.5 text-center border transition-all relative
+                      className={`w-full p-2.5 text-center border transition-all duration-200 relative
                         ${table.isActive
-                          ? 'bg-dark-3 border-gold/40'
+                          ? 'bg-dark-3 border-gold/40 hover:bg-dark-2'
                           : 'bg-dark-3 border-white/4 hover:border-gold/30'
                         }
                         ${selectedTable === table.number ? 'ring-1 ring-gold bg-gold/8' : ''}
@@ -475,13 +504,15 @@ export const ManagerDashboard: React.FC = () => {
                         {table.isActive ? 'Active' : 'Empty'}
                       </p>
                       {(table.hasPendingOrder || table.hasUnreadMessage) && (
-                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
+                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                       )}
                     </button>
                     {table.isActive && (
                       <button
+                        type="button"
                         onClick={() => handleEndSession(table.number)}
-                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center hover:bg-red-600"
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[8px] rounded-full 
+                                   flex items-center justify-center hover:bg-red-400 transition-colors shadow-lg"
                         title="End Session"
                       >
                         ×
@@ -494,7 +525,7 @@ export const ManagerDashboard: React.FC = () => {
 
             {/* Chat */}
             {selectedTable && (
-              <div className="bg-dark-2">
+              <div className="bg-dark-2 rounded-lg border border-gold/10">
                 <div className="px-5 py-4 border-b border-white/5">
                   <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">💬 Chat</p>
                   <p className="text-[11px] text-gold mt-1">
@@ -508,16 +539,16 @@ export const ManagerDashboard: React.FC = () => {
                     selectedTableMessages.map(msg => (
                       <div 
                         key={msg.id}
-                        className={`max-w-[85%] p-2.5 rounded-lg text-xs
+                        className={`max-w-[85%] p-3 rounded-lg text-xs
                           ${msg.sender === 'guest'
                             ? 'bg-gold/10 border border-gold/20 ml-auto rounded-br-sm'
                             : 'bg-dark-3 border border-white/5 mr-auto rounded-bl-sm'
                           }`}
                       >
                         {msg.sender === 'staff' && (
-                          <p className="text-[9px] text-gold uppercase tracking-wide mb-1">Staff</p>
+                          <p className="text-[9px] text-gold uppercase tracking-wide mb-1 font-medium">Staff</p>
                         )}
-                        <p className="text-cream">{msg.text}</p>
+                        <p className="text-cream/90">{msg.text}</p>
                         <p className="text-[9px] text-cream/30 mt-1 text-right">{formatTime(msg.timestamp)}</p>
                       </div>
                     ))
@@ -527,10 +558,13 @@ export const ManagerDashboard: React.FC = () => {
                   <input
                     type="text"
                     placeholder={`Reply to Table ${selectedTable}...`}
-                    className="flex-1 bg-dark-3 border border-white/6 rounded-full px-3 py-2 text-xs text-cream
+                    className="flex-1 bg-dark-3 border border-white/6 rounded-lg px-3 py-2 text-xs text-cream
                                focus:border-gold/35 focus:outline-none placeholder:text-cream/20"
                   />
-                  <button className="w-8 h-8 rounded-full bg-gold text-dark flex items-center justify-center text-xs">
+                  <button 
+                    type="button"
+                    className="w-8 h-8 rounded-lg bg-gold text-dark flex items-center justify-center text-xs hover:bg-gold-light transition-colors"
+                  >
                     ➤
                   </button>
                 </div>
@@ -538,17 +572,17 @@ export const ManagerDashboard: React.FC = () => {
             )}
 
             {/* Telegram Feed */}
-            <div className="bg-dark-2">
+            <div className="bg-dark-2 rounded-lg border border-gold/10">
               <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
                 <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">📲 Telegram Feed</p>
-                <button className="text-[10px] text-gold hover:underline">View Bot</button>
+                <button type="button" className="text-[10px] text-gold hover:text-gold-light transition-colors">View Bot</button>
               </div>
               <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
                 {telegramMessages.length === 0 ? (
                   <p className="text-center text-cream/30 text-xs py-4">No messages yet</p>
                 ) : (
                   telegramMessages.map((msg, i) => (
-                    <div key={i} className="bg-dark-3 border border-blue-500/15 rounded p-3 text-xs text-cream/70 whitespace-pre-line font-mono">
+                    <div key={i} className="bg-dark-3 border border-blue-500/15 rounded-lg p-3 text-xs text-cream/70 whitespace-pre-line font-mono">
                       {msg}
                       <p className="text-[9px] text-cream/25 mt-2 text-right">{formatTime(new Date())}</p>
                     </div>
@@ -562,19 +596,19 @@ export const ManagerDashboard: React.FC = () => {
         {/* Analytics Section */}
         {analytics && (
           <div className="px-6 pb-6">
-            <div className="bg-dark-2">
+            <div className="bg-dark-2 rounded-lg border border-gold/10">
               <div className="px-5 py-4 border-b border-white/5">
                 <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">📊 Analytics</p>
               </div>
               <div className="p-5 space-y-6">
                 {/* Top Items */}
                 <div>
-                  <h3 className="text-sm text-cream mb-3">Top Selling Items</h3>
+                  <h3 className="text-sm text-cream mb-3 font-medium">Top Selling Items</h3>
                   <div className="space-y-2">
                     {analytics.topSellingItems.slice(0, 5).map((item, i) => (
                       <div key={i} className="flex justify-between items-center text-xs">
                         <span className="text-cream/70">{i + 1}. {item.name}</span>
-                        <span className="text-gold">{formatPrice(item.revenue)} ({item.quantity} sold)</span>
+                        <span className="text-gold font-medium">{formatPrice(item.revenue)} ({item.quantity} sold)</span>
                       </div>
                     ))}
                   </div>
@@ -582,12 +616,12 @@ export const ManagerDashboard: React.FC = () => {
 
                 {/* Category Breakdown */}
                 <div>
-                  <h3 className="text-sm text-cream mb-3">Category Breakdown</h3>
+                  <h3 className="text-sm text-cream mb-3 font-medium">Category Breakdown</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {analytics.categoryBreakdown.map(cat => (
-                      <div key={cat.category} className="bg-dark-3 p-3 rounded">
+                      <div key={cat.category} className="bg-dark-3 p-3 rounded-lg">
                         <p className="text-[10px] text-cream/40 uppercase">{cat.category}</p>
-                        <p className="text-sm text-gold">{formatPrice(cat.revenue)}</p>
+                        <p className="text-sm text-gold font-semibold">{formatPrice(cat.revenue)}</p>
                         <p className="text-[10px] text-cream/30">{cat.count} items</p>
                       </div>
                     ))}
@@ -596,12 +630,12 @@ export const ManagerDashboard: React.FC = () => {
 
                 {/* Table Performance */}
                 <div>
-                  <h3 className="text-sm text-cream mb-3">Top Tables by Revenue</h3>
+                  <h3 className="text-sm text-cream mb-3 font-medium">Top Tables by Revenue</h3>
                   <div className="space-y-2">
                     {analytics.tablePerformance.slice(0, 5).map((table, i) => (
                       <div key={i} className="flex justify-between items-center text-xs">
                         <span className="text-cream/70">🪑 Table {table.tableNumber}</span>
-                        <span className="text-gold">{formatPrice(table.revenue)} ({table.orders} orders)</span>
+                        <span className="text-gold font-medium">{formatPrice(table.revenue)} ({table.orders} orders)</span>
                       </div>
                     ))}
                   </div>

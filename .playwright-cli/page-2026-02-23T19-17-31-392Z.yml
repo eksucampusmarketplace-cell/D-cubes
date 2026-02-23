@@ -1,0 +1,32 @@
+- generic [ref=e3]:
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e17]: D
+      - heading "D CUBES PLACE" [level=1] [ref=e18]
+      - paragraph [ref=e20]: Resort · Lounge · Nightlife
+    - generic [ref=e21]:
+      - heading "Welcome to D Cubes Place" [level=2] [ref=e22]
+      - paragraph [ref=e23]: Enter your name to begin your exclusive dining experience. Our staff will be notified of your arrival.
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - textbox "Your name or party name" [ref=e26]
+        - img [ref=e28]
+      - button "✦ BEGIN YOUR EXPERIENCE" [disabled] [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]: ✦
+          - generic [ref=e33]: BEGIN YOUR EXPERIENCE
+          - img [ref=e34]
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e39]: 🍸
+        - paragraph [ref=e40]: Premium Drinks
+      - generic [ref=e41]:
+        - generic [ref=e43]: 🍽️
+        - paragraph [ref=e44]: Fine Dining
+      - generic [ref=e45]:
+        - generic [ref=e47]: 💨
+        - paragraph [ref=e48]: Shisha Lounge
+  - paragraph [ref=e51]:
+    - text: Crafted by
+    - link "Toluwase Christopher" [ref=e52] [cursor=pointer]:
+      - /url: https://wa.me/2348174143260
