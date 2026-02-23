@@ -1,6 +1,6 @@
 # VELOUR — Luxury Club Table Ordering System
 
-A premium table ordering system for members clubs, featuring QR code-based table detection, real-time communication, Telegram integration, and multi-role staff dashboards.
+A premium table ordering system for members clubs, featuring QR code-based table detection, real-time communication, Telegram integration, multi-role staff dashboards, and comprehensive management features including returns, refunds, payment tracking, analytics, and session management.
 
 ## Features
 
@@ -12,6 +12,38 @@ A premium table ordering system for members clubs, featuring QR code-based table
 - **Access Requests**: Pool & Spa, Lounge Entry, VIP Dance Floor, Call Waiter, Extra Ice, Bill Request
 - **Two-way Chat**: Direct messaging with staff
 - **Nigerian Naira (₦)** currency support
+
+### Enhanced Management Features
+
+#### Payment & Refunds
+- **Payment Tracking**: Track order payment status (unpaid, partial, paid, refunded)
+- **Mark as Paid**: One-click payment confirmation by staff
+- **Refund Requests**: Customers can request returns for drinks
+- **Refund Processing**: Staff approve/deny refunds with reason tracking
+- **Order Cancellation**: Cancel pending orders before preparation
+- **Refund Analytics**: Track total refunds and reasons
+
+#### Table & Session Management
+- **Multi-Guest Sessions**: Multiple guests can join same table
+- **Individual Guest Tracking**: Unique IDs for each guest at a table
+- **Split Orders**: Multiple orders from same table, separately trackable
+- **Session Turnover**: Clean end-of-session handling
+- **Guest Notifications**: Notify when guests leave/join table
+- **Table Status**: Clear indication of table availability
+
+#### Analytics Dashboard
+- **Revenue Analytics**: Total revenue, order count, average order value
+- **Product Performance**: Top-selling items by quantity and revenue
+- **Category Breakdown**: Sales by category (cocktails, food, etc.)
+- **Hourly Sales**: Peak hours identification
+- **Table Performance**: Top tables by revenue and orders
+- **Real-time Updates**: Auto-refresh every 60 seconds
+
+#### Security
+- **PIN Authentication**: Role-specific PIN codes for staff dashboards
+- **Route Protection**: Secure access to manager, kitchen, and bar views
+- **Session Expiration**: Auto-logout after 8 hours
+- **Access Logging**: Track all staff authentication attempts
 
 ### Staff Dashboards
 - **Manager Dashboard**: Full overview, all orders, access requests, table grid, chat, Telegram feed, live stats
@@ -77,10 +109,12 @@ npm run client  # Frontend on port 3000
 ### Accessing the App
 
 - **Customer Page**: `http://localhost:3000/order?table=1` (change table number as needed)
-- **Manager Dashboard**: `http://localhost:3000/manager`
-- **Kitchen Display**: `http://localhost:3000/kitchen`
-- **Bar Display**: `http://localhost:3000/bar`
-- **QR Generator**: `http://localhost:3000/qr`
+- **Manager Dashboard**: `http://localhost:3000/manager` (PIN: 0000)
+- **Kitchen Display**: `http://localhost:3000/kitchen` (PIN: 1111)
+- **Bar Display**: `http://localhost:3000/bar` (PIN: 2222)
+- **QR Generator**: `http://localhost:3000/qr` (No PIN required)
+
+**Note:** Default PINs are for development only. Change them in `.env` before production deployment.
 
 ## Usage
 
@@ -124,6 +158,8 @@ Visit `/qr` to generate QR codes for all tables. Features:
 
 - `GET /api/health` - Health check
 - `GET /api/qr/:tableNumber` - Generate QR code for table
+- `GET /api/analytics` - Get sales and performance analytics
+- `GET /api/table/:tableNumber` - Get table session information
 
 ## WebSocket Events
 
@@ -133,15 +169,29 @@ Visit `/qr` to generate QR codes for all tables. Features:
 - `access-request` - Request access/assistance
 - `chat-message` - Send chat message
 - `update-order-status` - Staff updates order status
+- `update-payment` - Staff updates payment status
+- `request-refund` - Customer requests refund
+- `process-refund` - Staff approves/denies refund
+- `cancel-order` - Staff cancels pending order
 - `access-response` - Staff responds to access request
+- `end-session` - Staff ends table session (turnover)
 
 ### Server → Client
 - `new-order` - New order received
 - `order-status-update` - Order status changed
-- `check-in` - Guest checked in
+- `check-in` - Guest checked in (includes guest count)
+- `check-in-success` - Check-in successful (includes guest ID, session ID)
 - `access-request` - New access request
 - `access-response` - Access request response
 - `new-message` - New chat message
+- `payment-update` - Payment status changed
+- `refund-request` - New refund request
+- `refund-processed` - Refund approved/denied
+- `order-cancelled` - Order cancelled
+- `session-ended` - Session ended (for staff)
+- `session-ended-client` - Session ended (for guests)
+- `guest-left` - Guest left table
+- `table-inactive` - All guests left table
 
 ## Production Deployment
 
@@ -154,6 +204,37 @@ TELEGRAM_BOT_TOKEN=your_token
 KITCHEN_CHAT_ID=your_chat_id
 BAR_CHAT_ID=your_chat_id
 MANAGER_CHAT_ID=your_chat_id
+
+# Staff Authentication
+STAFF_MANAGER_PIN=1234
+STAFF_KITCHEN_PIN=5678
+STAFF_BAR_PIN=9012
+```
+
+### Docker Deployment
+
+Using Docker Compose (recommended):
+```bash
+# Build and run
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+Manual Docker build:
+```bash
+# Build image
+docker build -t velour-app .
+
+# Run container
+docker run -p 3000:3000 -p 5000:5000 \
+  -e TELEGRAM_BOT_TOKEN=your_token \
+  -e STAFF_MANAGER_PIN=1234 \
+  velour-app
 ```
 
 ### Build
@@ -174,6 +255,13 @@ Edit `client/src/data/menu.ts` to customize:
 - Prices
 - Descriptions
 - Tags
+
+## Documentation
+
+For detailed information on specific features:
+- **[FEATURES.md](FEATURES.md)** - Complete feature documentation with examples
+- **[SECURITY.md](SECURITY.md)** - Security best practices and guidelines
+- **[AUTHENTICATION.md](AUTHENTICATION.md)** - Staff authentication setup and options
 
 ## Credits
 

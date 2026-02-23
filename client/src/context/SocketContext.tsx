@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Order, AccessRequest, ChatMessage, OrderStatus } from '@/types';
+import { Order, AccessRequest, ChatMessage, OrderStatus, PaymentStatus, RefundRequest } from '@/types';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -13,6 +13,11 @@ interface SocketContextType {
   respondToAccess: (requestId: string, granted: boolean) => void;
   joinTable: (tableNumber: number) => void;
   joinStaff: (role: 'manager' | 'kitchen' | 'bar') => void;
+  updatePayment: (orderId: string, status: PaymentStatus) => void;
+  requestRefund: (request: RefundRequest) => void;
+  processRefund: (requestId: string, approved: boolean) => void;
+  cancelOrder: (orderId: string, reason?: string) => void;
+  endSession: (tableNumber: number, finalBill: number) => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -75,6 +80,26 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket?.emit('join-staff', role);
   }, [socket]);
 
+  const updatePayment = useCallback((orderId: string, status: PaymentStatus) => {
+    socket?.emit('update-payment', { orderId, status });
+  }, [socket]);
+
+  const requestRefund = useCallback((request: RefundRequest) => {
+    socket?.emit('request-refund', request);
+  }, [socket]);
+
+  const processRefund = useCallback((requestId: string, approved: boolean) => {
+    socket?.emit('process-refund', { requestId, approved });
+  }, [socket]);
+
+  const cancelOrder = useCallback((orderId: string, reason?: string) => {
+    socket?.emit('cancel-order', { orderId, reason });
+  }, [socket]);
+
+  const endSession = useCallback((tableNumber: number, finalBill: number) => {
+    socket?.emit('end-session', { tableNumber, finalBill });
+  }, [socket]);
+
   return (
     <SocketContext.Provider value={{
       socket,
@@ -86,7 +111,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       updateOrderStatus,
       respondToAccess,
       joinTable,
-      joinStaff
+      joinStaff,
+      updatePayment,
+      requestRefund,
+      processRefund,
+      cancelOrder,
+      endSession
     }}>
       {children}
     </SocketContext.Provider>

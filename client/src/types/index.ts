@@ -15,20 +15,29 @@ export interface Order {
   id: string;
   tableNumber: number;
   guestName: string;
+  guestId: string;
+  sessionId: string;
   items: CartItem[];
   note?: string;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
   timestamp: Date;
   total: number;
+  refundAmount?: number;
+  refundReason?: string;
 }
 
-export type OrderStatus = 
-  | 'pending' 
-  | 'confirmed' 
-  | 'preparing' 
-  | 'ready' 
-  | 'delivering' 
-  | 'delivered';
+export type OrderStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'preparing'
+  | 'ready'
+  | 'delivering'
+  | 'delivered'
+  | 'cancelled'
+  | 'refunded';
+
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded';
 
 export interface AccessRequest {
   id: string;
@@ -76,4 +85,45 @@ export interface CheckInData {
   tableNumber: number;
   guestName: string;
   timestamp: Date;
+}
+
+export interface TableSession {
+  id: string;
+  tableNumber: number;
+  startTime: Date;
+  endTime?: Date;
+  isActive: boolean;
+  guests: TableGuest[];
+  totalOrders: number;
+  totalSpent: number;
+}
+
+export interface TableGuest {
+  id: string;
+  guestName: string;
+  socketId: string;
+  checkInTime: Date;
+}
+
+export interface RefundRequest {
+  id: string;
+  orderId: string;
+  tableNumber: number;
+  guestName: string;
+  itemIds: number[];
+  reason: string;
+  status: 'pending' | 'approved' | 'denied';
+  timestamp: Date;
+  amount: number;
+}
+
+export interface AnalyticsData {
+  totalRevenue: number;
+  orderCount: number;
+  averageOrderValue: number;
+  topSellingItems: { name: string; quantity: number; revenue: number }[];
+  categoryBreakdown: { category: string; count: number; revenue: number }[];
+  hourlySales: { hour: number; orders: number; revenue: number }[];
+  tablePerformance: { tableNumber: number; orders: number; revenue: number }[];
+  popularItemsByCategory: Record<string, { name: string; quantity: number }[]>;
 }

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSocket } from '@/context/SocketContext';
-import { Order, AccessRequest, ChatMessage, Table, OrderStatus } from '@/types';
+import { Order, AccessRequest, ChatMessage, Table, OrderStatus, RefundRequest, AnalyticsData, PaymentStatus } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, getAccessTypeLabel } from '@/utils/format';
 
 export const ManagerDashboard: React.FC = () => {
-  const { socket, joinStaff, updateOrderStatus, respondToAccess } = useSocket();
+  const { socket, joinStaff, updateOrderStatus, respondToAccess, updatePayment, processRefund, cancelOrder, endSession } = useSocket();
   const [orders, setOrders] = useState<Order[]>([]);
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
+  const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([]);
   const [tables, setTables] = useState<Table[]>(
     Array.from({ length: 50 }, (_, i) => ({
       number: i + 1,
@@ -18,11 +19,13 @@ export const ManagerDashboard: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [telegramMessages, setTelegramMessages] = useState<string[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [stats, setStats] = useState({
     newOrders: 0,
     activeTables: 0,
     revenue: 0,
-    delivered: 0
+    delivered: 0,
+    unpaidOrders: 0
   });
 
   useEffect(() => {
@@ -35,14 +38,17 @@ export const ManagerDashboard: React.FC = () => {
     socket.on('new-order', (order: Order) => {
       setOrders(prev => [order, ...prev]);
       setStats(prev => ({ ...prev, newOrders: prev.newOrders + 1 }));
+      if (order.paymentStatus === 'unpaid') {
+        setStats(prev => ({ ...prev, unpaidOrders: prev.unpaidOrders + 1 }));
+      }
       updateTableStatus(order.tableNumber, { hasPendingOrder: true });
       addTelegramMessage(`🍾 NEW ORDER — Table ${order.tableNumber}\n👤 ${order.guestName}\n💰 ${formatPrice(order.total)}`);
     });
 
-    socket.on('check-in', ({ tableNumber, guestName }: { tableNumber: number; guestName: string }) => {
-      updateTableStatus(tableNumber, { isActive: true, guestName });
+    socket.on('check-in', (data: { tableNumber: number; guestName: string; guestId: string; sessionId: string; guestCount: number }) => {
+      updateTableStatus(data.tableNumber, { isActive: true, guestName: data.guestName });
       setStats(prev => ({ ...prev, activeTables: prev.activeTables + 1 }));
-      addTelegramMessage(`✅ CHECK-IN — Table ${tableNumber}\n👤 ${guestName}`);
+      addTelegramMessage(`✅ CHECK-IN — Table ${data.tableNumber}\n👤 ${data.guestName}\n👥 ${data.guestCount} guests`);
     });
 
     socket.on('access-request', (request: AccessRequest) => {
@@ -64,14 +70,50 @@ export const ManagerDashboard: React.FC = () => {
       }
     });
 
+    socket.on('payment-update', ({ orderId, status }: { orderId: string; status: PaymentStatus }) => {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentStatus: status } : o));
+      if (status === 'paid') {
+        setStats(prev => ({ ...prev, unpaidOrders: Math.max(0, prev.unpaidOrders - 1) }));
+      }
+    });
+
+    socket.on('refund-request', (request: RefundRequest) => {
+      setRefundRequests(prev => [request, ...prev]);
+      addTelegramMessage(`🔄 REFUND REQUEST — Table ${request.tableNumber}\n💰 ${formatPrice(request.amount)}`);
+    });
+
     return () => {
       socket.off('new-order');
       socket.off('check-in');
       socket.off('access-request');
       socket.off('chat-message');
       socket.off('order-status-update');
+      socket.off('payment-update');
+      socket.off('refund-request');
     };
   }, [socket]);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const response = await fetch('/api/analytics');
+        if (response.ok) {
+          const data = await response.json();
+          setAnalytics(data);
+          setStats(prev => ({
+            ...prev,
+            revenue: data.totalRevenue
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch analytics:', error);
+      }
+    };
+
+    fetchAnalytics();
+    const interval = setInterval(fetchAnalytics, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const updateTableStatus = (tableNumber: number, updates: Partial<Table>) => {
     setTables(prev => prev.map(t => 
@@ -94,6 +136,22 @@ export const ManagerDashboard: React.FC = () => {
   const handleMarkDone = (orderId: string, tableNum: number) => {
     updateOrderStatus(orderId, 'delivered');
     updateTableStatus(tableNum, { hasPendingOrder: false });
+  };
+
+  const handleMarkPaid = (orderId: string) => {
+    updatePayment(orderId, 'paid');
+  };
+
+  const handleCancelOrder = (orderId: string) => {
+    cancelOrder(orderId, 'Cancelled by staff');
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
+  };
+
+  const handleEndSession = (tableNumber: number) => {
+    const tableOrders = orders.filter(o => o.tableNumber === tableNumber && o.status !== 'cancelled');
+    const totalBill = tableOrders.reduce((sum, o) => sum + o.total, 0);
+    endSession(tableNumber, totalBill);
+    updateTableStatus(tableNumber, { isActive: false, hasPendingOrder: false });
   };
 
   const handleGrantAccess = (requestId: string, tableNum: number) => {
@@ -170,7 +228,7 @@ export const ManagerDashboard: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-0.5 p-6">
+        <div className="grid grid-cols-5 gap-0.5 p-6">
           <div className="bg-dark-2 p-5 relative overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-red-500/80" />
             <p className="text-[10px] tracking-[0.25em] uppercase text-cream/35 mb-2">New Orders</p>
@@ -195,6 +253,12 @@ export const ManagerDashboard: React.FC = () => {
             <p className="font-display text-3xl text-white">{stats.delivered}</p>
             <p className="text-[11px] text-cream/30 mt-1">Since 8PM</p>
           </div>
+          <div className="bg-dark-2 p-5 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-orange-500/80" />
+            <p className="text-[10px] tracking-[0.25em] uppercase text-cream/35 mb-2">Unpaid Orders</p>
+            <p className="font-display text-3xl text-orange-500">{stats.unpaidOrders}</p>
+            <p className="text-[11px] text-cream/30 mt-1">Awaiting payment</p>
+          </div>
         </div>
 
         {/* Main Grid */}
@@ -218,17 +282,53 @@ export const ManagerDashboard: React.FC = () => {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <button 
+                        <button
                           onClick={() => handleGrantAccess(req.id, req.tableNumber)}
                           className="bg-green-500 text-white text-[10px] px-3 py-1.5 rounded"
                         >
                           Grant
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDenyAccess(req.id)}
                           className="bg-white/5 text-cream text-[10px] px-2.5 py-1.5 rounded"
                         >
                           ✕
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Refund Requests */}
+            {refundRequests.length > 0 && (
+              <div className="bg-dark-2">
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                  <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">🔄 Refund Requests</p>
+                  <span className="text-[10px] text-gold">{refundRequests.length} pending</span>
+                </div>
+                <div className="p-4 space-y-2">
+                  {refundRequests.map(req => (
+                    <div key={req.id} className="bg-dark-3 border border-orange-500/15 p-3 flex items-center justify-between rounded">
+                      <div>
+                        <p className="text-sm text-cream">Table {req.tableNumber} · {req.guestName}</p>
+                        <p className="text-[10px] text-cream/35 mt-1">
+                          💰 {formatPrice(req.amount)} · {req.reason}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => processRefund(req.id, true)}
+                          className="bg-green-500 text-white text-[10px] px-3 py-1.5 rounded"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => processRefund(req.id, false)}
+                          className="bg-red-500 text-white text-[10px] px-2.5 py-1.5 rounded"
+                        >
+                          Deny
                         </button>
                       </div>
                     </div>
@@ -264,19 +364,30 @@ export const ManagerDashboard: React.FC = () => {
                         {order.note && (
                           <p className="text-[10px] text-cream/25 mt-1">📝 {order.note}</p>
                         )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[9px] tracking-[0.12em] uppercase px-2 py-0.5 rounded-full border whitespace-nowrap
+                            ${order.status === 'pending' ? 'bg-red-500/15 text-red-500 border-red-500/30' : ''}
+                            ${order.status === 'confirmed' ? 'bg-orange-500/15 text-orange-500 border-orange-500/30' : ''}
+                            ${order.status === 'delivering' ? 'bg-blue-500/15 text-blue-500 border-blue-500/30' : ''}
+                            ${order.status === 'delivered' ? 'bg-green-500/12 text-green-500 border-green-500/25' : ''}
+                            ${order.status === 'cancelled' ? 'bg-gray-500/15 text-gray-500 border-gray-500/30' : ''}
+                            ${order.status === 'refunded' ? 'bg-purple-500/15 text-purple-500 border-purple-500/30' : ''}
+                          `}>
+                            {getStatusLabel(order.status)}
+                          </span>
+                          <span className={`text-[9px] tracking-[0.12em] uppercase px-2 py-0.5 rounded-full border whitespace-nowrap
+                            ${order.paymentStatus === 'unpaid' ? 'bg-orange-500/15 text-orange-500 border-orange-500/30' : ''}
+                            ${order.paymentStatus === 'paid' ? 'bg-green-500/15 text-green-500 border-green-500/30' : ''}
+                            ${order.paymentStatus === 'refunded' ? 'bg-purple-500/15 text-purple-500 border-purple-500/30' : ''}
+                          `}>
+                            {order.paymentStatus === 'paid' ? '✓ Paid' : order.paymentStatus}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className={`text-[10px] tracking-[0.12em] uppercase px-2.5 py-1 rounded-full border whitespace-nowrap
-                          ${order.status === 'pending' ? 'bg-red-500/15 text-red-500 border-red-500/30' : ''}
-                          ${order.status === 'confirmed' ? 'bg-orange-500/15 text-orange-500 border-orange-500/30' : ''}
-                          ${order.status === 'delivering' ? 'bg-blue-500/15 text-blue-500 border-blue-500/30' : ''}
-                          ${order.status === 'delivered' ? 'bg-green-500/12 text-green-500 border-green-500/25' : ''}
-                        `}>
-                          {getStatusLabel(order.status)}
-                        </span>
                         <div className="flex gap-1">
                           {order.status === 'pending' && (
-                            <button 
+                            <button
                               onClick={() => handleConfirmOrder(order.id, order.tableNumber)}
                               className="bg-gold text-dark text-[10px] px-2.5 py-1 rounded"
                             >
@@ -284,7 +395,7 @@ export const ManagerDashboard: React.FC = () => {
                             </button>
                           )}
                           {order.status === 'confirmed' && (
-                            <button 
+                            <button
                               onClick={() => handleMarkDelivering(order.id, order.tableNumber)}
                               className="bg-blue-500 text-white text-[10px] px-2.5 py-1 rounded"
                             >
@@ -292,14 +403,30 @@ export const ManagerDashboard: React.FC = () => {
                             </button>
                           )}
                           {order.status === 'delivering' && (
-                            <button 
+                            <button
                               onClick={() => handleMarkDone(order.id, order.tableNumber)}
                               className="bg-green-500 text-white text-[10px] px-2.5 py-1 rounded"
                             >
                               Delivered
                             </button>
                           )}
-                          <button 
+                          {order.paymentStatus === 'unpaid' && order.status !== 'cancelled' && (
+                            <button
+                              onClick={() => handleMarkPaid(order.id)}
+                              className="bg-emerald-600 text-white text-[10px] px-2.5 py-1 rounded"
+                            >
+                              💳 Mark Paid
+                            </button>
+                          )}
+                          {order.status === 'pending' && (
+                            <button
+                              onClick={() => handleCancelOrder(order.id)}
+                              className="bg-red-500/80 text-white text-[10px] px-2.5 py-1 rounded"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                          <button
                             onClick={() => setSelectedTable(order.tableNumber)}
                             className="bg-white/5 text-cream text-[10px] px-2.5 py-1 rounded"
                           >
@@ -324,27 +451,37 @@ export const ManagerDashboard: React.FC = () => {
               </div>
               <div className="grid grid-cols-5 gap-0.5 p-4">
                 {tables.slice(0, 30).map(table => (
-                  <button
-                    key={table.number}
-                    onClick={() => setSelectedTable(table.number)}
-                    className={`p-2.5 text-center border transition-all relative
-                      ${table.isActive 
-                        ? 'bg-dark-3 border-gold/40' 
-                        : 'bg-dark-3 border-white/4 hover:border-gold/30'
-                      }
-                      ${selectedTable === table.number ? 'ring-1 ring-gold bg-gold/8' : ''}
-                    `}
-                  >
-                    <p className={`font-display text-xl leading-none ${table.isActive ? 'text-gold' : 'text-cream/50'}`}>
-                      {table.number}
-                    </p>
-                    <p className="text-[9px] text-cream/30 uppercase mt-1">
-                      {table.isActive ? 'Active' : 'Empty'}
-                    </p>
-                    {(table.hasPendingOrder || table.hasUnreadMessage) && (
-                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
+                  <div key={table.number} className="relative">
+                    <button
+                      onClick={() => setSelectedTable(table.number)}
+                      className={`w-full p-2.5 text-center border transition-all relative
+                        ${table.isActive
+                          ? 'bg-dark-3 border-gold/40'
+                          : 'bg-dark-3 border-white/4 hover:border-gold/30'
+                        }
+                        ${selectedTable === table.number ? 'ring-1 ring-gold bg-gold/8' : ''}
+                      `}
+                    >
+                      <p className={`font-display text-xl leading-none ${table.isActive ? 'text-gold' : 'text-cream/50'}`}>
+                        {table.number}
+                      </p>
+                      <p className="text-[9px] text-cream/30 uppercase mt-1">
+                        {table.isActive ? 'Active' : 'Empty'}
+                      </p>
+                      {(table.hasPendingOrder || table.hasUnreadMessage) && (
+                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
+                      )}
+                    </button>
+                    {table.isActive && (
+                      <button
+                        onClick={() => handleEndSession(table.number)}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[8px] rounded-full flex items-center justify-center hover:bg-red-600"
+                        title="End Session"
+                      >
+                        ×
+                      </button>
                     )}
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -415,6 +552,58 @@ export const ManagerDashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Analytics Section */}
+        {analytics && (
+          <div className="px-6 pb-6">
+            <div className="bg-dark-2">
+              <div className="px-5 py-4 border-b border-white/5">
+                <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">📊 Analytics</p>
+              </div>
+              <div className="p-5 space-y-6">
+                {/* Top Items */}
+                <div>
+                  <h3 className="text-sm text-cream mb-3">Top Selling Items</h3>
+                  <div className="space-y-2">
+                    {analytics.topSellingItems.slice(0, 5).map((item, i) => (
+                      <div key={i} className="flex justify-between items-center text-xs">
+                        <span className="text-cream/70">{i + 1}. {item.name}</span>
+                        <span className="text-gold">{formatPrice(item.revenue)} ({item.quantity} sold)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Category Breakdown */}
+                <div>
+                  <h3 className="text-sm text-cream mb-3">Category Breakdown</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {analytics.categoryBreakdown.map(cat => (
+                      <div key={cat.category} className="bg-dark-3 p-3 rounded">
+                        <p className="text-[10px] text-cream/40 uppercase">{cat.category}</p>
+                        <p className="text-sm text-gold">{formatPrice(cat.revenue)}</p>
+                        <p className="text-[10px] text-cream/30">{cat.count} items</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Table Performance */}
+                <div>
+                  <h3 className="text-sm text-cream mb-3">Top Tables by Revenue</h3>
+                  <div className="space-y-2">
+                    {analytics.tablePerformance.slice(0, 5).map((table, i) => (
+                      <div key={i} className="flex justify-between items-center text-xs">
+                        <span className="text-cream/70">🪑 Table {table.tableNumber}</span>
+                        <span className="text-gold">{formatPrice(table.revenue)} ({table.orders} orders)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

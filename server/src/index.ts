@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import QRCode from 'qrcode';
 import TelegramBot from 'node-telegram-bot-api';
-import { Order, AccessRequest, ChatMessage, OrderStatus } from './types';
+import { Order, AccessRequest, ChatMessage, OrderStatus, TableSession, TableGuest, RefundRequest, PaymentStatus, AnalyticsData } from './types';
 
 dotenv.config();
 
@@ -38,7 +38,8 @@ if (TELEGRAM_BOT_TOKEN) {
 const orders: Map<string, Order> = new Map();
 const accessRequests: Map<string, AccessRequest> = new Map();
 const messages: Map<string, ChatMessage[]> = new Map();
-const activeTables: Map<number, { guestName: string; socketId: string }> = new Map();
+const activeTables: Map<number, TableSession> = new Map();
+const refundRequests: Map<string, RefundRequest> = new Map();
 
 // Helper functions
 const formatPrice = (price: number): string => {
@@ -62,6 +63,18 @@ const sendTelegramMessage = async (chatId: string, message: string) => {
   }
 };
 
+const generateId = (): string => {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+
+const generateGuestId = (): string => {
+  return `guest-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+};
+
+const generateSessionId = (): string => {
+  return `session-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+};
+
 // Routes
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -73,7 +86,7 @@ app.get('/api/qr/:tableNumber', async (req, res) => {
     const tableNumber = parseInt(req.params.tableNumber);
     const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     const url = `${baseUrl}/order?table=${tableNumber}`;
-    
+
     const qrCodeDataUrl = await QRCode.toDataURL(url, {
       width: 400,
       margin: 2,
@@ -82,15 +95,91 @@ app.get('/api/qr/:tableNumber', async (req, res) => {
         light: '#0A0A0A'
       }
     });
-    
-    res.json({ 
-      tableNumber, 
-      url, 
-      qrCode: qrCodeDataUrl 
+
+    res.json({
+      tableNumber,
+      url,
+      qrCode: qrCodeDataUrl
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to generate QR code' });
   }
+});
+
+// Analytics endpoint
+app.get('/api/analytics', (req, res) => {
+  const analytics: AnalyticsData = {
+    totalRevenue: 0,
+    orderCount: 0,
+    averageOrderValue: 0,
+    topSellingItems: [],
+    categoryBreakdown: [],
+    hourlySales: Array.from({ length: 24 }, (_, i) => ({ hour: i, orders: 0, revenue: 0 })),
+    tablePerformance: [],
+    popularItemsByCategory: {}
+  };
+
+  const itemSales = new Map<number, { quantity: number; revenue: number; name: string; category: string }>();
+  const categorySales = new Map<string, { count: number; revenue: number }>();
+  const tableSales = new Map<number, { orders: number; revenue: number }>();
+
+  orders.forEach(order => {
+    if (order.status !== 'cancelled') {
+      analytics.orderCount++;
+      analytics.totalRevenue += order.total;
+
+      order.items.forEach(item => {
+        const existing = itemSales.get(item.id) || { quantity: 0, revenue: 0, name: item.name, category: item.category };
+        existing.quantity += item.quantity;
+        existing.revenue += item.price * item.quantity;
+        itemSales.set(item.id, existing);
+
+        const catSales = categorySales.get(item.category) || { count: 0, revenue: 0 };
+        catSales.count += item.quantity;
+        catSales.revenue += item.price * item.quantity;
+        categorySales.set(item.category, catSales);
+      });
+
+      const hour = new Date(order.timestamp).getHours();
+      analytics.hourlySales[hour].orders++;
+      analytics.hourlySales[hour].revenue += order.total;
+
+      const tableStats = tableSales.get(order.tableNumber) || { orders: 0, revenue: 0 };
+      tableStats.orders++;
+      tableStats.revenue += order.total;
+      tableSales.set(order.tableNumber, tableStats);
+    }
+  });
+
+  analytics.averageOrderValue = analytics.orderCount > 0 ? analytics.totalRevenue / analytics.orderCount : 0;
+
+  analytics.topSellingItems = Array.from(itemSales.values())
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 10);
+
+  analytics.categoryBreakdown = Array.from(categorySales.entries()).map(([category, data]) => ({
+    category,
+    count: data.count,
+    revenue: data.revenue
+  }));
+
+  analytics.tablePerformance = Array.from(tableSales.entries())
+    .map(([tableNumber, data]) => ({ tableNumber, ...data }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 20);
+
+  res.json(analytics);
+});
+
+// Get table session info
+app.get('/api/table/:tableNumber', (req, res) => {
+  const tableNumber = parseInt(req.params.tableNumber);
+  const session = activeTables.get(tableNumber);
+  res.json({
+    tableNumber,
+    hasActiveSession: !!session,
+    session
+  });
 });
 
 // Socket.io handling
@@ -112,83 +201,129 @@ io.on('connection', (socket) => {
 
   // Check-in
   socket.on('check-in', async ({ tableNumber, guestName }: { tableNumber: number; guestName: string }) => {
-    activeTables.set(tableNumber, { guestName, socketId: socket.id });
-    
-    // Notify managers
-    io.to('staff-manager').to('staff-all').emit('check-in', { tableNumber, guestName });
-    
-    // Send Telegram notification
-    const message = `✅ <b>CHECK-IN</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n🕐 ${formatTime(new Date())}`;
+    const guestId = generateGuestId();
+    let session = activeTables.get(tableNumber);
+
+    if (!session || !session.isActive) {
+      session = {
+        id: generateSessionId(),
+        tableNumber,
+        startTime: new Date(),
+        isActive: true,
+        guests: [],
+        totalOrders: 0,
+        totalSpent: 0
+      };
+      activeTables.set(tableNumber, session);
+    }
+
+    const guest: TableGuest = {
+      id: guestId,
+      guestName,
+      socketId: socket.id,
+      checkInTime: new Date()
+    };
+
+    session.guests.push(guest);
+
+    socket.join(`table-${tableNumber}`);
+
+    io.to('staff-manager').to('staff-all').emit('check-in', {
+      tableNumber,
+      guestName,
+      guestId,
+      sessionId: session.id,
+      guestCount: session.guests.length
+    });
+
+    const message = session.guests.length === 1
+      ? `✅ <b>NEW SESSION</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n🕐 ${formatTime(new Date())}`
+      : `👥 <b>GUEST JOINED</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n👥 ${session.guests.length} guests\n🕐 ${formatTime(new Date())}`;
+
     await sendTelegramMessage(MANAGER_CHAT_ID, message);
-    
-    console.log(`Check-in: Table ${tableNumber} - ${guestName}`);
+
+    socket.emit('check-in-success', {
+      tableNumber,
+      guestName,
+      guestId,
+      sessionId: session.id
+    });
+
+    console.log(`Check-in: Table ${tableNumber} - ${guestName} (Session: ${session.id})`);
   });
 
   // New order
   socket.on('new-order', async (order: Order) => {
+    order.id = order.id || generateId();
+    order.paymentStatus = 'unpaid';
     orders.set(order.id, order);
-    
+
+    const session = activeTables.get(order.tableNumber);
+    if (session) {
+      session.totalOrders++;
+      session.totalSpent += order.total;
+      activeTables.set(order.tableNumber, session);
+    }
+
     const foodItems = order.items.filter(item => item.category === 'food');
-    const drinkItems = order.items.filter(item => 
+    const drinkItems = order.items.filter(item =>
       ['cocktails', 'spirits', 'wine', 'nonalc'].includes(item.category)
     );
     const shishaItems = order.items.filter(item => item.category === 'shisha');
-    
-    // Notify appropriate staff
+
     io.to('staff-manager').to('staff-all').emit('new-order', order);
     if (foodItems.length > 0) {
       io.to('staff-kitchen').emit('new-order', { ...order, items: foodItems });
     }
     if (drinkItems.length > 0 || shishaItems.length > 0) {
-      io.to('staff-bar').emit('new-order', { 
-        ...order, 
-        items: [...drinkItems, ...shishaItems] 
+      io.to('staff-bar').emit('new-order', {
+        ...order,
+        items: [...drinkItems, ...shishaItems]
       });
     }
-    
-    // Notify table
+
     io.to(`table-${order.tableNumber}`).emit('order-confirmation', { orderId: order.id });
-    
-    // Send Telegram notifications
-    const itemsList = order.items.map(i => 
+
+    const itemsList = order.items.map(i =>
       `${i.quantity}× ${i.name} (${formatPrice(i.price * i.quantity)})`
     ).join('\n');
-    
-    // Manager notification (full order)
+
     const managerMsg = `🍾 <b>NEW ORDER</b> — Table ${order.tableNumber}\n` +
       `👤 ${order.guestName}\n` +
+      `🆔 Order: ${order.id.slice(-8)}\n` +
       `━━━━━━━━━━━━━━\n${itemsList}\n` +
       `━━━━━━━━━━━━━━\n` +
-      `💰 <b>Total:</b> ${formatPrice(order.total)}` +
+      `💰 <b>Total:</b> ${formatPrice(order.total)}\n` +
+      `💳 <b>Payment:</b> Unpaid` +
       (order.note ? `\n📝 <i>${order.note}</i>` : '');
     await sendTelegramMessage(MANAGER_CHAT_ID, managerMsg);
-    
-    // Kitchen notification (food only)
+
     if (foodItems.length > 0 && KITCHEN_CHAT_ID) {
-      const kitchenItems = foodItems.map(i => 
+      const kitchenItems = foodItems.map(i =>
         `${i.quantity}× ${i.name}`
       ).join('\n');
       const kitchenMsg = `👨‍🍳 <b>KITCHEN ORDER</b> — Table ${order.tableNumber}\n` +
         `👤 ${order.guestName}\n` +
+        `🆔 ${order.id.slice(-8)}\n` +
         `━━━━━━━━━━━━━━\n${kitchenItems}\n` +
         `━━━━━━━━━━━━━━` +
         (order.note ? `\n📝 <i>${order.note}</i>` : '');
       await sendTelegramMessage(KITCHEN_CHAT_ID, kitchenMsg);
     }
-    
-    // Bar notification (drinks only)
+
     if ((drinkItems.length > 0 || shishaItems.length > 0) && BAR_CHAT_ID) {
-      const barItems = [...drinkItems, ...shishaItems].map(i => 
+      const barItems = [...drinkItems, ...shishaItems].map(i =>
         `${i.quantity}× ${i.name}`
       ).join('\n');
       const barMsg = `🍸 <b>BAR ORDER</b> — Table ${order.tableNumber}\n` +
         `👤 ${order.guestName}\n` +
+        `🆔 ${order.id.slice(-8)}\n` +
         `━━━━━━━━━━━━━━\n${barItems}\n` +
         `━━━━━━━━━━━━━━` +
         (order.note ? `\n📝 <i>${order.note}</i>` : '');
       await sendTelegramMessage(BAR_CHAT_ID, barMsg);
     }
-    
+
     console.log(`New order: ${order.id} from Table ${order.tableNumber}`);
   });
 
@@ -270,29 +405,160 @@ io.on('connection', (socket) => {
     const tableMessages = messages.get(`table-${message.tableNumber}`) || [];
     tableMessages.push(message);
     messages.set(`table-${message.tableNumber}`, tableMessages);
-    
-    // Broadcast to table and staff
+
     io.to(`table-${message.tableNumber}`).to('staff-manager').to('staff-all').emit('new-message', message);
-    
-    // Telegram notification for guest messages
+
     if (message.sender === 'guest') {
       const msg = `💬 <b>MESSAGE</b> — Table ${message.tableNumber}\n` +
         `👤 ${message.senderName}: ${message.text}`;
       await sendTelegramMessage(MANAGER_CHAT_ID, msg);
     }
-    
+
     console.log(`Chat message from ${message.sender} at Table ${message.tableNumber}`);
+  });
+
+  // Update payment status
+  socket.on('update-payment', async ({ orderId, status }: { orderId: string; status: PaymentStatus }) => {
+    const order = orders.get(orderId);
+    if (order) {
+      order.paymentStatus = status;
+      orders.set(orderId, order);
+
+      io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-all').emit('payment-update', { orderId, status });
+
+      if (status === 'paid') {
+        const msg = `💳 <b>PAYMENT RECEIVED</b> — Table ${order.tableNumber}\n` +
+          `💰 ${formatPrice(order.total)}\n` +
+          `🆔 ${order.id.slice(-8)}`;
+        await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+      }
+
+      console.log(`Order ${orderId} payment updated to ${status}`);
+    }
+  });
+
+  // Request refund
+  socket.on('request-refund', async (request: RefundRequest) => {
+    refundRequests.set(request.id, request);
+
+    io.to('staff-manager').to('staff-all').emit('refund-request', request);
+
+    const msg = `🔄 <b>REFUND REQUEST</b>\n` +
+      `🪑 Table ${request.tableNumber}\n` +
+      `👤 ${request.guestName}\n` +
+      `💰 Amount: ${formatPrice(request.amount)}\n` +
+      `📝 Reason: ${request.reason}`;
+    await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+
+    console.log(`Refund request: ${request.id} from Table ${request.tableNumber}`);
+  });
+
+  // Process refund
+  socket.on('process-refund', async ({ requestId, approved }: { requestId: string; approved: boolean }) => {
+    const request = refundRequests.get(requestId);
+    if (request) {
+      request.status = approved ? 'approved' : 'denied';
+      refundRequests.set(requestId, request);
+
+      if (approved) {
+        const order = orders.get(request.orderId);
+        if (order) {
+          order.status = 'refunded';
+          order.refundAmount = request.amount;
+          order.refundReason = request.reason;
+          order.paymentStatus = 'refunded';
+          orders.set(request.orderId, order);
+
+          io.to(`table-${request.tableNumber}`).to('staff-manager').to('staff-all').emit('refund-processed', { requestId, approved, amount: request.amount });
+
+          const msg = `✅ <b>REFUND APPROVED</b> — Table ${request.tableNumber}\n` +
+            `💰 ${formatPrice(request.amount)}\n` +
+            `📝 ${request.reason}`;
+          await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+        }
+      } else {
+        io.to('staff-manager').to('staff-all').emit('refund-processed', { requestId, approved });
+        const msg = `❌ <b>REFUND DENIED</b> — Table ${request.tableNumber}\n` +
+          `💰 ${formatPrice(request.amount)}`;
+        await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+      }
+
+      console.log(`Refund ${requestId} ${approved ? 'approved' : 'denied'}`);
+    }
+  });
+
+  // Cancel order
+  socket.on('cancel-order', async ({ orderId, reason }: { orderId: string; reason?: string }) => {
+    const order = orders.get(orderId);
+    if (order && order.status === 'pending') {
+      order.status = 'cancelled';
+      orders.set(orderId, order);
+
+      io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-all').emit('order-cancelled', { orderId, reason });
+
+      const msg = `❌ <b>ORDER CANCELLED</b> — Table ${order.tableNumber}\n` +
+        `💰 ${formatPrice(order.total)}\n` +
+        `🆔 ${order.id.slice(-8)}` +
+        (reason ? `\n📝 ${reason}` : '');
+      await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+
+      console.log(`Order ${orderId} cancelled. Reason: ${reason || 'No reason provided'}`);
+    }
+  });
+
+  // End table session (table turnover)
+  socket.on('end-session', async ({ tableNumber, finalBill }: { tableNumber: number; finalBill: number }) => {
+    const session = activeTables.get(tableNumber);
+    if (session) {
+      session.isActive = false;
+      session.endTime = new Date();
+      session.totalSpent = finalBill;
+
+      io.to('staff-manager').to('staff-all').emit('session-ended', {
+        tableNumber,
+        sessionId: session.id,
+        duration: Math.floor((session.endTime.getTime() - session.startTime.getTime()) / 60000),
+        guestCount: session.guests.length,
+        totalOrders: session.totalOrders,
+        totalSpent: finalBill
+      });
+
+      const msg = `🧹 <b>SESSION ENDED</b> — Table ${tableNumber}\n` +
+        `👥 ${session.guests.length} guests\n` +
+        `📦 ${session.totalOrders} orders\n` +
+        `💰 ${formatPrice(finalBill)}`;
+      await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+
+      activeTables.delete(tableNumber);
+
+      io.to(`table-${tableNumber}`).emit('session-ended-client', {
+        sessionId: session.id
+      });
+
+      console.log(`Session ended for Table ${tableNumber}. Total spent: ${formatPrice(finalBill)}`);
+    }
   });
 
   // Disconnect
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
-    
-    // Remove from active tables
-    for (const [tableNum, data] of activeTables.entries()) {
-      if (data.socketId === socket.id) {
-        activeTables.delete(tableNum);
-        io.to('staff-manager').to('staff-all').emit('table-inactive', tableNum);
+
+    for (const [tableNum, session] of activeTables.entries()) {
+      const guestIndex = session.guests.findIndex(g => g.socketId === socket.id);
+      if (guestIndex !== -1) {
+        const guest = session.guests[guestIndex];
+        session.guests.splice(guestIndex, 1);
+        activeTables.set(tableNum, session);
+
+        if (session.guests.length === 0) {
+          io.to('staff-manager').to('staff-all').emit('table-inactive', tableNum);
+        } else {
+          io.to('staff-manager').to('staff-all').emit('guest-left', {
+            tableNumber: tableNum,
+            guestName: guest.guestName,
+            remainingGuests: session.guests.length
+          });
+        }
         break;
       }
     }

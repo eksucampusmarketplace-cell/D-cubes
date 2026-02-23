@@ -12,7 +12,7 @@ interface CartPanelProps {
 
 export const CartPanel: React.FC<CartPanelProps> = ({ isOpen, onClose }) => {
   const { items, total, clearCart, updateQuantity } = useCart();
-  const { tableNumber, guestName, orders, setOrders } = useTable();
+  const { tableNumber, guestName, guestId, sessionId, orders, setOrders } = useTable();
   const { sendOrder } = useSocket();
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,9 +26,12 @@ export const CartPanel: React.FC<CartPanelProps> = ({ isOpen, onClose }) => {
       id: generateOrderId(),
       tableNumber,
       guestName,
+      guestId,
+      sessionId,
       items: [...items],
       note: note.trim() || undefined,
       status: 'pending',
+      paymentStatus: 'unpaid',
       timestamp: new Date(),
       total
     };
