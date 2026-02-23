@@ -39,15 +39,17 @@ export const CustomerPage: React.FC = () => {
     <div className="min-h-screen bg-dark pb-24">
       {/* Top Bar */}
       <div className="sticky top-0 z-50 glass border-b border-gold/15 px-5 py-4 flex items-center justify-between">
-        <span className="font-display text-2xl tracking-[0.3em] text-gold">VELOUR</span>
+        <span className="font-display text-xl tracking-[0.25em] text-gold">D CUBES PLACE</span>
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-2 bg-gold/10 border border-gold/20 rounded-full px-3.5 py-1.5">
-            <span className="text-sm">🪑</span>
-            <span className="text-[11px] tracking-[0.15em] uppercase text-gold">
-              Table {tableNumber}
-            </span>
-          </div>
-          <button 
+          {tableNumber && (
+            <div className="flex items-center gap-2 bg-gold/10 border border-gold/20 rounded-full px-3.5 py-1.5">
+              <span className="text-sm">🪑</span>
+              <span className="text-[11px] tracking-[0.15em] uppercase text-gold">
+                Table {tableNumber}
+              </span>
+            </div>
+          )}
+          <button
             onClick={() => setChatOpen(true)}
             className="relative border border-gold/30 rounded-full px-3.5 py-1.5 text-cream text-[11px]
                        hover:border-gold hover:text-gold transition-colors"
@@ -73,9 +75,11 @@ export const CustomerPage: React.FC = () => {
           <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
           Staff Online
         </div>
-        <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/8 text-cream/50 text-[11px] flex-shrink-0">
-          🪑 Table {tableNumber} · Active
-        </div>
+        {tableNumber && (
+          <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/8 text-cream/50 text-[11px] flex-shrink-0">
+            🪑 Table {tableNumber} · Active
+          </div>
+        )}
         <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-white/8 text-cream/50 text-[11px] flex-shrink-0">
           🕐 Service Open
         </div>

@@ -49,7 +49,7 @@ export const BarDashboard: React.FC = () => {
       <div className="sticky top-0 bg-dark/95 backdrop-blur border-b border-gold/20 px-8 py-6 z-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="font-display text-4xl tracking-[0.3em] text-gold">VELOUR</h1>
+            <h1 className="font-display text-3xl tracking-[0.25em] text-gold">D CUBES PLACE</h1>
             <div className="h-8 w-px bg-gold/30" />
             <div>
               <h2 className="font-serif text-2xl text-white">Bar Display</h2>

@@ -6,7 +6,7 @@ interface CheckInScreenProps {
 }
 
 export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
-  const { tableNumber, checkIn, hasError } = useTable();
+  const { tableNumber, checkIn } = useTable();
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [shake, setShake] = useState(false);
@@ -30,46 +30,37 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
     setIsLoading(false);
   };
 
-  if (hasError) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-gradient-to-b from-dark-4 via-dark to-dark-4">
-        <div className="text-center max-w-sm">
-          <div className="text-6xl mb-6">⚠️</div>
-          <h1 className="font-serif text-3xl text-white mb-4">Invalid Table</h1>
-          <p className="text-cream/50 text-sm leading-relaxed">
-            Please scan the QR code on your table to access the ordering system.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-gradient-to-b from-dark-4 via-dark to-dark-4 relative overflow-hidden">
       {/* Background glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gold/10 rounded-full blur-[120px] pointer-events-none" />
-      
+
       {/* Logo */}
       <div className="text-center mb-4 opacity-0 animate-fade-down">
-        <h1 className="font-display text-5xl tracking-[0.4em] text-gold">VELOUR</h1>
-        <p className="text-xs tracking-[0.3em] uppercase text-gold/50 mt-2">
-          Members Club · Lagos
+        <h1 className="font-display text-4xl tracking-[0.3em] text-gold">D CUBES PLACE</h1>
+        <p className="text-[10px] tracking-[0.2em] uppercase text-gold/50 mt-2">
+          Resort · Lounge · Nightlife
         </p>
       </div>
 
-      {/* Table Badge */}
-      <div className="relative mb-10 opacity-0 animate-fade-down animate-delay-100">
-        <div className="w-36 h-36 rounded-full border border-gold/30 flex flex-col items-center justify-center animate-pulse-gold relative">
-          <div className="absolute inset-0 rounded-full border border-gold/10 -m-2" />
-          <span className="font-display text-6xl text-gold leading-none">{tableNumber}</span>
-          <span className="text-xs tracking-[0.3em] uppercase text-cream/40 mt-2">Your Table</span>
+      {/* Table Badge - only show if table number is available */}
+      {tableNumber && (
+        <div className="relative mb-10 opacity-0 animate-fade-down animate-delay-100">
+          <div className="w-36 h-36 rounded-full border border-gold/30 flex flex-col items-center justify-center animate-pulse-gold relative">
+            <div className="absolute inset-0 rounded-full border border-gold/10 -m-2" />
+            <span className="font-display text-6xl text-gold leading-none">{tableNumber}</span>
+            <span className="text-xs tracking-[0.3em] uppercase text-cream/40 mt-2">Your Table</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Welcome Text */}
       <div className="text-center mb-8 opacity-0 animate-fade-up animate-delay-200">
         <h2 className="font-serif text-2xl text-white mb-2">
-          Welcome to <em className="text-gold not-italic">Table {tableNumber}</em>
+          {tableNumber
+            ? <>Welcome to <em className="text-gold not-italic">Table {tableNumber}</em></>
+            : <>Welcome to <em className="text-gold not-italic">D Cubes Place</em></>
+          }
         </h2>
         <p className="text-cream/50 text-sm leading-relaxed max-w-[280px]">
           Enter your name to check in and start ordering. Our staff will be notified of your arrival.

@@ -1,11 +1,11 @@
 version: '3.8'
 
 services:
-  velour-app:
+  dcubes-app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: velour-app
+    container_name: dcubes-app
     ports:
       - "3000:3000"
       - "5000:5000"
@@ -19,7 +19,7 @@ services:
       - MANAGER_CHAT_ID=${MANAGER_CHAT_ID}
     restart: unless-stopped
     networks:
-      - velour-network
+      - dcubes-network
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/health')"]
       interval: 30s
@@ -28,5 +28,5 @@ services:
       start_period: 40s
 
 networks:
-  velour-network:
+  dcubes-network:
     driver: bridge

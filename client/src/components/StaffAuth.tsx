@@ -36,7 +36,7 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
     if (pin === correctPin) {
       setAuthenticated(true);
       setError('');
-      localStorage.setItem(`velour_auth_${role}`, new Date().toISOString());
+      localStorage.setItem(`dcubes_auth_${role}`, new Date().toISOString());
     } else {
       setError('Invalid PIN code');
       setPin('');
@@ -46,11 +46,11 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
   const handleLogout = () => {
     setAuthenticated(false);
     setPin('');
-    localStorage.removeItem(`velour_auth_${role}`);
+    localStorage.removeItem(`dcubes_auth_${role}`);
   };
 
   React.useEffect(() => {
-    const storedAuth = localStorage.getItem(`velour_auth_${role}`);
+    const storedAuth = localStorage.getItem(`dcubes_auth_${role}`);
     if (storedAuth) {
       const authTime = new Date(storedAuth);
       const now = new Date();
@@ -59,7 +59,7 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
       if (hoursDiff < 8) {
         setAuthenticated(true);
       } else {
-        localStorage.removeItem(`velour_auth_${role}`);
+        localStorage.removeItem(`dcubes_auth_${role}`);
       }
     }
   }, [role]);
@@ -80,7 +80,7 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
       <div className="min-h-screen bg-dark flex items-center justify-center p-4">
         <div className="bg-dark-2 border border-gold/20 rounded-lg p-8 w-full max-w-sm">
           <div className="text-center mb-6">
-            <h1 className="font-display text-3xl tracking-[0.3em] text-gold mb-2">VELOUR</h1>
+            <h1 className="font-display text-2xl tracking-[0.25em] text-gold mb-2">D CUBES PLACE</h1>
             <p className="text-[10px] tracking-[0.2em] uppercase text-cream/30">Staff Authentication</p>
           </div>
 

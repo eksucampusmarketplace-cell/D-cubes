@@ -14,7 +14,6 @@ interface TableContextType {
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   checkIn: (name: string) => void;
   currentOrderStatus: OrderStatus | null;
-  hasError: boolean;
 }
 
 const TableContext = createContext<TableContextType | undefined>(undefined);
@@ -27,25 +26,18 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [hasError, setHasError] = useState(false);
   const { socket, checkIn: socketCheckIn, joinTable } = useSocket();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tableParam = params.get('table');
     
-    if (!tableParam) {
-      setHasError(true);
-      return;
+    if (tableParam) {
+      const tableNum = parseInt(tableParam, 10);
+      if (!isNaN(tableNum) && tableNum >= 1) {
+        setTableNumber(tableNum);
+      }
     }
-
-    const tableNum = parseInt(tableParam, 10);
-    if (isNaN(tableNum) || tableNum < 1) {
-      setHasError(true);
-      return;
-    }
-
-    setTableNumber(tableNum);
   }, []);
 
   useEffect(() => {
@@ -97,7 +89,7 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: 'welcome',
       tableNumber,
       sender: 'staff',
-      text: `Welcome to VELOUR, ${name}! 👋 How can we make your evening special?`,
+      text: `Welcome to D CUBES PLACE, ${name}! 👋 How can we make your visit special?`,
       timestamp: new Date(),
       senderName: 'Staff'
     }]);
@@ -117,8 +109,7 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       messages,
       setMessages,
       checkIn,
-      currentOrderStatus,
-      hasError
+      currentOrderStatus
     }}>
       {children}
     </TableContext.Provider>

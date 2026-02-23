@@ -1,15 +1,15 @@
-# VELOUR — Luxury Club Table Ordering System
+# D Cubes Place — Resort & Lounge Ordering System
 
-A premium table ordering system for members clubs, featuring QR code-based table detection, real-time communication, Telegram integration, multi-role staff dashboards, and comprehensive management features including returns, refunds, payment tracking, analytics, and session management.
+A premium ordering system for resorts and lounges featuring optional QR code-based table detection, real-time communication, Telegram integration, multi-role staff dashboards, and comprehensive management features including returns, refunds, payment tracking, analytics, and session management.
 
 ## Features
 
 ### Customer Experience (Mobile-First)
-- **QR Code Check-in**: Each table has a unique QR code that auto-detects the table number
+- **Optional QR Code Check-in**: Table-specific access via QR codes, or browse the full menu directly
 - **Luxury Menu**: Browse cocktails, spirits, wine, food, shisha, and non-alcoholic beverages
 - **Cart & Ordering**: Add items, adjust quantities, add special notes
 - **Real-time Order Tracking**: Pending → Confirmed → Preparing → Ready → On Its Way → Delivered
-- **Access Requests**: Pool & Spa, Lounge Entry, VIP Dance Floor, Call Waiter, Extra Ice, Bill Request
+- **Access Requests**: Swimming Pool, Lounge Entry, Night Club, Casino, Gym, Laundry Services, Call Waiter, Extra Ice, Bill Request
 - **Two-way Chat**: Direct messaging with staff
 - **Nigerian Naira (₦)** currency support
 
@@ -108,7 +108,7 @@ npm run client  # Frontend on port 3000
 
 ### Accessing the App
 
-- **Customer Page**: `http://localhost:3000/order?table=1` (change table number as needed)
+- **Customer Page**: `http://localhost:3000/order` (add `?table=N` for table-specific access)
 - **Manager Dashboard**: `http://localhost:3000/manager` (PIN: 0000)
 - **Kitchen Display**: `http://localhost:3000/kitchen` (PIN: 1111)
 - **Bar Display**: `http://localhost:3000/bar` (PIN: 2222)
@@ -119,7 +119,7 @@ npm run client  # Frontend on port 3000
 ## Usage
 
 ### For Customers
-1. Scan the QR code on your table
+1. Visit the ordering page (directly or via QR code on your table)
 2. Enter your name to check in
 3. Browse the menu and add items to cart
 4. Add any special requests in the notes
@@ -228,13 +228,13 @@ docker-compose down
 Manual Docker build:
 ```bash
 # Build image
-docker build -t velour-app .
+docker build -t dcubes-app .
 
 # Run container
 docker run -p 3000:3000 -p 5000:5000 \
   -e TELEGRAM_BOT_TOKEN=your_token \
   -e STAFF_MANAGER_PIN=1234 \
-  velour-app
+  dcubes-app
 ```
 
 ### Build
@@ -271,4 +271,4 @@ Web Developer
 
 ## License
 
-This project is proprietary software for VELOUR Members Club.
+This project is proprietary software for D Cubes Place.
