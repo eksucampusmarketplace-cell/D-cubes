@@ -193,6 +193,12 @@ export const ManagerDashboard: React.FC = () => {
           <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream/50 hover:text-cream transition-colors">
             💬 Messages
           </button>
+          <a
+            href="/admin"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream/50 hover:text-cream transition-colors"
+          >
+            ⚙️ Admin Panel
+          </a>
         </div>
 
         <div className="mt-auto p-4 border-t border-white/5">

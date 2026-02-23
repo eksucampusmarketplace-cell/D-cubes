@@ -9,6 +9,7 @@ import { ManagerDashboard } from '@/pages/ManagerDashboard';
 import { KitchenDashboard } from '@/pages/KitchenDashboard';
 import { BarDashboard } from '@/pages/BarDashboard';
 import { QRGenerator } from '@/pages/QRGenerator';
+import { AdminPanel } from '@/pages/AdminPanel';
 
 const App: FC = () => {
   return (
@@ -32,6 +33,11 @@ const App: FC = () => {
               <Route path="/bar" element={
                 <StaffAuth role="bar">
                   <BarDashboard />
+                </StaffAuth>
+              } />
+              <Route path="/admin" element={
+                <StaffAuth role="manager">
+                  <AdminPanel />
                 </StaffAuth>
               } />
               <Route path="/qr" element={<QRGenerator />} />
