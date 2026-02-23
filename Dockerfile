@@ -1,4 +1,4 @@
-# Multi-stage build for VELOUR - Luxury Club Table Ordering System
+# Multi-stage build for D Cubes Place - Resort & Lounge Ordering System
 
 # Stage 1: Build client
 FROM node:18-alpine AS client-build
@@ -37,11 +37,11 @@ COPY --from=client-build /app/client/dist ./client/dist
 COPY package*.json ./
 
 # Create non-root user
-RUN addgroup -g 1001 -S velour && \
-    adduser -S velour -u 1001 && \
-    chown -R velour:velour /app
+RUN addgroup -g 1001 -S dcubes && \
+    adduser -S dcubes -u 1001 && \
+    chown -R dcubes:dcubes /app
 
-USER velour
+USER dcubes
 
 # Expose port
 EXPOSE 5000

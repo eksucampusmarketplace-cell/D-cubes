@@ -173,7 +173,7 @@ export const ManagerDashboard: React.FC = () => {
       {/* Sidebar */}
       <div className="w-56 bg-dark-2 border-r border-gold/10 flex-shrink-0 flex flex-col sticky top-0 h-screen">
         <div className="p-6 border-b border-white/5">
-          <h1 className="font-display text-2xl tracking-[0.3em] text-gold">VELOUR</h1>
+          <h1 className="font-display text-xl tracking-[0.25em] text-gold">D CUBES PLACE</h1>
           <p className="text-[10px] tracking-[0.2em] uppercase text-cream/30 mt-1">Staff Dashboard</p>
         </div>
         

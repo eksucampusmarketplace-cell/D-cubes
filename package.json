@@ -1,7 +1,7 @@
 {
-  "name": "velour-club-system",
+  "name": "dcubes-place-system",
   "version": "1.0.0",
-  "description": "Luxury Club Table Ordering System",
+  "description": "Resort & Lounge Ordering System",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "client": "cd client && npm run dev",

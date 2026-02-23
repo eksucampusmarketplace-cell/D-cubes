@@ -18,7 +18,7 @@ export const QRGenerator: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-display text-4xl tracking-[0.3em] text-gold">VELOUR</h1>
+          <h1 className="font-display text-3xl tracking-[0.25em] text-gold">D CUBES PLACE</h1>
           <h2 className="font-serif text-2xl text-white mt-2">QR Code Generator</h2>
         </div>
         <div className="flex gap-3 no-print">
