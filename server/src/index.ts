@@ -22,6 +22,16 @@ const io = new Server(httpServer, {
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from client in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../../client/dist')));
+
+  // Handle client-side routing
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
+  });
+}
+
 // Telegram Bot Setup
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const KITCHEN_CHAT_ID = process.env.KITCHEN_CHAT_ID || '';

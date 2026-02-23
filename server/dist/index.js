@@ -8,6 +8,7 @@ const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
 const qrcode_1 = __importDefault(require("qrcode"));
 const node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api"));
 dotenv_1.default.config();
@@ -21,6 +22,14 @@ const io = new socket_io_1.Server(httpServer, {
 });
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+// Serve static files from client in production
+if (process.env.NODE_ENV === 'production') {
+    app.use(express_1.default.static(path_1.default.join(__dirname, '../../client/dist')));
+    // Handle client-side routing
+    app.get('*', (req, res) => {
+        res.sendFile(path_1.default.join(__dirname, '../../client/dist/index.html'));
+    });
+}
 // Telegram Bot Setup
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const KITCHEN_CHAT_ID = process.env.KITCHEN_CHAT_ID || '';

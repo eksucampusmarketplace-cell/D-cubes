@@ -1,6 +1,7 @@
 node_modules
 npm-debug.log
-dist
+client/dist
+server/dist
 .env.local
 .env.*.local
 .git
@@ -11,3 +12,9 @@ README.md
 coverage
 .vscode
 .idea
+AUTHENTICATION.md
+FEATURES.md
+IMPLEMENTATION_SUMMARY.md
+SECURITY.md
+docker-compose.yml
+
