@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VELOUR — Bar Display</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #C9A84C;
+  --black: #0A0A0A;
+  --dark: #111111;
+  --dark2: #1A1A1A;
+  --cream: #F5F0E8;
+  --green: #2ECC71;
+  --orange: #F39C12;
+  --purple: #9B59B6;
+  --red: #E74C3C;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--black);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+}
+
+/* HEADER */
+.header {
+  background: linear-gradient(135deg, rgba(155,89,182,0.15) 0%, rgba(201,168,76,0.1) 100%);
+  border-bottom: 1px solid rgba(201,168,76,0.2);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.header-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+}
+.header-title {
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.4);
+  padding: 6px 14px;
+  border: 1px solid rgba(155,89,182,0.4);
+  border-radius: 20px;
+  background: rgba(155,89,182,0.1);
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.header-time {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  color: var(--cream);
+}
+.header-date {
+  font-size: 0.7rem;
+  color: rgba(245,240,232,0.4);
+  text-align: right;
+}
+
+/* STATUS BAR */
+.status-bar {
+  background: rgba(155,89,182,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 12px 24px;
+  display: flex;
+  gap: 24px;
+}
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-count {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  color: var(--purple);
+}
+.status-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(245,240,232,0.4);
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* MAIN */
+.main {
+  padding: 24px;
+}
+
+/* TICKETS GRID */
+.tickets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+/* TICKET CARD */
+.ticket-card {
+  background: var(--dark2);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  animation: slideIn 0.4s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ticket-card.new {
+  border-color: var(--purple);
+  box-shadow: 0 0 20px rgba(155,89,182,0.2);
+}
+.ticket-card.preparing {
+  border-color: var(--orange);
+}
+.ticket-card.ready {
+  border-color: var(--green);
+}
+
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.ticket-table {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.5rem;
+  color: var(--gold);
+  line-height: 1;
+}
+.ticket-table-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(245,240,232,0.3);
+}
+.ticket-time {
+  text-align: right;
+}
+.ticket-time-val {
+  font-size: 1.2rem;
+  color: var(--cream);
+}
+.ticket-time-label {
+  font-size: 0.55rem;
+  color: rgba(245,240,232,0.3);
+  text-transform: uppercase;
+}
+.ticket-badge {
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-top: 8px;
+  display: inline-block;
+}
+.badge-new { background: rgba(155,89,182,0.15); color: var(--purple); border: 1px solid rgba(155,89,182,0.3); }
+.badge-preparing { background: rgba(243,156,18,0.15); color: var(--orange); border: 1px solid rgba(243,156,18,0.3); }
+.badge-ready { background: rgba(46,204,113,0.15); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+
+.ticket-body {
+  padding: 20px;
+}
+.ticket-guest {
+  font-size: 0.85rem;
+  color: var(--cream);
+  margin-bottom: 12px;
+}
+
+/* DRINK TYPE SECTIONS */
+.drink-section {
+  margin-bottom: 16px;
+}
+.drink-section:last-child { margin-bottom: 0; }
+.drink-section-title {
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 6px 10px;
+  background: rgba(201,168,76,0.1);
+  margin-bottom: 8px;
+  display: inline-block;
+}
+.drink-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.drink-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.drink-item:last-child { border-bottom: none; }
+.drink-item-name {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--cream);
+}
+.drink-item-qty {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.3rem;
+  color: var(--gold);
+  background: rgba(201,168,76,0.1);
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+.drink-item-icon {
+  font-size: 1.2rem;
+  margin-right: 8px;
+}
+
+.ticket-note {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(155,89,182,0.08);
+  border-left: 3px solid var(--purple);
+  font-size: 0.85rem;
+  color: rgba(245,240,232,0.7);
+  font-style: italic;
+}
+
+.ticket-actions {
+  display: flex;
+  gap: 8px;
+  padding: 16px 20px;
+  background: rgba(255,255,255,0.02);
+}
+.ticket-btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: none;
+  border-radius: 2px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.ticket-btn.preparing {
+  background: var(--orange);
+  color: white;
+}
+.ticket-btn.ready {
+  background: var(--green);
+  color: white;
+}
+.ticket-btn:hover { transform: translateY(-2px); }
+
+/* EMPTY STATE */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 40px;
+  color: rgba(245,240,232,0.3);
+}
+.empty-icon { font-size: 4rem; margin-bottom: 16px; }
+.empty-title { font-size: 1.2rem; margin-bottom: 8px; color: rgba(245,240,232,0.5); }
+.empty-sub { font-size: 0.85rem; }
+
+/* DRINK TYPE ICONS */
+.icon-cocktail::before { content: '🍸 '; }
+.icon-spirit::before { content: '🥃 '; }
+.icon-wine::before { content: '🍷 '; }
+.icon-shisha::before { content: '💨 '; }
+.icon-nonalc::before { content: '🧃 '; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">VELOUR</div>
+    <div class="header-title">🍸 Bar Display</div>
+  </div>
+  <div class="header-right">
+    <div>
+      <div class="header-time" id="header-time">--:--</div>
+      <div class="header-date" id="header-date">Loading...</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div class="status-dot"></div>
+      <span style="font-size:0.65rem;color:rgba(245,240,232,0.5);">Connected</span>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+  <div class="status-item">
+    <div class="status-count" id="new-count">0</div>
+    <div class="status-label">New Orders</div>
+  </div>
+  <div class="status-item">
+    <div class="status-count" id="prep-count">0</div>
+    <div class="status-label">Preparing</div>
+  </div>
+  <div class="status-item">
+    <div class="status-count" id="ready-count">0</div>
+    <div class="status-label">Ready to Serve</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="tickets-grid" id="tickets-grid">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🍸</div>
+      <div class="empty-title">No Bar Orders</div>
+      <div class="empty-sub">New drink and shisha orders will appear here</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let ws = null;
+let orders = {};
+let audioContext = null;
+
+// Initialize
+function init() {
+  connectWebSocket();
+  updateClock();
+  setInterval(updateClock, 1000);
+}
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('header-time').textContent = now.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('header-date').textContent = now.toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'short' });
+}
+
+// WebSocket
+function connectWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${protocol}//${window.location.host}`);
+  
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'register', clientType: 'bar' }));
+  };
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    handleWebSocketMessage(data);
+  };
+  
+  ws.onclose = () => {
+    setTimeout(connectWebSocket, 3000);
+  };
+}
+
+function handleWebSocketMessage(data) {
+  switch (data.type) {
+    case 'new_order':
+      if (data.data.drinkItems && data.data.drinkItems.length > 0) {
+        handleNewOrder(data.data);
+      }
+      break;
+    case 'order_status':
+      handleOrderStatus(data.data);
+      break;
+  }
+}
+
+function handleNewOrder(data) {
+  orders[data.orderId] = { ...data, status: 'pending', barStatus: 'new' };
+  playSound();
+  renderTickets();
+  updateCounts();
+}
+
+function handleOrderStatus(data) {
+  if (orders[data.orderId]) {
+    orders[data.orderId].status = data.status;
+    if (data.status === 'delivered') {
+      delete orders[data.orderId];
+    }
+    renderTickets();
+    updateCounts();
+  }
+}
+
+function updateOrderStatus(orderId, status) {
+  if (orders[orderId]) {
+    orders[orderId].barStatus = status;
+    
+    fetch('/api/order-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId, status: status === 'ready' ? 'preparing' : orders[orderId].status })
+    });
+    
+    renderTickets();
+    updateCounts();
+  }
+}
+
+function getDrinkIcon(cat) {
+  const icons = {
+    cocktails: '🍸',
+    spirits: '🥃',
+    wine: '🍷',
+    shisha: '💨',
+    nonalc: '🧃'
+  };
+  return icons[cat] || '🍹';
+}
+
+function getCategoryName(cat) {
+  const names = {
+    cocktails: 'Cocktails',
+    spirits: 'Spirits & Bottles',
+    wine: 'Wine & Champagne',
+    shisha: 'Shisha',
+    nonalc: 'Non-Alcoholic'
+  };
+  return names[cat] || cat;
+}
+
+function renderTickets() {
+  const grid = document.getElementById('tickets-grid');
+  const empty = document.getElementById('empty-state');
+  
+  const activeOrders = Object.values(orders).filter(o => o.barStatus !== 'picked');
+  
+  if (activeOrders.length === 0) {
+    grid.innerHTML = '';
+    grid.appendChild(empty);
+    empty.style.display = 'block';
+    return;
+  }
+  
+  empty.style.display = 'none';
+  
+  const sorted = activeOrders.sort((a, b) => {
+    const order = { new: 0, preparing: 1, ready: 2 };
+    return order[a.barStatus] - order[b.barStatus];
+  });
+  
+  grid.innerHTML = sorted.map(o => {
+    // Group drinks by category
+    const grouped = {};
+    o.drinkItems.forEach(item => {
+      if (!grouped[item.cat]) grouped[item.cat] = [];
+      grouped[item.cat].push(item);
+    });
+    
+    const sectionsHtml = Object.entries(grouped).map(([cat, items]) => `
+      <div class="drink-section">
+        <div class="drink-section-title">${getDrinkIcon(cat)} ${getCategoryName(cat)}</div>
+        <div class="drink-items">
+          ${items.map(i => `
+            <div class="drink-item">
+              <span class="drink-item-name">${i.name}</span>
+              <span class="drink-item-qty">${i.qty}×</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+    
+    const badgeClass = o.barStatus === 'new' ? 'badge-new' : o.barStatus === 'preparing' ? 'badge-preparing' : 'badge-ready';
+    const badgeText = o.barStatus === 'new' ? '● NEW' : o.barStatus === 'preparing' ? '🥃 PREPARING' : '✓ READY';
+    
+    let actionsHtml = '';
+    if (o.barStatus === 'new') {
+      actionsHtml = `<button class="ticket-btn preparing" onclick="updateOrderStatus('${o.orderId}', 'preparing')">Start Making</button>`;
+    } else if (o.barStatus === 'preparing') {
+      actionsHtml = `<button class="ticket-btn ready" onclick="updateOrderStatus('${o.orderId}', 'ready')">Mark Ready</button>`;
+    } else {
+      actionsHtml = `<button class="ticket-btn ready" onclick="markPicked('${o.orderId}')" style="opacity:0.7;">Picked Up ✓</button>`;
+    }
+    
+    return `
+      <div class="ticket-card ${o.barStatus}">
+        <div class="ticket-header">
+          <div>
+            <div class="ticket-table">${o.tableNum}</div>
+            <div class="ticket-table-label">Table</div>
+            <span class="ticket-badge ${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="ticket-time">
+            <div class="ticket-time-val">${o.time}</div>
+            <div class="ticket-time-label">Order Time</div>
+          </div>
+        </div>
+        <div class="ticket-body">
+          <div class="ticket-guest">👤 ${o.guestName}</div>
+          ${sectionsHtml}
+          ${o.note ? `<div class="ticket-note">📝 ${o.note}</div>` : ''}
+        </div>
+        <div class="ticket-actions">${actionsHtml}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function markPicked(orderId) {
+  delete orders[orderId];
+  renderTickets();
+  updateCounts();
+}
+
+function updateCounts() {
+  const newCount = Object.values(orders).filter(o => o.barStatus === 'new').length;
+  const prepCount = Object.values(orders).filter(o => o.barStatus === 'preparing').length;
+  const readyCount = Object.values(orders).filter(o => o.barStatus === 'ready').length;
+  
+  document.getElementById('new-count').textContent = newCount;
+  document.getElementById('prep-count').textContent = prepCount;
+  document.getElementById('ready-count').textContent = readyCount;
+}
+
+function playSound() {
+  try {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.frequency.value = 600;
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch (e) {
+    console.log('Audio not supported');
+  }
+}
+
+init();
+</script>
+</body>
+</html>

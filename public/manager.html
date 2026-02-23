@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VELOUR — Manager Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #C9A84C;
+  --gold-light: #E8C97A;
+  --black: #0A0A0A;
+  --dark: #111111;
+  --dark2: #1A1A1A;
+  --dark3: #222222;
+  --cream: #F5F0E8;
+  --green: #2ECC71;
+  --orange: #F39C12;
+  --blue: #3498DB;
+  --red: #E74C3C;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--black);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--dark);
+  border-right: 1px solid rgba(201,168,76,0.1);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.sidebar-logo {
+  padding: 24px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.sidebar-logo-text {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+}
+.sidebar-logo-sub {
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.3);
+  margin-top: 2px;
+}
+.sidebar-section {
+  padding: 16px 14px 6px;
+  font-size: 0.55rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.25);
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-left: 2px solid transparent;
+  font-size: 0.78rem;
+  color: rgba(245,240,232,0.5);
+  position: relative;
+}
+.sidebar-item:hover { background: rgba(255,255,255,0.04); color: var(--cream); }
+.sidebar-item.active { border-left-color: var(--gold); background: rgba(201,168,76,0.06); color: var(--cream); }
+.sidebar-badge {
+  position: absolute;
+  right: 14px;
+  background: var(--red);
+  color: white;
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.staff-avatar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.avatar-circle {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #8B5E1A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--black);
+}
+.avatar-name { font-size: 0.75rem; color: var(--cream); }
+.avatar-role { font-size: 0.58rem; color: rgba(245,240,232,0.35); }
+
+/* MAIN */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Topbar */
+.topbar {
+  background: rgba(10,10,10,0.95);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(20px);
+}
+.topbar-title { font-size: 0.95rem; font-weight: 400; color: #fff; }
+.topbar-sub { font-size: 0.65rem; color: rgba(245,240,232,0.35); margin-top: 2px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.status-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--green);
+  border: 1px solid rgba(46,204,113,0.25);
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+.live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 1.5s ease infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+.telegram-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.65rem;
+  color: rgba(245,240,232,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+
+/* CONTENT */
+.content { padding: 24px; flex: 1; }
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--dark2);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--gold);
+  opacity: 0.3;
+}
+.stat-card.alert::after { background: var(--red); opacity: 0.8; }
+.stat-card.success::after { background: var(--green); opacity: 0.8; }
+.stat-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.35);
+  margin-bottom: 8px;
+}
+.stat-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  letter-spacing: 0.05em;
+  color: #fff;
+  line-height: 1;
+}
+.stat-val.gold { color: var(--gold); }
+.stat-val.green { color: var(--green); }
+.stat-val.red { color: var(--red); }
+.stat-change {
+  font-size: 0.65rem;
+  color: rgba(245,240,232,0.3);
+  margin-top: 4px;
+}
+
+/* GRID LAYOUT */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+}
+
+/* PANELS */
+.panel-card {
+  background: var(--dark2);
+}
+.panel-card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-card-title {
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.5);
+}
+.panel-card-action {
+  font-size: 0.6rem;
+  color: var(--gold);
+  cursor: pointer;
+  letter-spacing: 0.1em;
+}
+
+/* ACCESS REQUESTS */
+.access-requests { padding: 0 18px 14px; }
+.access-req-item {
+  background: var(--dark3);
+  border: 1px solid rgba(201,168,76,0.15);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 2px;
+  animation: slideIn 0.4s ease;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.access-req-info { font-size: 0.72rem; color: var(--cream); }
+.access-req-table { font-size: 0.58rem; color: rgba(245,240,232,0.35); margin-top: 2px; }
+.access-req-btns { display: flex; gap: 5px; }
+.access-grant {
+  background: var(--green);
+  border: none;
+  color: white;
+  padding: 4px 10px;
+  font-size: 0.58rem;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.access-deny {
+  background: rgba(255,255,255,0.06);
+  border: none;
+  color: var(--cream);
+  padding: 4px 8px;
+  font-size: 0.58rem;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+/* ORDERS */
+.orders-list { padding: 0; }
+.order-row {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: grid;
+  grid-template-columns: 50px 1fr auto;
+  gap: 14px;
+  align-items: start;
+  transition: background 0.2s;
+}
+.order-row:hover { background: rgba(255,255,255,0.02); }
+.order-row:last-child { border-bottom: none; }
+.order-table-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  color: var(--gold);
+  line-height: 1;
+}
+.order-table-label {
+  font-size: 0.52rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.3);
+}
+.order-guest { font-size: 0.75rem; color: var(--cream); margin-bottom: 3px; }
+.order-items-text { font-size: 0.68rem; color: rgba(245,240,232,0.4); margin-bottom: 4px; line-height: 1.4; }
+.order-total { font-size: 0.68rem; color: var(--gold); }
+.order-time { font-size: 0.55rem; color: rgba(245,240,232,0.25); margin-top: 3px; }
+.order-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-end;
+}
+.status-pill {
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.pill-new { background: rgba(231,76,60,0.15); color: var(--red); border: 1px solid rgba(231,76,60,0.3); }
+.pill-confirmed { background: rgba(52,152,219,0.15); color: var(--blue); border: 1px solid rgba(52,152,219,0.3); }
+.pill-preparing { background: rgba(243,156,18,0.15); color: var(--orange); border: 1px solid rgba(243,156,18,0.3); }
+.pill-onway { background: rgba(155,89,182,0.15); color: #9B59B6; border: 1px solid rgba(155,89,182,0.3); }
+.pill-done { background: rgba(46,204,113,0.12); color: var(--green); border: 1px solid rgba(46,204,113,0.25); }
+.action-btns { display: flex; gap: 4px; }
+.action-btn {
+  padding: 4px 8px;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  border-radius: 2px;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+.action-btn.confirm { background: var(--gold); color: var(--black); }
+.action-btn.preparing { background: var(--orange); color: white; }
+.action-btn.onway { background: #9B59B6; color: white; }
+.action-btn.done { background: var(--green); color: white; }
+.action-btn.reply-btn { background: rgba(255,255,255,0.06); color: var(--cream); }
+
+/* CHAT SIDEBAR */
+.chat-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* TABLES GRID */
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  padding: 14px 18px;
+}
+.table-chip {
+  padding: 8px 4px;
+  text-align: center;
+  background: var(--dark3);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.table-chip:hover { border-color: rgba(201,168,76,0.3); }
+.table-chip.active { border-color: rgba(46,204,113,0.4); }
+.table-chip.has-order { border-color: rgba(231,76,60,0.4); }
+.table-chip.selected { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+.table-chip-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.2rem;
+  color: var(--cream);
+  line-height: 1;
+}
+.table-chip.active .table-chip-num { color: var(--green); }
+.table-chip.has-order .table-chip-num { color: var(--gold); }
+.table-chip-label {
+  font-size: 0.5rem;
+  color: rgba(245,240,232,0.3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.table-dot {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--red);
+  display: none;
+}
+.table-chip.has-order .table-dot { display: block; }
+
+/* STAFF CHAT */
+.staff-chat {
+  background: var(--dark2);
+  display: flex;
+  flex-direction: column;
+}
+.chat-window {
+  height: 260px;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.staff-msg {
+  max-width: 85%;
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  border-radius: 10px;
+}
+.staff-msg.guest-msg {
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: var(--cream);
+  align-self: flex-end;
+  border-bottom-right-radius: 3px;
+}
+.staff-msg.from-staff {
+  background: var(--dark3);
+  border: 1px solid rgba(255,255,255,0.06);
+  align-self: flex-start;
+  color: var(--cream);
+  border-bottom-left-radius: 3px;
+}
+.msg-meta {
+  font-size: 0.52rem;
+  color: rgba(245,240,232,0.3);
+  margin-top: 2px;
+}
+.chat-reply-row {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  gap: 6px;
+}
+.chat-reply-input {
+  flex: 1;
+  background: var(--dark3);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 8px 12px;
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.75rem;
+  outline: none;
+  border-radius: 20px;
+}
+.chat-reply-btn {
+  width: 32px; height: 32px;
+  background: var(--gold);
+  border: none;
+  border-radius: 50%;
+  color: var(--black);
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.selected-table-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding: 8px 14px 0;
+}
+
+/* TELEGRAM FEED */
+.telegram-panel {
+  background: var(--dark2);
+  padding: 14px 18px;
+}
+.tg-message {
+  background: var(--dark3);
+  border: 1px solid rgba(44,165,224,0.15);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 6px;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: rgba(245,240,232,0.7);
+  white-space: pre-wrap;
+  font-family: 'Courier New', monospace;
+  animation: slideIn 0.4s ease;
+}
+.tg-time {
+  font-size: 0.52rem;
+  color: rgba(245,240,232,0.25);
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* NOTIFICATION */
+.notif {
+  position: fixed;
+  top: 16px; right: 16px;
+  background: var(--dark2);
+  border: 1px solid var(--gold);
+  border-left: 3px solid var(--gold);
+  padding: 12px 16px;
+  max-width: 280px;
+  z-index: 999;
+  animation: slideInRight 0.4s ease;
+}
+@keyframes slideInRight {
+  from { transform: translateX(120%); }
+  to { transform: translateX(0); }
+}
+.notif.hiding { transform: translateX(120%); opacity: 0; transition: all 0.3s; }
+.notif-title { font-size: 0.68rem; font-weight: 500; color: var(--gold); letter-spacing: 0.1em; margin-bottom: 3px; }
+.notif-body { font-size: 0.72rem; color: rgba(245,240,232,0.7); line-height: 1.4; }
+.notif-time { font-size: 0.55rem; color: rgba(245,240,232,0.3); margin-top: 4px; }
+
+.empty-state {
+  padding: 30px;
+  text-align: center;
+  color: rgba(245,240,232,0.3);
+  font-size: 0.75rem;
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <span class="sidebar-logo-text">VELOUR</span>
+    <div class="sidebar-logo-sub">Manager Dashboard</div>
+  </div>
+  <div class="sidebar-section">Operations</div>
+  <div class="sidebar-item active">📋 Live Orders <span class="sidebar-badge" id="sidebar-badge">0</span></div>
+  <div class="sidebar-item">🪑 Tables</div>
+  <div class="sidebar-item">💬 Messages</div>
+  <div class="sidebar-item">🛎️ Requests</div>
+  <div class="sidebar-section">Venue</div>
+  <div class="sidebar-item">🍽️ Menu Editor</div>
+  <div class="sidebar-item">🎵 Events</div>
+  <div class="sidebar-item">🏊 Pool Bookings</div>
+  <div class="sidebar-section">Reports</div>
+  <div class="sidebar-item">📊 Sales</div>
+  <div class="sidebar-item">⚙️ Settings</div>
+  <div class="sidebar-footer">
+    <div class="staff-avatar">
+      <div class="avatar-circle">MG</div>
+      <div>
+        <div class="avatar-name">Manager</div>
+        <div class="avatar-role">On Duty</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">Live Orders & Table Management</div>
+      <div class="topbar-sub" id="topbar-date">Loading...</div>
+    </div>
+    <div class="topbar-right">
+      <div class="telegram-status">📲 Telegram Connected</div>
+      <div class="status-live"><div class="live-dot"></div> <span id="active-tables-count">0</span> Tables Active</div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card alert">
+        <div class="stat-label">New Orders</div>
+        <div class="stat-val red" id="stat-new">0</div>
+        <div class="stat-change">Needs attention</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Tables</div>
+        <div class="stat-val gold" id="stat-tables">0</div>
+        <div class="stat-change">of 50 tables</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Tonight's Revenue</div>
+        <div class="stat-val green" id="stat-revenue">₦0</div>
+        <div class="stat-change">Live total</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Orders Delivered</div>
+        <div class="stat-val" id="stat-delivered">0</div>
+        <div class="stat-change">Completed</div>
+      </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="dashboard-grid">
+      <!-- Orders + Access Requests -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- Access Requests -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-card-title">🛎️ Access Requests</span>
+            <span class="panel-card-action" id="req-count">0 pending</span>
+          </div>
+          <div class="access-requests" id="access-requests-list">
+            <div class="empty-state" id="access-empty">No pending requests</div>
+          </div>
+        </div>
+
+        <!-- Live Orders -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-card-title">📋 Live Orders</span>
+            <span class="panel-card-action" onclick="clearCompleted()">Clear Completed</span>
+          </div>
+          <div class="orders-list" id="orders-list">
+            <div class="empty-state" id="orders-empty">No active orders</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar -->
+      <div class="chat-sidebar">
+        <!-- Active Tables -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-card-title">🪑 Tables</span>
+            <span class="panel-card-action">1-50</span>
+          </div>
+          <div class="tables-grid" id="tables-grid"></div>
+        </div>
+
+        <!-- Staff Chat -->
+        <div class="panel-card staff-chat">
+          <div class="panel-card-header">
+            <span class="panel-card-title">💬 Chat</span>
+          </div>
+          <div class="selected-table-label" id="chat-table-label">Select a table to chat</div>
+          <div class="chat-window" id="staff-chat-window">
+            <div class="empty-state">Click a table to start chatting</div>
+          </div>
+          <div class="chat-reply-row">
+            <input type="text" class="chat-reply-input" id="staff-reply-input" placeholder="Reply to guest..." disabled>
+            <button class="chat-reply-btn" id="chat-send-btn" onclick="sendStaffReply()">➤</button>
+          </div>
+        </div>
+
+        <!-- Telegram Feed -->
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <span class="panel-card-title">📲 Telegram Feed</span>
+          </div>
+          <div class="telegram-panel" id="telegram-feed">
+            <div class="tg-message" style="border-color: rgba(46,204,113,0.2);">
+✅ SYSTEM READY
+━━━━━━━━━━━━
+Manager dashboard connected.
+Waiting for orders...
+              <div class="tg-time">Just now</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications -->
+<div id="notif-container"></div>
+
+<script>
+// State
+let ws = null;
+let selectedTableNum = null;
+let orders = {};
+let tables = {};
+let accessRequests = {};
+let messages = {};
+let totalRevenue = 0;
+let deliveredCount = 0;
+
+// Initialize
+function init() {
+  generateTablesGrid();
+  connectWebSocket();
+  updateDateTime();
+  setInterval(updateDateTime, 60000);
+}
+
+function updateDateTime() {
+  const now = new Date();
+  document.getElementById('topbar-date').textContent = 
+    now.toLocaleDateString('en-NG', { weekday: 'long', month: 'short', day: 'numeric' }) + 
+    ' · ' + now.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Generate tables grid
+function generateTablesGrid() {
+  const grid = document.getElementById('tables-grid');
+  let html = '';
+  for (let i = 1; i <= 50; i++) {
+    html += `
+      <div class="table-chip" id="table-chip-${i}" onclick="selectTable(${i})">
+        <div class="table-chip-num">${i}</div>
+        <div class="table-chip-label">Empty</div>
+        <div class="table-dot"></div>
+      </div>
+    `;
+  }
+  grid.innerHTML = html;
+}
+
+// WebSocket connection
+function connectWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${protocol}//${window.location.host}`);
+  
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'register', clientType: 'manager' }));
+    addTelegramMessage('✅ MANAGER DASHBOARD\nConnected to live system.');
+  };
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    handleWebSocketMessage(data);
+  };
+  
+  ws.onclose = () => {
+    setTimeout(connectWebSocket, 3000);
+  };
+}
+
+function handleWebSocketMessage(data) {
+  switch (data.type) {
+    case 'checkin':
+      handleCheckin(data.data);
+      break;
+    case 'new_order':
+      handleNewOrder(data.data);
+      break;
+    case 'order_status':
+      handleOrderStatus(data.data);
+      break;
+    case 'access_request':
+      handleAccessRequest(data.data);
+      break;
+    case 'chat':
+      handleChat(data.data);
+      break;
+    case 'access_granted':
+    case 'access_denied':
+      handleAccessResponse(data.data, data.type);
+      break;
+  }
+}
+
+// Handle check-in
+function handleCheckin(data) {
+  if (!tables[data.tableNum]) {
+    tables[data.tableNum] = { guestName: data.guestName, active: true, orders: [] };
+  } else {
+    tables[data.tableNum].guestName = data.guestName;
+    tables[data.tableNum].active = true;
+  }
+  
+  updateTableChip(data.tableNum, true);
+  addTelegramMessage(`✅ CHECK-IN — Table ${data.tableNum}\n👤 Guest: ${data.guestName}\n🕐 ${data.time}`);
+  showNotif(`Table ${data.tableNum} Checked In`, `${data.guestName} just arrived.`);
+  updateStats();
+}
+
+// Handle new order
+function handleNewOrder(data) {
+  orders[data.orderId] = data;
+  
+  if (!tables[data.tableNum]) {
+    tables[data.tableNum] = { guestName: data.guestName, active: true, orders: [] };
+  }
+  tables[data.tableNum].orders.push(data.orderId);
+  tables[data.tableNum].active = true;
+  
+  // Update revenue
+  totalRevenue += data.total;
+  
+  updateTableChip(data.tableNum, true, true);
+  renderOrders();
+  updateStats();
+  
+  const itemsPreview = data.items.map(i => `${i.qty}× ${i.name}`).join(' · ');
+  addTelegramMessage(`🍾 NEW ORDER — Table ${data.tableNum}\n👤 Guest: ${data.guestName}\n━━━━━━━━━━━━\n${itemsPreview}\n━━━━━━━━━━━━\n💰 Total: ₦${data.total.toLocaleString()}\n🕐 ${data.time}`);
+  
+  showNotif(`🆕 New Order — Table ${data.tableNum}`, `₦${data.total.toLocaleString()} from ${data.guestName}`);
+}
+
+// Handle order status update
+function handleOrderStatus(data) {
+  if (orders[data.orderId]) {
+    orders[data.orderId].status = data.status;
+    renderOrders();
+    
+    if (data.status === 'delivered') {
+      deliveredCount++;
+      updateStats();
+    }
+  }
+}
+
+// Handle access request
+function handleAccessRequest(data) {
+  accessRequests[data.requestId] = data;
+  renderAccessRequests();
+  updateStats();
+  
+  addTelegramMessage(`🛎️ REQUEST — Table ${data.tableNum}\n👤 ${data.guestName || 'Guest'}\n📍 Requested: ${data.accessType}\n🕐 ${data.time}`);
+  showNotif(`🛎️ Request from Table ${data.tableNum}`, data.accessType);
+}
+
+// Handle chat
+function handleChat(data) {
+  if (!messages[data.tableNum]) {
+    messages[data.tableNum] = [];
+  }
+  messages[data.tableNum].push(data);
+  
+  // If this table is selected, update the chat window
+  if (selectedTableNum == data.tableNum) {
+    renderChatMessages(data.tableNum);
+  }
+  
+  // Show notification badge
+  if (data.senderType === 'guest') {
+    showNotif(`💬 Message from Table ${data.tableNum}`, `${data.sender}: ${data.text.substring(0, 40)}...`);
+  }
+}
+
+// Handle access response
+function handleAccessResponse(data, type) {
+  if (type === 'access_granted') {
+    showNotif(`✓ Access Granted`, `Table ${data.tableNum} - ${data.accessType}`);
+  }
+}
+
+// Update table chip
+function updateTableChip(tableNum, active, hasOrder = false) {
+  const chip = document.getElementById(`table-chip-${tableNum}`);
+  if (chip) {
+    chip.classList.remove('active', 'has-order');
+    if (active) chip.classList.add('active');
+    if (hasOrder) chip.classList.add('has-order');
+    
+    const label = chip.querySelector('.table-chip-label');
+    if (tables[tableNum] && tables[tableNum].guestName) {
+      label.textContent = tables[tableNum].guestName.substring(0, 8);
+    } else {
+      label.textContent = active ? 'Active' : 'Empty';
+    }
+  }
+}
+
+// Select table
+function selectTable(tableNum) {
+  document.querySelectorAll('.table-chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById(`table-chip-${tableNum}`).classList.add('selected');
+  selectedTableNum = tableNum;
+  
+  const table = tables[tableNum];
+  const label = document.getElementById('chat-table-label');
+  label.textContent = `Table ${tableNum}${table && table.guestName ? ' · ' + table.guestName : ''}`;
+  
+  document.getElementById('staff-reply-input').disabled = false;
+  document.getElementById('staff-reply-input').placeholder = `Reply to Table ${tableNum}...`;
+  
+  renderChatMessages(tableNum);
+}
+
+// Render orders
+function renderOrders() {
+  const list = document.getElementById('orders-list');
+  const emptyState = document.getElementById('orders-empty');
+  
+  const activeOrders = Object.values(orders).filter(o => o.status !== 'delivered');
+  
+  if (activeOrders.length === 0) {
+    list.innerHTML = '<div class="empty-state">No active orders</div>';
+    return;
+  }
+  
+  list.innerHTML = activeOrders.map(o => {
+    const itemsText = o.items.map(i => `${i.qty}× ${i.name}`).join(' · ');
+    const statusPill = getStatusPill(o.status);
+    const actions = getOrderActions(o.orderId, o.status, o.tableNum);
+    
+    return `
+      <div class="order-row" id="order-${o.orderId}">
+        <div>
+          <div class="order-table-num">${o.tableNum}</div>
+          <div class="order-table-label">Table</div>
+        </div>
+        <div>
+          <div class="order-guest">👤 ${o.guestName}</div>
+          <div class="order-items-text">${itemsText}</div>
+          <div class="order-total">₦${o.total.toLocaleString()}</div>
+          <div class="order-time">${o.time}${o.note ? ' · Note: "' + o.note + '"' : ''}</div>
+        </div>
+        <div class="order-actions">
+          ${statusPill}
+          ${actions}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getStatusPill(status) {
+  const pills = {
+    pending: '<span class="status-pill pill-new">● New</span>',
+    confirmed: '<span class="status-pill pill-confirmed">✓ Confirmed</span>',
+    preparing: '<span class="status-pill pill-preparing">🍳 Preparing</span>',
+    onway: '<span class="status-pill pill-onway">🚶 On Way</span>',
+    delivered: '<span class="status-pill pill-done">✓ Delivered</span>'
+  };
+  return pills[status] || pills.pending;
+}
+
+function getOrderActions(orderId, status, tableNum) {
+  switch (status) {
+    case 'pending':
+      return `<div class="action-btns">
+        <button class="action-btn confirm" onclick="updateOrderStatus('${orderId}', 'confirmed')">Confirm</button>
+        <button class="action-btn reply-btn" onclick="selectTable(${tableNum})">Reply</button>
+      </div>`;
+    case 'confirmed':
+      return `<div class="action-btns">
+        <button class="action-btn preparing" onclick="updateOrderStatus('${orderId}', 'preparing')">Preparing</button>
+        <button class="action-btn reply-btn" onclick="selectTable(${tableNum})">Reply</button>
+      </div>`;
+    case 'preparing':
+      return `<div class="action-btns">
+        <button class="action-btn onway" onclick="updateOrderStatus('${orderId}', 'onway')">On Way</button>
+        <button class="action-btn reply-btn" onclick="selectTable(${tableNum})">Reply</button>
+      </div>`;
+    case 'onway':
+      return `<div class="action-btns">
+        <button class="action-btn done" onclick="updateOrderStatus('${orderId}', 'delivered')">Delivered</button>
+        <button class="action-btn reply-btn" onclick="selectTable(${tableNum})">Reply</button>
+      </div>`;
+    default:
+      return '';
+  }
+}
+
+// Update order status
+async function updateOrderStatus(orderId, status) {
+  try {
+    await fetch('/api/order-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId, status })
+    });
+    
+    if (orders[orderId]) {
+      orders[orderId].status = status;
+      renderOrders();
+      
+      if (status === 'delivered') {
+        deliveredCount++;
+        updateStats();
+      }
+      
+      addTelegramMessage(`📦 STATUS UPDATE\nOrder ${orderId} → ${status.toUpperCase()}`);
+    }
+  } catch (err) {
+    console.error('Status update error:', err);
+  }
+}
+
+// Render access requests
+function renderAccessRequests() {
+  const list = document.getElementById('access-requests-list');
+  const pending = Object.values(accessRequests).filter(r => r.status === 'pending');
+  
+  document.getElementById('req-count').textContent = `${pending.length} pending`;
+  
+  if (pending.length === 0) {
+    list.innerHTML = '<div class="empty-state">No pending requests</div>';
+    return;
+  }
+  
+  list.innerHTML = pending.map(r => `
+    <div class="access-req-item" id="req-${r.requestId}">
+      <div>
+        <div class="access-req-info">${r.accessType}</div>
+        <div class="access-req-table">Table ${r.tableNum}${r.guestName ? ' · ' + r.guestName : ''} · ${r.time}</div>
+      </div>
+      <div class="access-req-btns">
+        <button class="access-grant" onclick="grantAccess('${r.requestId}', '${r.tableNum}', '${r.accessType}')">Grant</button>
+        <button class="access-deny" onclick="denyAccess('${r.requestId}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Grant access
+function grantAccess(requestId, tableNum, accessType) {
+  accessRequests[requestId].status = 'granted';
+  renderAccessRequests();
+  
+  ws.send(JSON.stringify({ type: 'access_granted', tableNum, accessType }));
+  addTelegramMessage(`🎫 ACCESS GRANTED — Table ${tableNum}\n📍 ${accessType}`);
+  showNotif('Access Granted', `Table ${tableNum} - ${accessType}`);
+}
+
+// Deny access
+function denyAccess(requestId) {
+  const req = accessRequests[requestId];
+  ws.send(JSON.stringify({ type: 'access_denied', tableNum: req.tableNum, accessType: req.accessType }));
+  accessRequests[requestId].status = 'denied';
+  renderAccessRequests();
+}
+
+// Render chat messages
+function renderChatMessages(tableNum) {
+  const window = document.getElementById('staff-chat-window');
+  const msgs = messages[tableNum] || [];
+  
+  if (msgs.length === 0) {
+    window.innerHTML = '<div class="empty-state">No messages yet</div>';
+    return;
+  }
+  
+  window.innerHTML = msgs.map(m => `
+    <div class="staff-msg ${m.senderType === 'guest' ? 'guest-msg' : 'from-staff'}">
+      ${m.text}
+      <div class="msg-meta">${m.senderType === 'guest' ? 'Table ' + tableNum : 'Staff'} · ${m.time}</div>
+    </div>
+  `).join('');
+  
+  window.scrollTop = window.scrollHeight;
+}
+
+// Send staff reply
+function sendStaffReply() {
+  const input = document.getElementById('staff-reply-input');
+  const text = input.value.trim();
+  if (!text || !selectedTableNum) return;
+  
+  ws.send(JSON.stringify({
+    type: 'chat',
+    tableNum: selectedTableNum,
+    sender: 'Staff',
+    senderType: 'staff',
+    text
+  }));
+  
+  const msgData = {
+    tableNum: selectedTableNum,
+    sender: 'Staff',
+    senderType: 'staff',
+    text,
+    time: getTime()
+  };
+  
+  if (!messages[selectedTableNum]) messages[selectedTableNum] = [];
+  messages[selectedTableNum].push(msgData);
+  
+  renderChatMessages(selectedTableNum);
+  input.value = '';
+  
+  addTelegramMessage(`💬 STAFF → Table ${selectedTableNum}\n"${text}"`, 'rgba(52,152,219,0.15)');
+}
+
+// Update stats
+function updateStats() {
+  const newOrders = Object.values(orders).filter(o => o.status === 'pending').length;
+  const activeTables = Object.values(tables).filter(t => t.active).length;
+  
+  document.getElementById('stat-new').textContent = newOrders;
+  document.getElementById('stat-tables').textContent = activeTables;
+  document.getElementById('stat-revenue').textContent = `₦${totalRevenue.toLocaleString()}`;
+  document.getElementById('stat-delivered').textContent = deliveredCount;
+  document.getElementById('sidebar-badge').textContent = newOrders;
+  document.getElementById('active-tables-count').textContent = activeTables;
+}
+
+// Clear completed orders
+function clearCompleted() {
+  Object.keys(orders).forEach(id => {
+    if (orders[id].status === 'delivered') {
+      delete orders[id];
+    }
+  });
+  renderOrders();
+}
+
+// Telegram feed
+function addTelegramMessage(text, borderColor = '') {
+  const feed = document.getElementById('telegram-feed');
+  const el = document.createElement('div');
+  el.className = 'tg-message';
+  if (borderColor) el.style.borderColor = borderColor;
+  el.innerHTML = text + `\n<div class="tg-time">${getTime()}</div>`;
+  feed.insertBefore(el, feed.firstChild);
+  
+  // Keep only last 10 messages
+  while (feed.children.length > 10) {
+    feed.removeChild(feed.lastChild);
+  }
+}
+
+// Notifications
+function showNotif(title, body) {
+  const container = document.getElementById('notif-container');
+  const notif = document.createElement('div');
+  notif.className = 'notif';
+  notif.innerHTML = `
+    <div class="notif-title">${title}</div>
+    <div class="notif-body">${body}</div>
+    <div class="notif-time">${getTime()}</div>
+  `;
+  container.appendChild(notif);
+  setTimeout(() => {
+    notif.classList.add('hiding');
+    setTimeout(() => notif.remove(), 400);
+  }, 4000);
+}
+
+function getTime() {
+  return new Date().toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' });
+}
+
+// Enter to reply
+document.getElementById('staff-reply-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    sendStaffReply();
+  }
+});
+
+// Initialize
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VELOUR — Members Club</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #C9A84C;
+  --gold-light: #E8C97A;
+  --black: #0A0A0A;
+  --dark: #111111;
+  --dark2: #1A1A1A;
+  --cream: #F5F0E8;
+  --red: #8B1A1A;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  overflow-x: hidden;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 50px;
+  background: linear-gradient(to bottom, rgba(10,10,10,0.95), transparent);
+}
+.nav-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-decoration: none;
+}
+.nav-links {
+  display: flex;
+  gap: 36px;
+  list-style: none;
+}
+.nav-links a {
+  color: var(--cream);
+  text-decoration: none;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  transition: opacity 0.3s, color 0.3s;
+}
+.nav-links a:hover { opacity: 1; color: var(--gold); }
+.nav-cta {
+  background: var(--gold);
+  color: var(--black) !important;
+  opacity: 1 !important;
+  padding: 10px 22px;
+  font-weight: 500 !important;
+}
+
+/* HERO */
+.hero {
+  height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(139,26,26,0.12) 0%, transparent 50%),
+    linear-gradient(135deg, #0A0A0A 0%, #1a1208 50%, #0A0A0A 100%);
+}
+
+/* Particles */
+.particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.particle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: float linear infinite;
+  opacity: 0;
+}
+@keyframes float {
+  0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-100px) translateX(40px); opacity: 0; }
+}
+
+.hero-content {
+  text-align: center;
+  z-index: 2;
+  animation: fadeUp 1.2s ease forwards;
+  opacity: 0;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hero-eyebrow {
+  font-size: 0.65rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 20px;
+  opacity: 0;
+  animation: fadeUp 1s ease 0.3s forwards;
+}
+.hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(4rem, 10vw, 9rem);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: #fff;
+  opacity: 0;
+  animation: fadeUp 1s ease 0.5s forwards;
+}
+.hero-title em {
+  font-style: italic;
+  color: var(--gold);
+}
+.hero-sub {
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  color: rgba(245,240,232,0.5);
+  margin-top: 28px;
+  opacity: 0;
+  animation: fadeUp 1s ease 0.7s forwards;
+}
+.hero-buttons {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 44px;
+  opacity: 0;
+  animation: fadeUp 1s ease 0.9s forwards;
+}
+.btn-primary {
+  background: var(--gold);
+  color: var(--black);
+  padding: 14px 36px;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.3s, transform 0.2s;
+}
+.btn-primary:hover { background: var(--gold-light); transform: translateY(-2px); }
+.btn-outline {
+  border: 1px solid rgba(201,168,76,0.4);
+  color: var(--cream);
+  padding: 14px 36px;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: border-color 0.3s, transform 0.2s;
+}
+.btn-outline:hover { border-color: var(--gold); transform: translateY(-2px); }
+
+.hero-scroll {
+  position: absolute;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.4;
+  animation: fadeUp 1s ease 1.2s forwards;
+}
+.scroll-line {
+  width: 1px;
+  height: 50px;
+  background: linear-gradient(to bottom, var(--gold), transparent);
+  animation: scrollPulse 2s ease infinite;
+}
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* SECTION BASE */
+section { padding: 90px 50px; }
+.section-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.2rem, 4vw, 4rem);
+  font-weight: 300;
+  line-height: 1.1;
+  color: #fff;
+}
+.section-title em { font-style: italic; color: var(--gold); }
+
+/* EXPERIENCES */
+.experiences { background: var(--dark); }
+.exp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  margin-top: 50px;
+}
+.exp-card {
+  position: relative;
+  height: 380px;
+  overflow: hidden;
+}
+.exp-card-bg {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.6s ease;
+}
+.exp-card:hover .exp-card-bg { transform: scale(1.05); }
+.exp-dance { background: linear-gradient(135deg, #1a0a2e 0%, #2d1545 50%, #0d0820 100%); }
+.exp-dining { background: linear-gradient(135deg, #1a0a0a 0%, #2d1010 50%, #1a0505 100%); }
+.exp-pool { background: linear-gradient(135deg, #0a1a2e 0%, #0d2545 50%, #081520 100%); }
+.exp-lounge { background: linear-gradient(135deg, #1a1500 0%, #2d2508 50%, #0d0e00 100%); }
+.exp-icon {
+  position: absolute;
+  top: 36px;
+  left: 36px;
+  font-size: 2.2rem;
+  opacity: 0.3;
+  transition: opacity 0.4s, transform 0.4s;
+}
+.exp-card:hover .exp-icon { opacity: 0.6; transform: scale(1.1); }
+.exp-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  background-image: repeating-linear-gradient(45deg, var(--gold) 0px, var(--gold) 1px, transparent 1px, transparent 20px);
+}
+.exp-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 36px;
+  background: linear-gradient(to top, rgba(10,10,10,0.95) 0%, transparent 100%);
+}
+.exp-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.exp-desc {
+  font-size: 0.75rem;
+  color: rgba(245,240,232,0.5);
+  line-height: 1.6;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease;
+}
+.exp-card:hover .exp-desc { max-height: 80px; }
+.exp-tag {
+  display: inline-block;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid rgba(201,168,76,0.3);
+  padding: 3px 10px;
+  margin-bottom: 10px;
+}
+
+/* MEMBERSHIP */
+.membership {
+  background: var(--dark);
+  text-align: center;
+}
+.tier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 50px;
+  max-width: 850px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.tier {
+  background: var(--dark2);
+  padding: 44px 36px;
+  position: relative;
+  transition: transform 0.3s;
+}
+.tier:hover { transform: translateY(-6px); }
+.tier-featured {
+  background: linear-gradient(135deg, #1a1208, #2a1f0a);
+  border: 1px solid var(--gold);
+}
+.tier-badge {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gold);
+  color: var(--black);
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 3px 14px;
+  font-weight: 500;
+}
+.tier-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.2em;
+  color: var(--cream);
+  margin-bottom: 6px;
+}
+.tier-price {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 2.6rem;
+  color: var(--gold);
+  font-weight: 300;
+  line-height: 1;
+}
+.tier-price span {
+  font-size: 0.9rem;
+  color: rgba(245,240,232,0.4);
+}
+.tier-features {
+  list-style: none;
+  margin-top: 28px;
+  text-align: left;
+}
+.tier-features li {
+  font-size: 0.75rem;
+  color: rgba(245,240,232,0.6);
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.tier-features li::before {
+  content: '✦';
+  color: var(--gold);
+  font-size: 0.5rem;
+  flex-shrink: 0;
+}
+.tier-cta {
+  display: block;
+  margin-top: 32px;
+  padding: 12px;
+  text-align: center;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--cream);
+  transition: all 0.3s;
+}
+.tier-cta:hover, .tier-featured .tier-cta {
+  background: var(--gold);
+  color: var(--black);
+  border-color: var(--gold);
+}
+
+/* FOOTER */
+footer {
+  background: #070707;
+  padding: 70px 50px 36px;
+  border-top: 1px solid rgba(201,168,76,0.1);
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 50px;
+  margin-bottom: 50px;
+}
+.footer-brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.2rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+.footer-tagline {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: rgba(245,240,232,0.3);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.footer-heading {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 20px;
+}
+.footer-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.footer-links a {
+  color: rgba(245,240,232,0.4);
+  text-decoration: none;
+  font-size: 0.75rem;
+  transition: color 0.3s;
+}
+.footer-links a:hover { color: var(--gold); }
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 36px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.footer-copy {
+  font-size: 0.65rem;
+  color: rgba(245,240,232,0.2);
+  letter-spacing: 0.1em;
+}
+.footer-socials {
+  display: flex;
+  gap: 16px;
+}
+.footer-socials a {
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(201,168,76,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(245,240,232,0.4);
+  text-decoration: none;
+  font-size: 0.7rem;
+  transition: all 0.3s;
+}
+.footer-socials a:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ANNOUNCEMENT BAR */
+.announce {
+  background: var(--gold);
+  color: var(--black);
+  text-align: center;
+  padding: 8px;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  nav { padding: 18px 20px; }
+  .nav-links { display: none; }
+  section { padding: 50px 20px; }
+  .exp-grid { grid-template-columns: 1fr 1fr; }
+  .tier-grid { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 30px; }
+  .footer-bottom { flex-direction: column; gap: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Announcement -->
+<div class="announce">✦ Fridays: Latin Night — Saturdays: Open Bar 10PM–2AM ✦ Book Your Table Now</div>
+
+<!-- Nav -->
+<nav>
+  <a href="#" class="nav-logo">VELOUR</a>
+  <ul class="nav-links">
+    <li><a href="#experiences">Experiences</a></li>
+    <li><a href="#membership">Membership</a></li>
+    <li><a href="https://wa.me/2348174143260">Contact</a></li>
+    <li><a href="/manager" class="nav-cta">Staff Portal</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="particles" id="particles"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">Lagos' Premier Members Club</p>
+    <h1 class="hero-title">Where<br><em>Night</em><br>Begins</h1>
+    <p class="hero-sub">Dancing · Dining · Cocktails · Swimming · Lounge</p>
+    <div class="hero-buttons">
+      <a href="#membership" class="btn-primary">Become a Member</a>
+      <a href="https://wa.me/2348174143260" class="btn-outline">Reserve Tonight</a>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- EXPERIENCES -->
+<section class="experiences" id="experiences">
+  <p class="section-label">What We Offer</p>
+  <h2 class="section-title">Four Ways to<br><em>Lose Yourself</em></h2>
+  <div class="exp-grid">
+    <div class="exp-card">
+      <div class="exp-card-bg exp-dance"><div class="exp-pattern"></div></div>
+      <div class="exp-icon">🎵</div>
+      <div class="exp-content">
+        <span class="exp-tag">Nightly</span>
+        <div class="exp-title">Dance Floor</div>
+        <div class="exp-desc">Afrobeats, Amapiano, R&B — our resident DJs keep the floor moving every Thursday to Sunday night.</div>
+      </div>
+    </div>
+    <div class="exp-card">
+      <div class="exp-card-bg exp-dining"><div class="exp-pattern"></div></div>
+      <div class="exp-icon">🍽️</div>
+      <div class="exp-content">
+        <span class="exp-tag">Daily</span>
+        <div class="exp-title">Fine Dining</div>
+        <div class="exp-desc">Modern Nigerian cuisine and continental dishes prepared by our award-winning executive chef.</div>
+      </div>
+    </div>
+    <div class="exp-card">
+      <div class="exp-card-bg exp-pool"><div class="exp-pattern"></div></div>
+      <div class="exp-icon">🏊</div>
+      <div class="exp-content">
+        <span class="exp-tag">Members Only</span>
+        <div class="exp-title">Infinity Pool</div>
+        <div class="exp-desc">Our rooftop infinity pool overlooking the city. Poolside bar service available during daytime hours.</div>
+      </div>
+    </div>
+    <div class="exp-card">
+      <div class="exp-card-bg exp-lounge"><div class="exp-pattern"></div></div>
+      <div class="exp-icon">🥂</div>
+      <div class="exp-content">
+        <span class="exp-tag">Open Bar Fri–Sat</span>
+        <div class="exp-title">Velvet Lounge</div>
+        <div class="exp-desc">Premium cocktails, aged spirits, imported wines. A curated experience for connoisseurs.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MEMBERSHIP -->
+<section class="membership" id="membership">
+  <p class="section-label">Join The Circle</p>
+  <h2 class="section-title">Choose Your<br><em>Membership</em></h2>
+  <div class="tier-grid">
+    <div class="tier">
+      <div class="tier-name">Silver</div>
+      <div class="tier-price">₦50K <span>/ month</span></div>
+      <ul class="tier-features">
+        <li>Club access Fri–Sun</li>
+        <li>10% off food & drinks</li>
+        <li>Pool access (weekdays)</li>
+        <li>2 guest passes/month</li>
+        <li>Priority event booking</li>
+      </ul>
+      <a href="https://wa.me/2348174143260?text=I'm%20interested%20in%20the%20Silver%20membership" class="tier-cta">Get Started</a>
+    </div>
+    <div class="tier tier-featured">
+      <div class="tier-badge">Most Popular</div>
+      <div class="tier-name">Gold</div>
+      <div class="tier-price">₦120K <span>/ month</span></div>
+      <ul class="tier-features">
+        <li>Unlimited club access</li>
+        <li>20% off food & drinks</li>
+        <li>Pool + spa access daily</li>
+        <li>5 guest passes/month</li>
+        <li>Reserved lounge seating</li>
+        <li>Monthly members dinner</li>
+      </ul>
+      <a href="https://wa.me/2348174143260?text=I'm%20interested%20in%20the%20Gold%20membership" class="tier-cta">Get Started</a>
+    </div>
+    <div class="tier">
+      <div class="tier-name">Platinum</div>
+      <div class="tier-price">₦250K <span>/ month</span></div>
+      <ul class="tier-features">
+        <li>All Gold benefits</li>
+        <li>Private booth reservation</li>
+        <li>Complimentary bottle/week</li>
+        <li>Unlimited guest passes</li>
+        <li>Personal concierge</li>
+        <li>Airport lounge access</li>
+      </ul>
+      <a href="https://wa.me/2348174143260?text=I'm%20interested%20in%20the%20Platinum%20membership" class="tier-cta">Get Started</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-brand">VELOUR</div>
+      <div class="footer-tagline">"Where the night<br>comes alive."</div>
+    </div>
+    <div>
+      <div class="footer-heading">Explore</div>
+      <ul class="footer-links">
+        <li><a href="#experiences">Dance Floor</a></li>
+        <li><a href="#experiences">Fine Dining</a></li>
+        <li><a href="#experiences">Pool & Spa</a></li>
+        <li><a href="#experiences">Velvet Lounge</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-heading">Membership</div>
+      <ul class="footer-links">
+        <li><a href="#membership">Silver Plan</a></li>
+        <li><a href="#membership">Gold Plan</a></li>
+        <li><a href="#membership">Platinum Plan</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="footer-heading">Contact</div>
+      <ul class="footer-links">
+        <li><a href="https://wa.me/2348174143260">WhatsApp: 08174143260</a></li>
+        <li><a href="mailto:reservations@velourclub.com">reservations@velourclub.com</a></li>
+        <li><a href="#">Victoria Island, Lagos</a></li>
+        <li><a href="#">Mon–Sun: 12PM – 4AM</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2025 VELOUR Members Club. All rights reserved.</span>
+    <div class="footer-socials">
+      <a href="#">Ig</a>
+      <a href="#">Tw</a>
+      <a href="#">Fb</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Generate particles
+const particlesEl = document.getElementById('particles');
+for (let i = 0; i < 25; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  p.style.left = Math.random() * 100 + '%';
+  p.style.width = p.style.height = (Math.random() * 2 + 1) + 'px';
+  p.style.animationDuration = (Math.random() * 12 + 10) + 's';
+  p.style.animationDelay = (Math.random() * 12) + 's';
+  particlesEl.appendChild(p);
+}
+</script>
+</body>
+</html>

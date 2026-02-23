@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>VELOUR — Table Service</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #C9A84C;
+  --gold-light: #E8C97A;
+  --black: #0A0A0A;
+  --dark: #111111;
+  --dark2: #1A1A1A;
+  --cream: #F5F0E8;
+  --green: #2ECC71;
+  --blue: #3498DB;
+  --orange: #F39C12;
+  --red: #E74C3C;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; }
+body {
+  background: var(--black);
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ERROR SCREEN */
+#error-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.08) 0%, transparent 70%), var(--black);
+}
+.error-icon { font-size: 4rem; margin-bottom: 24px; }
+.error-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.8rem;
+  color: var(--cream);
+  margin-bottom: 12px;
+}
+.error-msg {
+  font-size: 0.85rem;
+  color: rgba(245,240,232,0.5);
+  max-width: 280px;
+  line-height: 1.6;
+}
+.hidden { display: none !important; }
+
+/* CHECK-IN SCREEN */
+#checkin-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.12) 0%, transparent 70%), var(--black);
+  text-align: center;
+}
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.8rem;
+  letter-spacing: 0.4em;
+  color: var(--gold);
+  margin-bottom: 6px;
+  animation: fadeDown 0.8s ease forwards;
+}
+.logo-sub {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(201,168,76,0.5);
+  margin-bottom: 50px;
+  animation: fadeDown 0.8s ease 0.1s both;
+}
+.table-badge {
+  width: 130px; height: 130px;
+  border: 1px solid rgba(201,168,76,0.3);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 36px;
+  position: relative;
+  animation: pulse 3s ease infinite;
+}
+.table-badge::before {
+  content: '';
+  position: absolute; inset: -8px;
+  border-radius: 50%;
+  border: 1px solid rgba(201,168,76,0.1);
+  animation: pulse 3s ease infinite 0.5s;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.2); }
+  50% { box-shadow: 0 0 0 20px rgba(201,168,76,0); }
+}
+.table-badge-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3.2rem;
+  color: var(--gold);
+  line-height: 1;
+}
+.table-badge-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.4);
+}
+.checkin-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.9rem;
+  font-weight: 300;
+  color: #fff;
+  margin-bottom: 10px;
+  animation: fadeUp 0.8s ease 0.3s both;
+}
+.checkin-title em { font-style: italic; color: var(--gold); }
+.checkin-sub {
+  font-size: 0.8rem;
+  color: rgba(245,240,232,0.45);
+  margin-bottom: 36px;
+  line-height: 1.6;
+  max-width: 270px;
+  animation: fadeUp 0.8s ease 0.4s both;
+}
+.input-group {
+  width: 100%;
+  max-width: 300px;
+  margin-bottom: 14px;
+  animation: fadeUp 0.8s ease 0.5s both;
+}
+.input-group input {
+  width: 100%;
+  background: var(--dark2);
+  border: 1px solid rgba(201,168,76,0.2);
+  padding: 16px 18px;
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.3s;
+  border-radius: 2px;
+}
+.input-group input:focus { border-color: var(--gold); }
+.input-group input::placeholder { color: rgba(245,240,232,0.25); }
+.btn-gold {
+  width: 100%;
+  max-width: 300px;
+  background: var(--gold);
+  border: none;
+  padding: 17px;
+  color: var(--black);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+  border-radius: 2px;
+  animation: fadeUp 0.8s ease 0.6s both;
+}
+.btn-gold:hover { background: var(--gold-light); transform: translateY(-2px); }
+.btn-gold:active { transform: translateY(0); }
+
+/* MAIN APP */
+#app {
+  display: none;
+  min-height: 100vh;
+  flex-direction: column;
+  padding-bottom: 80px;
+}
+
+/* Topbar */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10,10,10,0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.topbar-logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+}
+.topbar-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.topbar-table {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.2);
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+.topbar-table-icon { font-size: 0.75rem; }
+.topbar-table-text {
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.topbar-chat-btn {
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.3);
+  padding: 5px 12px;
+  color: var(--cream);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  border-radius: 20px;
+  position: relative;
+}
+.topbar-chat-btn:hover { border-color: var(--gold); color: var(--gold); }
+.chat-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  width: 14px; height: 14px;
+  background: var(--red);
+  border-radius: 50%;
+  font-size: 0.5rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+/* Greeting */
+.greeting {
+  padding: 24px 18px 18px;
+  background: linear-gradient(to bottom, rgba(201,168,76,0.06), transparent);
+}
+.greeting-welcome {
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(201,168,76,0.6);
+  margin-bottom: 3px;
+}
+.greeting-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: #fff;
+}
+.greeting-name em { font-style: italic; color: var(--gold); }
+
+/* Status pills */
+.status-row {
+  display: flex;
+  gap: 6px;
+  padding: 0 18px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.status-row::-webkit-scrollbar { display: none; }
+.status-pill {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(245,240,232,0.5);
+}
+.status-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 2s ease infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Order Status Card */
+.order-status-section { padding: 0 18px 16px; }
+.order-card {
+  background: var(--dark2);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 14px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  display: none;
+}
+.order-card.visible { display: block; }
+.order-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.order-card-title { font-size: 0.7rem; color: rgba(245,240,232,0.5); letter-spacing: 0.1em; }
+.order-status-badge {
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 10px;
+}
+.status-pending { background: rgba(255,193,7,0.15); color: #FFC107; border: 1px solid rgba(255,193,7,0.3); }
+.status-confirmed { background: rgba(52,152,219,0.15); color: #3498DB; border: 1px solid rgba(52,152,219,0.3); }
+.status-preparing { background: rgba(243,156,18,0.15); color: #F39C12; border: 1px solid rgba(243,156,18,0.3); }
+.status-onway { background: rgba(155,89,182,0.15); color: #9B59B6; border: 1px solid rgba(155,89,182,0.3); }
+.status-delivered { background: rgba(46,204,113,0.15); color: #2ECC71; border: 1px solid rgba(46,204,113,0.3); }
+.order-card-items { font-size: 0.72rem; color: var(--cream); line-height: 1.5; }
+.order-progress {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+.progress-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.progress-step.active .progress-dot { background: var(--gold); border-color: var(--gold); }
+.progress-step.completed .progress-dot { background: var(--green); border-color: var(--green); }
+.progress-label { font-size: 0.5rem; color: rgba(245,240,232,0.3); text-transform: uppercase; letter-spacing: 0.05em; }
+.progress-step.active .progress-label { color: var(--gold); }
+.progress-step.completed .progress-label { color: var(--green); }
+
+/* Request Access Section */
+.access-section {
+  padding: 20px 18px;
+  margin: 0 18px 20px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(201,168,76,0.03));
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 4px;
+}
+.access-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1rem;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.access-sub {
+  font-size: 0.7rem;
+  color: rgba(245,240,232,0.4);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.access-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.access-opt {
+  background: var(--dark2);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+.access-opt:hover, .access-opt.selected {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.08);
+}
+.access-opt-icon { font-size: 1.1rem; margin-bottom: 3px; }
+.access-opt-name {
+  font-size: 0.6rem;
+  color: var(--cream);
+  letter-spacing: 0.05em;
+}
+.btn-request {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--gold);
+  padding: 12px;
+  color: var(--gold);
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s;
+  border-radius: 2px;
+}
+.btn-request:hover { background: var(--gold); color: var(--black); }
+.btn-request.sent { background: var(--green); border-color: var(--green); color: white; }
+
+/* Category tabs */
+.cat-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 18px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-tab {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(245,240,232,0.35);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+.cat-tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* Section header */
+.section-header {
+  padding: 0 18px 14px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  color: #fff;
+}
+.section-count {
+  font-size: 0.6rem;
+  color: rgba(245,240,232,0.3);
+  letter-spacing: 0.1em;
+}
+
+/* Menu items */
+.menu-list {
+  padding: 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.menu-item {
+  background: var(--dark2);
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+  transition: background 0.2s;
+  border-left: 2px solid transparent;
+}
+.menu-item:hover { background: #1f1f1f; border-left-color: rgba(201,168,76,0.3); }
+.item-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.95rem;
+  color: #fff;
+  margin-bottom: 2px;
+}
+.item-desc {
+  font-size: 0.68rem;
+  color: rgba(245,240,232,0.35);
+  line-height: 1.4;
+  margin-bottom: 5px;
+}
+.item-price {
+  font-size: 0.75rem;
+  color: var(--gold);
+  letter-spacing: 0.05em;
+}
+.item-tags {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+.item-tag {
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid rgba(201,168,76,0.2);
+  color: rgba(201,168,76,0.6);
+  border-radius: 2px;
+}
+.item-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.qty-control {
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(201,168,76,0.2);
+}
+.qty-btn {
+  width: 26px; height: 26px;
+  background: transparent;
+  border: none;
+  color: var(--gold);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qty-btn:hover { background: rgba(201,168,76,0.1); }
+.qty-num {
+  width: 26px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--cream);
+  background: rgba(201,168,76,0.05);
+}
+.add-btn {
+  background: var(--gold);
+  border: none;
+  padding: 7px 12px;
+  color: var(--black);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  min-width: 65px;
+}
+.add-btn:hover { background: var(--gold-light); }
+.add-btn.added { background: var(--green); color: white; }
+
+/* CART BAR */
+.cart-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--dark);
+  border-top: 1px solid rgba(201,168,76,0.2);
+  padding: 12px 18px;
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 60;
+  backdrop-filter: blur(20px);
+}
+.cart-bar.visible { display: flex; }
+.cart-info { display: flex; flex-direction: column; gap: 2px; }
+.cart-count { font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(245,240,232,0.4); }
+.cart-total { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: var(--gold); }
+.btn-cart {
+  background: var(--gold);
+  border: none;
+  padding: 12px 24px;
+  color: var(--black);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+/* ORDER PANEL */
+.panel-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 70;
+  display: none;
+  backdrop-filter: blur(4px);
+}
+.panel-overlay.open { display: block; }
+.panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--dark);
+  border-top: 1px solid rgba(201,168,76,0.25);
+  border-radius: 16px 16px 0 0;
+  z-index: 80;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.panel.open { transform: translateY(0); }
+.panel-handle {
+  width: 36px; height: 4px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+.panel-header {
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.panel-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  color: #fff;
+}
+.panel-close {
+  background: rgba(255,255,255,0.06);
+  border: none;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  color: var(--cream);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.panel-body { padding: 18px; }
+.order-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.order-item-name { font-size: 0.8rem; color: var(--cream); }
+.order-item-qty { font-size: 0.7rem; color: rgba(245,240,232,0.4); }
+.order-item-price { font-size: 0.8rem; color: var(--gold); }
+.order-total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 0 0;
+}
+.order-total-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.2em; color: rgba(245,240,232,0.4); }
+.order-total-amount { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: var(--gold); }
+.note-input {
+  width: 100%;
+  background: var(--dark2);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 12px 14px;
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  outline: none;
+  resize: none;
+  border-radius: 2px;
+  margin: 14px 0;
+}
+.note-input:focus { border-color: rgba(201,168,76,0.4); }
+.note-input::placeholder { color: rgba(245,240,232,0.2); }
+.btn-send-order {
+  width: 100%;
+  background: var(--gold);
+  border: none;
+  padding: 16px;
+  color: var(--black);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+/* CHAT PANEL */
+.chat-panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 80vh;
+  background: var(--dark);
+  border-top: 1px solid rgba(201,168,76,0.25);
+  border-radius: 16px 16px 0 0;
+  z-index: 80;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  display: flex;
+  flex-direction: column;
+}
+.chat-panel.open { transform: translateY(0); }
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.msg {
+  max-width: 82%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.msg.guest {
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: var(--cream);
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.msg.staff {
+  background: var(--dark2);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--cream);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+.msg-time {
+  font-size: 0.55rem;
+  color: rgba(245,240,232,0.3);
+  margin-top: 4px;
+  text-align: right;
+}
+.msg.staff .msg-time { text-align: left; }
+.msg-sender {
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 3px;
+}
+.chat-input-row {
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  gap: 8px;
+}
+.chat-input {
+  flex: 1;
+  background: var(--dark2);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 14px;
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  outline: none;
+  border-radius: 20px;
+  resize: none;
+}
+.chat-input:focus { border-color: rgba(201,168,76,0.4); }
+.chat-send {
+  width: 38px; height: 38px;
+  background: var(--gold);
+  border: none;
+  border-radius: 50%;
+  color: var(--black);
+  font-size: 0.9rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  top: 70px; left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: var(--green);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  z-index: 999;
+  opacity: 0;
+  transition: all 0.4s;
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* FOOTER */
+.footer {
+  padding: 20px 18px 100px;
+  text-align: center;
+  border-top: 1px solid rgba(201,168,76,0.1);
+  margin-top: 40px;
+}
+.footer-text {
+  font-size: 0.65rem;
+  color: rgba(245,240,232,0.3);
+  letter-spacing: 0.1em;
+}
+.footer-link {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+/* Animations */
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<!-- ERROR SCREEN -->
+<div id="error-screen" class="hidden">
+  <div class="error-icon">⚠️</div>
+  <h2 class="error-title">No Table Selected</h2>
+  <p class="error-msg">Please scan the QR code on your table to access the ordering system. Each table has its own unique code.</p>
+</div>
+
+<!-- CHECK-IN SCREEN -->
+<div id="checkin-screen" class="hidden">
+  <div class="logo">VELOUR</div>
+  <div class="logo-sub">Members Club · Lagos</div>
+  <div class="table-badge">
+    <div class="table-badge-num" id="table-display">--</div>
+    <div class="table-badge-label">Your Table</div>
+  </div>
+  <h2 class="checkin-title">Welcome to<br><em id="table-title">Table --</em></h2>
+  <p class="checkin-sub">Enter your name to check in and start ordering. Our staff will be notified of your arrival.</p>
+  <div class="input-group">
+    <input type="text" id="guest-name-input" placeholder="Your name or party name" maxlength="40">
+  </div>
+  <button class="btn-gold" onclick="checkIn()">✦ Check In & Order</button>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <span class="topbar-logo">VELOUR</span>
+    <div class="topbar-right">
+      <div class="topbar-table">
+        <span class="topbar-table-icon">🪑</span>
+        <span class="topbar-table-text" id="topbar-table-label">Table --</span>
+      </div>
+      <button class="topbar-chat-btn" onclick="openChat()">
+        💬 Staff
+        <span class="chat-badge" id="chat-badge">!</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Greeting -->
+  <div class="greeting">
+    <div class="greeting-welcome" id="greeting-time">Good Evening</div>
+    <div class="greeting-name">Welcome, <em id="guest-name-display">—</em></div>
+  </div>
+
+  <!-- Status pills -->
+  <div class="status-row">
+    <div class="status-pill"><div class="status-dot"></div> Staff Online</div>
+    <div class="status-pill">🪑 Table Active</div>
+    <div class="status-pill">🥂 Bar Open</div>
+    <div class="status-pill">🏊 Pool Open</div>
+  </div>
+
+  <!-- Order Status Card -->
+  <div class="order-status-section">
+    <div class="order-card" id="order-status-card">
+      <div class="order-card-top">
+        <span class="order-card-title">YOUR ORDER</span>
+        <span class="order-status-badge status-pending" id="order-status-badge">● Pending</span>
+      </div>
+      <div class="order-card-items" id="order-card-items-preview"></div>
+      <div class="order-progress" id="order-progress">
+        <div class="progress-step" data-step="pending"><div class="progress-dot"></div><span class="progress-label">Pending</span></div>
+        <div class="progress-step" data-step="confirmed"><div class="progress-dot"></div><span class="progress-label">Confirmed</span></div>
+        <div class="progress-step" data-step="preparing"><div class="progress-dot"></div><span class="progress-label">Preparing</span></div>
+        <div class="progress-step" data-step="onway"><div class="progress-dot"></div><span class="progress-label">On Way</span></div>
+        <div class="progress-step" data-step="delivered"><div class="progress-dot"></div><span class="progress-label">Delivered</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Request Access Section -->
+  <div class="access-section">
+    <div class="access-title">Request Access or Assistance</div>
+    <div class="access-sub">Need something? Select what you need and our staff will come to you.</div>
+    <div class="access-options">
+      <div class="access-opt" onclick="selectAccess(this, 'Pool & Spa')">
+        <div class="access-opt-icon">🏊</div>
+        <div class="access-opt-name">Pool & Spa</div>
+      </div>
+      <div class="access-opt" onclick="selectAccess(this, 'Lounge Entry')">
+        <div class="access-opt-icon">🛋️</div>
+        <div class="access-opt-name">Lounge</div>
+      </div>
+      <div class="access-opt" onclick="selectAccess(this, 'VIP Dance Floor')">
+        <div class="access-opt-icon">🎵</div>
+        <div class="access-opt-name">VIP Floor</div>
+      </div>
+      <div class="access-opt" onclick="selectAccess(this, 'Call a Waiter')">
+        <div class="access-opt-icon">🛎️</div>
+        <div class="access-opt-name">Waiter</div>
+      </div>
+      <div class="access-opt" onclick="selectAccess(this, 'Extra Ice/Cups')">
+        <div class="access-opt-icon">🧊</div>
+        <div class="access-opt-name">Ice/Cups</div>
+      </div>
+      <div class="access-opt" onclick="selectAccess(this, 'Bill Request')">
+        <div class="access-opt-icon">💳</div>
+        <div class="access-opt-name">Bill</div>
+      </div>
+    </div>
+    <button class="btn-request" id="access-btn" onclick="requestAccess()">Send Request to Staff →</button>
+  </div>
+
+  <!-- Category Tabs -->
+  <div class="cat-tabs" id="cat-tabs">
+    <div class="cat-tab active" onclick="filterCat(this, 'all')">All</div>
+    <div class="cat-tab" onclick="filterCat(this, 'cocktails')">Cocktails</div>
+    <div class="cat-tab" onclick="filterCat(this, 'spirits')">Spirits</div>
+    <div class="cat-tab" onclick="filterCat(this, 'wine')">Wine</div>
+    <div class="cat-tab" onclick="filterCat(this, 'food')">Food</div>
+    <div class="cat-tab" onclick="filterCat(this, 'shisha')">Shisha</div>
+    <div class="cat-tab" onclick="filterCat(this, 'nonalc')">Non-Alc</div>
+  </div>
+
+  <!-- Menu -->
+  <div class="section-header">
+    <div class="section-title" id="menu-section-title">Full Menu</div>
+    <div class="section-count" id="menu-section-count"></div>
+  </div>
+  <div class="menu-list" id="menu-list"></div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p class="footer-text">Built by <a href="https://wa.me/2348174143260" class="footer-link">Toluwase Christopher</a> · Web Developer</p>
+  </div>
+</div>
+
+<!-- CART BAR -->
+<div class="cart-bar" id="cart-bar">
+  <div class="cart-info">
+    <span class="cart-count" id="cart-count-label">0 items</span>
+    <span class="cart-total" id="cart-total-label">₦0</span>
+  </div>
+  <button class="btn-cart" onclick="openOrderPanel()">View Order →</button>
+</div>
+
+<!-- ORDER PANEL -->
+<div class="panel-overlay" id="order-overlay" onclick="closeOrderPanel()"></div>
+<div class="panel" id="order-panel">
+  <div class="panel-handle"></div>
+  <div class="panel-header">
+    <div class="panel-title">Your Order</div>
+    <button class="panel-close" onclick="closeOrderPanel()">✕</button>
+  </div>
+  <div class="panel-body">
+    <div id="order-items-list"></div>
+    <div class="order-total-row">
+      <span class="order-total-label">Total</span>
+      <span class="order-total-amount" id="panel-total">₦0</span>
+    </div>
+    <textarea class="note-input" id="order-note" placeholder="Any special requests or notes for the kitchen or bar…" rows="2"></textarea>
+    <button class="btn-send-order" onclick="sendOrder()">📲 Send Order to Staff</button>
+  </div>
+</div>
+
+<!-- CHAT PANEL -->
+<div class="panel-overlay" id="chat-overlay" onclick="closeChat()"></div>
+<div class="chat-panel" id="chat-panel">
+  <div class="panel-handle"></div>
+  <div class="panel-header">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="status-dot"></div>
+      <div class="panel-title">Staff Chat</div>
+    </div>
+    <button class="panel-close" onclick="closeChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="msg staff">
+      <div class="msg-sender">VELOUR Staff</div>
+      Good evening! 👋 We've received your check-in. How can we help you tonight?
+      <div class="msg-time">Just now</div>
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <input type="text" class="chat-input" id="chat-input" placeholder="Message staff…">
+    <button class="chat-send" onclick="sendChatMessage()">➤</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── DATA ───
+const MENU = [
+  // Cocktails
+  { id: 1, name: 'Lagos Sunset', desc: 'Campari, blood orange, prosecco, basil', price: 8500, cat: 'cocktails', tags: ['Signature'] },
+  { id: 2, name: 'Velour Noir', desc: 'Dark rum, activated charcoal, coconut, lime', price: 12000, cat: 'cocktails', tags: ['Signature', 'Strong'] },
+  { id: 3, name: 'Gold Rush', desc: 'Bourbon, lemon, honey, ginger', price: 9500, cat: 'cocktails', tags: ['Classic'] },
+  { id: 4, name: 'Afro Spritz', desc: 'Zobo, aperol, sparkling water, mint', price: 7500, cat: 'cocktails', tags: ['Light'] },
+  { id: 5, name: 'Espresso Martini', desc: 'Vodka, kahlua, fresh espresso', price: 11000, cat: 'cocktails', tags: ['Classic'] },
+  { id: 6, name: 'Nigerian Mule', desc: 'Vodka, ginger beer, lime, spicy', price: 9000, cat: 'cocktails', tags: ['Spicy'] },
+  // Spirits
+  { id: 10, name: 'Hennessy VS', desc: 'Bottle service — cognac', price: 85000, cat: 'spirits', tags: ['Bottle'] },
+  { id: 11, name: "D'Ussé VSOP", desc: 'Bottle service — premium cognac', price: 95000, cat: 'spirits', tags: ['Bottle'] },
+  { id: 12, name: 'Don Julio 1942', desc: 'Bottle service — aged tequila', price: 180000, cat: 'spirits', tags: ['Bottle', 'Premium'] },
+  { id: 13, name: 'Johnnie Walker Blue', desc: 'Bottle service — blended scotch', price: 120000, cat: 'spirits', tags: ['Bottle'] },
+  { id: 14, name: 'Rémy Martin XO', desc: 'Bottle service — extra cognac', price: 220000, cat: 'spirits', tags: ['Bottle', 'Premium'] },
+  { id: 15, name: 'Grey Goose', desc: 'Bottle service — premium vodka', price: 65000, cat: 'spirits', tags: ['Bottle'] },
+  // Wine
+  { id: 20, name: 'Dom Pérignon 2013', desc: 'Champagne, France — bottle', price: 180000, cat: 'wine', tags: ['Champagne'] },
+  { id: 21, name: 'Whispering Angel', desc: 'Provence Rosé — bottle', price: 65000, cat: 'wine', tags: ['Rosé'] },
+  { id: 22, name: 'Moët & Chandon', desc: 'Brut Imperial — bottle', price: 75000, cat: 'wine', tags: ['Champagne'] },
+  { id: 23, name: 'Veuve Clicquot', desc: 'Brut Yellow Label — bottle', price: 95000, cat: 'wine', tags: ['Champagne'] },
+  { id: 24, name: 'Santa Margherita Pinot', desc: 'Italian white wine — bottle', price: 45000, cat: 'wine', tags: ['White'] },
+  // Food
+  { id: 30, name: 'Suya Platter', desc: 'Grilled beef suya, onions, tomatoes, spiced groundnut', price: 25000, cat: 'food', tags: ['Popular', 'Local'] },
+  { id: 31, name: 'Grilled Lobster', desc: 'Whole lobster, garlic butter, lemon, herbs', price: 48000, cat: 'food', tags: ['Premium'] },
+  { id: 32, name: 'Wagyu Sliders', desc: '3 mini wagyu burgers, truffle mayo, caramelised onion', price: 32000, cat: 'food', tags: ['Popular'] },
+  { id: 33, name: 'Seafood Tower', desc: 'Oysters, prawns, lobster, scallops — serves 4', price: 95000, cat: 'food', tags: ['Sharing'] },
+  { id: 34, name: 'Jollof Rice & Chicken', desc: 'Premium smoked jollof, grilled chicken, plantain', price: 18000, cat: 'food', tags: ['Local'] },
+  { id: 35, name: 'Peppered Snails', desc: 'Giant African snails in spicy pepper sauce', price: 22000, cat: 'food', tags: ['Local', 'Popular'] },
+  { id: 36, name: 'Grilled Tilapia', desc: 'Whole fish, pepper sauce, fried plantain', price: 28000, cat: 'food', tags: ['Local'] },
+  { id: 37, name: 'Nkwobi', desc: 'Spicy cow foot, traditional eastern delicacy', price: 20000, cat: 'food', tags: ['Local'] },
+  // Shisha
+  { id: 40, name: 'Double Apple', desc: 'Classic double apple hookah — 1 hr', price: 15000, cat: 'shisha', tags: ['Classic'] },
+  { id: 41, name: 'Gummy Bear', desc: 'Fruity mixed flavour hookah — 1 hr', price: 18000, cat: 'shisha', tags: ['Popular'] },
+  { id: 42, name: 'Lemon Mint', desc: 'Fresh lemon with mint — 1 hr', price: 15000, cat: 'shisha', tags: ['Refreshing'] },
+  { id: 43, name: 'Blue Mist', desc: 'Blueberry and mint blend — 1 hr', price: 16000, cat: 'shisha', tags: ['Popular'] },
+  { id: 44, name: 'Grape Mint', desc: 'Sweet grape with cool mint — 1 hr', price: 15000, cat: 'shisha', tags: ['Sweet'] },
+  // Non-Alcoholic
+  { id: 50, name: 'Virgin Mojito', desc: 'Lime, mint, sugar, soda water', price: 5500, cat: 'nonalc', tags: ['Refreshing'] },
+  { id: 51, name: 'Zobo Punch', desc: 'Hibiscus, ginger, pineapple, sparkling water', price: 4500, cat: 'nonalc', tags: ['Local'] },
+  { id: 52, name: 'Mango Lassi', desc: 'Fresh mango, yoghurt, cardamom', price: 5000, cat: 'nonalc', tags: ['Creamy'] },
+  { id: 53, name: 'Chapman', desc: 'Nigerian classic mocktail, grenadine, bitters', price: 6000, cat: 'nonalc', tags: ['Local', 'Popular'] },
+  { id: 54, name: 'Fresh Juice', desc: 'Orange, pineapple, or watermelon', price: 4000, cat: 'nonalc', tags: ['Fresh'] },
+];
+
+const cart = {};
+let tableNum = null;
+let guestName = '';
+let selectedAccess = '';
+let currentCat = 'all';
+let checkedIn = false;
+let ws = null;
+let currentOrderId = null;
+
+// ─── INITIALIZATION ───
+function init() {
+  const params = new URLSearchParams(window.location.search);
+  const table = params.get('table');
+  
+  if (!table || isNaN(parseInt(table))) {
+    document.getElementById('error-screen').classList.remove('hidden');
+    return;
+  }
+  
+  tableNum = parseInt(table);
+  document.getElementById('table-display').textContent = tableNum;
+  document.getElementById('table-title').innerHTML = `Table <em>${tableNum}</em>`;
+  
+  document.getElementById('checkin-screen').classList.remove('hidden');
+  
+  connectWebSocket();
+  setGreeting();
+}
+
+function setGreeting() {
+  const hour = new Date().getHours();
+  const greeting = document.getElementById('greeting-time');
+  if (hour < 12) greeting.textContent = 'Good Morning';
+  else if (hour < 17) greeting.textContent = 'Good Afternoon';
+  else greeting.textContent = 'Good Evening';
+}
+
+// ─── WEBSOCKET ───
+function connectWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${protocol}//${window.location.host}`);
+  
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'register', clientType: 'customer', tableNum }));
+  };
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    handleWebSocketMessage(data);
+  };
+  
+  ws.onclose = () => {
+    setTimeout(connectWebSocket, 3000);
+  };
+}
+
+function handleWebSocketMessage(data) {
+  switch (data.type) {
+    case 'chat':
+      if (data.data.tableNum == tableNum && data.data.senderType === 'staff') {
+        addStaffMessage(data.data.text, data.data.sender, data.data.time);
+      }
+      break;
+    case 'order_status':
+      if (data.data.tableNum == tableNum) {
+        updateOrderStatus(data.data.status);
+      }
+      break;
+    case 'access_granted':
+      if (data.data.tableNum == tableNum) {
+        showToast(`✓ ${data.data.accessType} access granted!`);
+      }
+      break;
+    case 'access_denied':
+      if (data.data.tableNum == tableNum) {
+        showToast(`✗ ${data.data.accessType} request declined`);
+      }
+      break;
+  }
+}
+
+// ─── CHECK IN ───
+async function checkIn() {
+  const input = document.getElementById('guest-name-input').value.trim();
+  if (!input) { shakeInput(); return; }
+  
+  guestName = input;
+  checkedIn = true;
+  
+  document.getElementById('guest-name-display').textContent = guestName;
+  document.getElementById('topbar-table-label').textContent = `Table ${tableNum}`;
+  
+  // Send check-in to server
+  try {
+    await fetch('/api/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableNum, guestName })
+    });
+  } catch (err) {
+    console.error('Check-in error:', err);
+  }
+  
+  document.getElementById('checkin-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('app').style.flexDirection = 'column';
+  
+  renderMenu(MENU);
+  showToast(`✦ Checked in! Staff have been notified.`);
+  
+  // Welcome message
+  setTimeout(() => {
+    addStaffMessage(`Hello ${guestName}! Welcome to Table ${tableNum}. I'm here to help with anything you need. Feel free to browse the menu or message me directly! 🥂`, 'VELOUR Staff');
+  }, 2000);
+}
+
+function shakeInput() {
+  const input = document.getElementById('guest-name-input');
+  input.style.borderColor = 'var(--red)';
+  setTimeout(() => input.style.borderColor = '', 1500);
+}
+
+// ─── MENU ───
+function renderMenu(items) {
+  const list = document.getElementById('menu-list');
+  const title = document.getElementById('menu-section-title');
+  const count = document.getElementById('menu-section-count');
+  
+  const catNames = {
+    all: 'Full Menu',
+    cocktails: 'Cocktails',
+    spirits: 'Spirits & Bottles',
+    wine: 'Wine & Champagne',
+    food: 'Food',
+    shisha: 'Shisha',
+    nonalc: 'Non-Alcoholic'
+  };
+  title.textContent = catNames[currentCat] || 'Menu';
+  count.textContent = `${items.length} items`;
+  
+  list.innerHTML = items.map(item => `
+    <div class="menu-item" data-cat="${item.cat}">
+      <div>
+        <div class="item-name">${item.name}</div>
+        <div class="item-desc">${item.desc}</div>
+        <div class="item-price">₦${item.price.toLocaleString()}</div>
+        <div class="item-tags">${item.tags.map(t => `<span class="item-tag">${t}</span>`).join('')}</div>
+      </div>
+      <div class="item-controls">
+        ${cart[item.id] ? `
+          <div class="qty-control">
+            <button class="qty-btn" onclick="changeQty(${item.id}, -1)">−</button>
+            <span class="qty-num">${cart[item.id]}</span>
+            <button class="qty-btn" onclick="changeQty(${item.id}, 1)">+</button>
+          </div>
+        ` : `
+          <button class="add-btn" onclick="addToCart(${item.id})">Add</button>
+        `}
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterCat(el, cat) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentCat = cat;
+  const filtered = cat === 'all' ? MENU : MENU.filter(i => i.cat === cat);
+  renderMenu(filtered);
+}
+
+// ─── CART ───
+function addToCart(id) {
+  cart[id] = 1;
+  updateCartUI();
+  renderMenu(currentCat === 'all' ? MENU : MENU.filter(i => i.cat === currentCat));
+}
+
+function changeQty(id, delta) {
+  cart[id] = (cart[id] || 0) + delta;
+  if (cart[id] <= 0) delete cart[id];
+  updateCartUI();
+  renderMenu(currentCat === 'all' ? MENU : MENU.filter(i => i.cat === currentCat));
+}
+
+function updateCartUI() {
+  const ids = Object.keys(cart);
+  const totalQty = ids.reduce((a, id) => a + cart[id], 0);
+  const totalPrice = ids.reduce((a, id) => a + cart[id] * MENU.find(i => i.id == id).price, 0);
+  
+  document.getElementById('cart-count-label').textContent = `${totalQty} item${totalQty !== 1 ? 's' : ''}`;
+  document.getElementById('cart-total-label').textContent = `₦${totalPrice.toLocaleString()}`;
+  document.getElementById('cart-bar').classList.toggle('visible', ids.length > 0);
+}
+
+// ─── ORDER PANEL ───
+function openOrderPanel() {
+  const ids = Object.keys(cart);
+  const list = document.getElementById('order-items-list');
+  let total = 0;
+  
+  list.innerHTML = ids.map(id => {
+    const item = MENU.find(i => i.id == id);
+    const sub = item.price * cart[id];
+    total += sub;
+    return `
+      <div class="order-item-row">
+        <div>
+          <div class="order-item-name">${item.name}</div>
+          <div class="order-item-qty">×${cart[id]}</div>
+        </div>
+        <div class="order-item-price">₦${sub.toLocaleString()}</div>
+      </div>
+    `;
+  }).join('');
+  
+  document.getElementById('panel-total').textContent = `₦${total.toLocaleString()}`;
+  document.getElementById('order-overlay').classList.add('open');
+  document.getElementById('order-panel').classList.add('open');
+}
+
+function closeOrderPanel() {
+  document.getElementById('order-overlay').classList.remove('open');
+  document.getElementById('order-panel').classList.remove('open');
+}
+
+async function sendOrder() {
+  const ids = Object.keys(cart);
+  if (!ids.length) return;
+  
+  const note = document.getElementById('order-note').value;
+  
+  // Separate food and drinks
+  const items = ids.map(id => {
+    const item = MENU.find(i => i.id == id);
+    return { ...item, qty: cart[id] };
+  });
+  
+  const foodItems = items.filter(i => i.cat === 'food');
+  const drinkItems = items.filter(i => ['cocktails', 'spirits', 'wine', 'shisha', 'nonalc'].includes(i.cat));
+  
+  const total = items.reduce((a, i) => a + i.price * i.qty, 0);
+  const foodTotal = foodItems.reduce((a, i) => a + i.price * i.qty, 0);
+  const drinkTotal = drinkItems.reduce((a, i) => a + i.price * i.qty, 0);
+  
+  // Send order to server
+  try {
+    const res = await fetch('/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tableNum,
+        guestName,
+        items,
+        note,
+        foodItems,
+        drinkItems,
+        foodTotal,
+        drinkTotal,
+        total
+      })
+    });
+    const data = await res.json();
+    currentOrderId = data.orderId;
+  } catch (err) {
+    console.error('Order error:', err);
+  }
+  
+  // Show order status
+  const preview = items.map(i => i.name).join(', ');
+  document.getElementById('order-card-items-preview').textContent = preview;
+  document.getElementById('order-status-card').classList.add('visible');
+  updateOrderStatus('pending');
+  
+  closeOrderPanel();
+  showToast('✦ Order sent! Staff notified.');
+  
+  // Simulate status updates (in real app, these come from staff dashboard)
+  setTimeout(() => updateOrderStatus('confirmed'), 4000);
+  setTimeout(() => updateOrderStatus('preparing'), 8000);
+  setTimeout(() => updateOrderStatus('onway'), 15000);
+  setTimeout(() => {
+    updateOrderStatus('delivered');
+    addStaffMessage(`Your order has been delivered to Table ${tableNum}! Enjoy! 🎉`, 'VELOUR Staff');
+  }, 20000);
+  
+  // Clear cart
+  for (const k in cart) delete cart[k];
+  updateCartUI();
+  renderMenu(currentCat === 'all' ? MENU : MENU.filter(i => i.cat === currentCat));
+  document.getElementById('order-note').value = '';
+}
+
+function updateOrderStatus(status) {
+  const badge = document.getElementById('order-status-badge');
+  const steps = document.querySelectorAll('.progress-step');
+  
+  const statusClasses = {
+    pending: 'status-pending',
+    confirmed: 'status-confirmed',
+    preparing: 'status-preparing',
+    onway: 'status-onway',
+    delivered: 'status-delivered'
+  };
+  
+  const statusLabels = {
+    pending: '● Pending',
+    confirmed: '✓ Confirmed',
+    preparing: '🍳 Preparing',
+    onway: '🚶 On Its Way',
+    delivered: '✓ Delivered'
+  };
+  
+  badge.className = 'order-status-badge ' + statusClasses[status];
+  badge.textContent = statusLabels[status];
+  
+  // Update progress
+  const statusOrder = ['pending', 'confirmed', 'preparing', 'onway', 'delivered'];
+  const currentIndex = statusOrder.indexOf(status);
+  
+  steps.forEach((step, i) => {
+    step.classList.remove('active', 'completed');
+    if (i < currentIndex) {
+      step.classList.add('completed');
+    } else if (i === currentIndex) {
+      step.classList.add('active');
+    }
+  });
+}
+
+// ─── ACCESS REQUESTS ───
+function selectAccess(el, name) {
+  document.querySelectorAll('.access-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedAccess = name;
+}
+
+async function requestAccess() {
+  if (!selectedAccess) {
+    showToast('Please select an option first');
+    return;
+  }
+  
+  const btn = document.getElementById('access-btn');
+  btn.classList.add('sent');
+  btn.textContent = '✓ Request Sent!';
+  
+  try {
+    await fetch('/api/access-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tableNum, guestName, accessType: selectedAccess })
+    });
+  } catch (err) {
+    console.error('Access request error:', err);
+  }
+  
+  addStaffMessage(`We've received your request for ${selectedAccess}. Someone will be with you shortly! 🙏`, 'VELOUR Staff');
+  document.getElementById('chat-badge').style.display = 'flex';
+  
+  setTimeout(() => {
+    btn.classList.remove('sent');
+    btn.textContent = 'Send Request to Staff →';
+    document.querySelectorAll('.access-opt').forEach(o => o.classList.remove('selected'));
+    selectedAccess = '';
+  }, 5000);
+}
+
+// ─── CHAT ───
+function openChat() {
+  document.getElementById('chat-overlay').classList.add('open');
+  document.getElementById('chat-panel').classList.add('open');
+  document.getElementById('chat-badge').style.display = 'none';
+}
+
+function closeChat() {
+  document.getElementById('chat-overlay').classList.remove('open');
+  document.getElementById('chat-panel').classList.remove('open');
+}
+
+function addStaffMessage(text, sender = 'VELOUR Staff', time = null) {
+  const msgs = document.getElementById('chat-messages');
+  const el = document.createElement('div');
+  el.className = 'msg staff';
+  el.innerHTML = `
+    <div class="msg-sender">${sender}</div>
+    ${text}
+    <div class="msg-time">${time || getTime()}</div>
+  `;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  document.getElementById('chat-badge').style.display = 'flex';
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  
+  const msgs = document.getElementById('chat-messages');
+  const el = document.createElement('div');
+  el.className = 'msg guest';
+  el.innerHTML = `${text}<div class="msg-time">${getTime()}</div>`;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  input.value = '';
+  
+  // Send via WebSocket
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'chat',
+      tableNum,
+      sender: guestName,
+      senderType: 'guest',
+      text
+    }));
+  }
+}
+
+function getTime() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Auto-grow textarea
+document.addEventListener('input', e => {
+  if (e.target.tagName === 'TEXTAREA') {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  }
+});
+
+// Enter to send chat
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && document.getElementById('chat-panel').classList.contains('open')) {
+    const input = document.getElementById('chat-input');
+    if (document.activeElement === input) {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  }
+});
+
+// Initialize on load
+init();
+</script>
+</body>
+</html>
