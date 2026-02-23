@@ -5,6 +5,8 @@ import { useSocket } from './SocketContext';
 interface TableContextType {
   tableNumber: number | null;
   guestName: string;
+  guestId: string;
+  sessionId: string;
   isCheckedIn: boolean;
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
@@ -20,6 +22,8 @@ const TableContext = createContext<TableContextType | undefined>(undefined);
 export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tableNumber, setTableNumber] = useState<number | null>(null);
   const [guestName, setGuestName] = useState('');
+  const [guestId, setGuestId] = useState('');
+  const [sessionId, setSessionId] = useState('');
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -54,7 +58,7 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!socket) return;
 
     const handleOrderUpdate = ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
-      setOrders(prev => prev.map(order => 
+      setOrders(prev => prev.map(order =>
         order.id === orderId ? { ...order, status } : order
       ));
     };
@@ -65,12 +69,19 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     };
 
+    const handleCheckInSuccess = (data: { tableNumber: number; guestName: string; guestId: string; sessionId: string }) => {
+      setGuestId(data.guestId);
+      setSessionId(data.sessionId);
+    };
+
     socket.on('order-status-update', handleOrderUpdate);
     socket.on('new-message', handleNewMessage);
+    socket.on('check-in-success', handleCheckInSuccess);
 
     return () => {
       socket.off('order-status-update', handleOrderUpdate);
       socket.off('new-message', handleNewMessage);
+      socket.off('check-in-success', handleCheckInSuccess);
     };
   }, [socket, tableNumber]);
 
@@ -98,6 +109,8 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <TableContext.Provider value={{
       tableNumber,
       guestName,
+      guestId,
+      sessionId,
       isCheckedIn,
       orders,
       setOrders,
