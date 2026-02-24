@@ -3,8 +3,14 @@ import { QRCodeSVG } from 'qrcode.react';
 import { LOCATIONS, ZONES, getLocationsByZone } from '@/data/locations';
 import type { ZoneType } from '@/types';
 
+const getClientUrl = (): string => {
+  const envUrl = import.meta.env.VITE_CLIENT_URL;
+  if (envUrl) return `${envUrl}/order`;
+  return `${window.location.origin}/order`;
+};
+
 export const QRGenerator: React.FC = () => {
-  const [baseUrl, setBaseUrl] = useState('https://dcubesplace.com/order');
+  const [baseUrl, setBaseUrl] = useState(getClientUrl());
   
   // Mode selection: 'location' (new zone-based) or 'legacy' (old table numbers)
   const [mode, setMode] = useState<'location' | 'legacy'>('location');
