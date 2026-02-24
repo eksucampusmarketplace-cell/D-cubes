@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { MenuItem } from '@/types';
 import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS } from '@/data/menu';
 import { formatPrice } from '@/utils/format';
@@ -229,73 +229,16 @@ export const AdminPanel: React.FC = () => {
         )}
 
         {activeTab === 'gallery' && (
-          <div>
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="font-serif text-3xl text-white">Club Gallery</h2>
-                <p className="text-cream/40 mt-1">Manage images for your club's ambiance</p>
-              </div>
-              <button
-                onClick={() => {
-                  const url = prompt('Enter image URL:');
-                  if (url) handleAddGalleryImage(url);
-                }}
-                className="btn-luxury px-6 py-3 rounded-xl text-xs"
-              >
-                + Add Image
-              </button>
-            </div>
-
-            {/* Gallery Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {galleryImages.map((img, index) => (
-                <div key={index} className="luxury-card rounded-2xl overflow-hidden group aspect-square">
-                  <div className="relative w-full h-full">
-                    <img 
-                      src={img}
-                      alt={`Gallery ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-dark-4/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="absolute bottom-3 left-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <input
-                        type="text"
-                        defaultValue={img}
-                        onChange={(e) => {
-                          const newImages = [...galleryImages];
-                          newImages[index] = e.target.value;
-                          setGalleryImages(newImages);
-                        }}
-                        className="flex-1 text-xs bg-dark-4/80 backdrop-blur border border-gold/20 rounded-lg px-3 py-2 text-cream"
-                        placeholder="Image URL"
-                      />
-                      <button
-                        onClick={() => handleRemoveGalleryImage(index)}
-                        className="w-10 h-10 rounded-lg bg-red-500/80 flex items-center justify-center text-white"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {/* Add New Card */}
-              <div 
-                onClick={() => {
-                  const url = prompt('Enter image URL:');
-                  if (url) handleAddGalleryImage(url);
-                }}
-                className="luxury-card rounded-2xl aspect-square flex flex-col items-center justify-center cursor-pointer hover:border-gold/40 transition-all"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center mb-3">
-                  <span className="text-2xl text-gold">+</span>
-                </div>
-                <span className="text-sm text-cream/40">Add New Image</span>
-              </div>
-            </div>
-          </div>
+          <GalleryManager 
+            images={galleryImages}
+            onAddImage={handleAddGalleryImage}
+            onRemoveImage={handleRemoveGalleryImage}
+            onUpdateImage={(index, url) => {
+              const newImages = [...galleryImages];
+              newImages[index] = url;
+              setGalleryImages(newImages);
+            }}
+          />
         )}
 
         {activeTab === 'settings' && (
@@ -364,24 +307,10 @@ export const AdminPanel: React.FC = () => {
               {/* Hero Image */}
               <div className="luxury-card rounded-2xl p-6">
                 <h3 className="font-serif text-xl text-white mb-6">Hero Image</h3>
-                <div className="relative h-48 rounded-xl overflow-hidden mb-4">
-                  <img 
-                    src={clubSettings.heroImage}
-                    alt="Hero"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 gradient-overlay" />
-                </div>
-                <div>
-                  <label className="text-xs text-cream/40 uppercase tracking-wider mb-2 block">Image URL</label>
-                  <input
-                    type="text"
-                    value={clubSettings.heroImage}
-                    onChange={(e) => setClubSettings({ ...clubSettings, heroImage: e.target.value })}
-                    className="w-full input-luxury"
-                    placeholder="https://..."
-                  />
-                </div>
+                <ImageUpload
+                  currentImage={clubSettings.heroImage}
+                  onImageChange={(image) => setClubSettings({ ...clubSettings, heroImage: image })}
+                />
               </div>
             </div>
 
@@ -406,6 +335,339 @@ export const AdminPanel: React.FC = () => {
           }}
         />
       )}
+    </div>
+  );
+};
+
+// Gallery Manager Component
+interface GalleryManagerProps {
+  images: string[];
+  onAddImage: (url: string) => void;
+  onRemoveImage: (index: number) => void;
+  onUpdateImage: (index: number, url: string) => void;
+}
+
+const GalleryManager: React.FC<GalleryManagerProps> = ({ images, onAddImage, onRemoveImage, onUpdateImage }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = useCallback((file: File) => {
+    setUploadError(null);
+    
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select an image file');
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image must be less than 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      onAddImage(result);
+    };
+    reader.onerror = () => {
+      setUploadError('Failed to read image file');
+    };
+    reader.readAsDataURL(file);
+  }, [onAddImage]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    files.forEach(file => handleFileSelect(file));
+  }, [handleFileSelect]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => handleFileSelect(file));
+    e.target.value = ''; // Reset input
+  }, [handleFileSelect]);
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="font-serif text-3xl text-white">Club Gallery</h2>
+          <p className="text-cream/40 mt-1">Upload and manage your club's ambiance photos</p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="btn-luxury px-6 py-3 rounded-xl text-xs flex items-center gap-2"
+          >
+            <span>📤</span> Upload Images
+          </button>
+          <button
+            onClick={() => {
+              const url = prompt('Enter image URL:');
+              if (url) onAddImage(url);
+            }}
+            className="px-6 py-3 rounded-xl text-xs border border-gold/30 text-gold hover:bg-gold/10 transition-all"
+          >
+            + URL
+          </button>
+        </div>
+      </div>
+
+      {/* Error Message */}
+      {uploadError && (
+        <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3">
+          <span className="text-red-400">⚠️</span>
+          <p className="text-red-400 text-sm">{uploadError}</p>
+        </div>
+      )}
+
+      {/* Hidden File Input - Multiple files allowed */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleInputChange}
+        className="hidden"
+      />
+
+      {/* Gallery Grid */}
+      <div 
+        className={`grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 transition-all ${
+          isDragging ? 'opacity-50' : ''
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        {images.map((img, index) => (
+          <div key={index} className="luxury-card rounded-2xl overflow-hidden group aspect-square">
+            <div className="relative w-full h-full">
+              <img 
+                src={img}
+                alt={`Gallery ${index + 1}`}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-dark-4/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute bottom-3 left-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <input
+                  type="text"
+                  defaultValue={img}
+                  onChange={(e) => onUpdateImage(index, e.target.value)}
+                  className="flex-1 text-xs bg-dark-4/80 backdrop-blur border border-gold/20 rounded-lg px-3 py-2 text-cream"
+                  placeholder="Image URL"
+                />
+                <button
+                  onClick={() => onRemoveImage(index)}
+                  className="w-10 h-10 rounded-lg bg-red-500/80 flex items-center justify-center text-white hover:bg-red-600 transition-all"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {/* Upload Drop Zone Card */}
+        <div 
+          onClick={() => fileInputRef.current?.click()}
+          className={`luxury-card rounded-2xl aspect-square flex flex-col items-center justify-center cursor-pointer transition-all ${
+            isDragging 
+              ? 'border-gold bg-gold/20 scale-105' 
+              : 'hover:border-gold/40 hover:bg-gold/5'
+          }`}
+        >
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-3 transition-all ${
+            isDragging ? 'bg-gold/30 scale-110' : 'bg-gold/10 border border-gold/20'
+          }`}>
+            <span className={`text-2xl transition-all ${isDragging ? 'scale-125' : ''}`}>
+              {isDragging ? '📥' : '📤'}
+            </span>
+          </div>
+          <span className="text-sm text-cream/40">
+            {isDragging ? 'Drop images here' : 'Click or drag to upload'}
+          </span>
+          <span className="text-xs text-cream/30 mt-1">JPG, PNG, WEBP up to 5MB each</span>
+        </div>
+      </div>
+
+      {/* Drag Overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-dark-4/90 backdrop-blur-xl border-2 border-gold rounded-3xl p-8 flex flex-col items-center">
+            <div className="w-20 h-20 rounded-2xl bg-gold/20 flex items-center justify-center mb-4 animate-bounce">
+              <span className="text-4xl">📥</span>
+            </div>
+            <p className="text-xl text-gold font-medium">Drop images to upload</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Image Upload Component
+interface ImageUploadProps {
+  currentImage: string;
+  onImageChange: (image: string) => void;
+}
+
+const ImageUpload: React.FC<ImageUploadProps> = ({ currentImage, onImageChange }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = useCallback((file: File) => {
+    setUploadError(null);
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select an image file');
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image must be less than 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      onImageChange(result);
+    };
+    reader.onerror = () => {
+      setUploadError('Failed to read image file');
+    };
+    reader.readAsDataURL(file);
+  }, [onImageChange]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  }, [handleFileSelect]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  }, [handleFileSelect]);
+
+  return (
+    <div className="space-y-3">
+      {/* Image Preview */}
+      <div 
+        className={`relative h-48 rounded-xl overflow-hidden border-2 transition-all ${
+          isDragging ? 'border-gold bg-gold/10' : 'border-gold/20'
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        {currentImage ? (
+          <>
+            <img 
+              src={currentImage}
+              alt="Preview"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-dark-4/80 via-transparent to-transparent" />
+            <div className="absolute bottom-3 left-3 right-3 flex gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-1 py-2 bg-dark-4/90 backdrop-blur border border-gold/30 rounded-lg text-gold text-sm
+                           hover:bg-gold hover:text-black transition-all"
+              >
+                🖼️ Change Image
+              </button>
+              <button
+                onClick={() => onImageChange('')}
+                className="px-4 py-2 bg-red-500/90 backdrop-blur rounded-lg text-white text-sm
+                           hover:bg-red-600 transition-all"
+              >
+                ✕
+              </button>
+            </div>
+          </>
+        ) : (
+          <div 
+            className="w-full h-full flex flex-col items-center justify-center cursor-pointer bg-dark-2/50"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-3 transition-all ${
+              isDragging ? 'bg-gold/20 scale-110' : 'bg-gold/10'
+            }`}>
+              <span className="text-3xl">📤</span>
+            </div>
+            <p className="text-cream/70 text-sm font-medium">
+              {isDragging ? 'Drop image here' : 'Click or drag image here'}
+            </p>
+            <p className="text-cream/40 text-xs mt-1">JPG, PNG, WEBP up to 5MB</p>
+          </div>
+        )}
+      </div>
+
+      {/* Error Message */}
+      {uploadError && (
+        <p className="text-red-400 text-sm flex items-center gap-2">
+          <span>⚠️</span> {uploadError}
+        </p>
+      )}
+
+      {/* Hidden File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleInputChange}
+        className="hidden"
+      />
+
+      {/* URL Input as Alternative */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-px bg-gold/10" />
+        <span className="text-cream/30 text-xs">or use URL</span>
+        <div className="flex-1 h-px bg-gold/10" />
+      </div>
+      
+      <input
+        type="text"
+        value={currentImage || ''}
+        onChange={(e) => onImageChange(e.target.value)}
+        className="w-full input-luxury text-sm"
+        placeholder="https://example.com/image.jpg"
+      />
     </div>
   );
 };
@@ -460,14 +722,13 @@ const EditItemModal: React.FC<EditItemModalProps> = ({ item, onSave, onClose }) 
 
         {/* Form */}
         <div className="p-6 space-y-6">
-          {/* Image Preview */}
-          <div className="relative h-40 rounded-xl overflow-hidden">
-            <img 
-              src={formData.image || CATEGORY_IMAGES[formData.category]}
-              alt="Preview"
-              className="w-full h-full object-cover"
+          {/* Image Upload Section */}
+          <div>
+            <label className="text-xs text-cream/40 uppercase tracking-wider mb-3 block">Item Image</label>
+            <ImageUpload
+              currentImage={formData.image || ''}
+              onImageChange={(image) => setFormData({ ...formData, image })}
             />
-            <div className="absolute inset-0 gradient-overlay" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -515,17 +776,6 @@ const EditItemModal: React.FC<EditItemModalProps> = ({ item, onSave, onClose }) 
                   <option key={key} value={key}>{name}</option>
                 ))}
               </select>
-            </div>
-
-            <div className="col-span-2">
-              <label className="text-xs text-cream/40 uppercase tracking-wider mb-2 block">Image URL</label>
-              <input
-                type="text"
-                value={formData.image || ''}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                className="w-full input-luxury"
-                placeholder="https://..."
-              />
             </div>
 
             <div className="col-span-2">
