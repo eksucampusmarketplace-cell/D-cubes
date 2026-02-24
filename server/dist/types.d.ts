@@ -3,7 +3,7 @@ export interface MenuItem {
     name: string;
     description: string;
     price: number;
-    category: 'cocktails' | 'spirits' | 'wine' | 'food' | 'shisha' | 'nonalc' | 'soft-drinks' | 'energy-drinks' | 'brandy' | 'liquor' | 'tequila' | 'sparkling-wine' | 'beer' | 'cigar';
+    category: 'cocktails' | 'spirits' | 'wine' | 'food' | 'shisha' | 'nonalc' | 'soft-drinks' | 'energy-drinks' | 'brandy' | 'liquor' | 'tequila' | 'sparkling-wine' | 'beer' | 'cigar' | 'mixers';
     tags: string[];
     image?: string;
     isPopular?: boolean;

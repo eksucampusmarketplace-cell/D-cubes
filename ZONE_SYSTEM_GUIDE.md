@@ -2,21 +2,21 @@
 
 ## Overview
 
-The ordering system now supports **multiple zones** with different menu availability. Each location in the venue belongs to a zone, and customers see only the items available in their current zone when they scan the QR code.
+The ordering system supports **multiple zones** with different pricing. The **Lounge** zone has special pricing as specified in your menu list. All zones now support **full food service**.
 
 ## Zones
 
-| Zone | ID | Food Service | Description |
-|------|-----|--------------|-------------|
-| **Open Bar** | `open-bar` | ❌ No | Bar stools and standing tables - drinks only |
-| **Lounge** | `lounge` | ✅ Yes | Regular tables and sofas - full menu |
-| **Nightclub** | `nightclub` | ❌ No | Dance floor tables - drinks & bottle service |
-| **VIP** | `vip` | ✅ Yes | Premium booths - full menu + bottle service |
-| **Poolside** | `poolside` | ✅ Yes | Cabanas - drinks + light food |
+| Zone | ID | Description | Special Pricing |
+|------|-----|-------------|-----------------|
+| **Open Bar** | `open-bar` | Casual bar seating and standing tables | Standard prices |
+| **Lounge** | `lounge` | Relaxed seating with premium service | **Custom Lounge prices** |
+| **Nightclub** | `nightclub` | High energy dance floor area | Standard prices |
+| **VIP** | `vip` | Exclusive VIP booths | Standard prices |
+| **Poolside** | `poolside` | Pool cabanas and outdoor seating | Standard prices |
 
 ## Location Types
 
-Each physical spot has a unique ID and type:
+Each physical spot has a unique ID:
 
 - **BAR-01** to **BAR-12** - Bar stools (Open Bar)
 - **ST-01** to **ST-06** - Standing tables (Open Bar)
@@ -26,9 +26,82 @@ Each physical spot has a unique ID and type:
 - **NF-01** to **NF-10** - Nightclub floor tables (Nightclub)
 - **PC-01** to **PC-06** - Poolside cabanas (Poolside)
 
+## Zone-Specific Pricing
+
+### Lounge Prices (as specified in your menu)
+
+**Brandy:**
+- Hennessy VS: ₦115,000
+- Hennessy VSOP: ₦190,000
+- Remy Martins XO: ₦480,000
+- Remy Martins VSOP: ₦145,000
+- Martel XO: ₦610,000
+- Martel Blueswift: ₦165,000
+
+**Whisky:**
+- Glendiffich 21: ₦570,000
+- Glendiffich 18: ₦270,000
+- Glendiffich 15: ₦180,000
+- Blue Label: ₦405,000
+- Red Label: ₦35,000
+- Black Label: ₦80,000
+- Jack Daniels: ₦70,000
+- Jack Daniels (1L): ₦65,000
+- Jameson Black: ₦45,000
+- Jameson Green: ₦80,000
+- Ciroc: ₦80,000
+- Black Stone Gold: ₦40,000
+
+**Tequila:**
+- Tequila Siera: ₦55,000
+- Olmecca White/Chocolate: ₦60,000
+- Casamigos Black/Gold/White: ₦390,000
+- Casamigos White (1L): ₦425,000
+- Don Julio: ₦700,000
+- Azul: ₦650,000
+
+**Liquor:**
+- Baileys: ₦35,000
+
+**Mixers:**
+- Cranberry: ₦12,000
+- Red Bull: ₦4,000
+- Power Horse: ₦4,000
+- Monster: ₦4,000
+- Water: ₦700
+- Coke: ₦1,500
+- Schweppes: ₦1,000
+- Hollandia: ₦4,000
+- Malt Drink: ₦2,000
+
+**Red Wine:**
+- Carlo Rossi: ₦20,000
+- Four Cousin Red: ₦25,000
+- Agor: ₦20,000
+
+**Sparkling Wine:**
+- Moet Rose: ₦235,000
+- Belaire Rose/Brut/White: ₦130,000
+- Martini: ₦40,000
+- Andre: ₦30,000
+- Blue Nun Rose: ₦55,000
+
+**Vodka:**
+- Petrovskaia: ₦12,000
+- Absolute Water Melon: ₦8,000
+
+**Shisha:**
+- Double Pipe: ₦12,000
+- Single Pipe: ₦8,000
+- Special: ₦15,000
+
+### Other Zones (Open Bar, Nightclub, VIP, Poolside)
+
+These zones use standard prices (as defined in the base menu items). You can set custom prices for these zones by adding entries to `ZONE_PRICES` in `client/src/data/menu.ts`.
+
 ## QR Code Structure
 
-### New Location-Based QR Codes
+### Location-Based QR Codes
 ```
 https://dcubesplace.com/order?location=T-001&zone=lounge
 https://dcubesplace.com/order?location=BAR-05&zone=open-bar
@@ -38,21 +111,23 @@ https://dcubesplace.com/order?location=VIP-A&zone=vip
 ### Legacy Table-Based QR Codes (Backward Compatible)
 ```
 https://dcubesplace.com/order?table=1
-https://dcubesplace.com/order?table=15
 ```
-> Legacy QR codes default to the **Lounge** zone with full menu access.
+> Legacy QR codes default to the **Lounge** zone with Lounge pricing.
 
-## Menu Categories by Zone
+## Menu Categories
 
-### Open Bar & Nightclub
-- ✅ Soft Drinks, Energy Drinks, Beer
-- ✅ Brandy, Wine, Liquor, Tequila
-- ✅ Sparkling Wine, Cocktails, Non-Alcoholic
-- ✅ Shisha, Cigarettes
-- ❌ **No Food**
+The menu is organized into elegant categories:
 
-### Lounge, VIP & Poolside
-- ✅ **All categories including Food**
+1. **Brandy** - Fine cognacs and brandies
+2. **Whisky and Vodka** - Premium spirits
+3. **Tequila** - Mexican agave spirits
+4. **Liquor** - Cream liqueurs and specialty spirits
+5. **Mixers and Soft Drinks** - Juices, sodas, and water
+6. **Energy Drinks** - Red Bull, Monster, etc.
+7. **Red Wine** - Fine red wines
+8. **Sparkling Wine and Champagne** - Celebratory bubbles
+9. **Shisha** - Premium hookah experiences
+10. **Cuisine** - Food menu
 
 ## Generating QR Codes
 
@@ -62,10 +137,10 @@ https://dcubesplace.com/order?table=15
 4. Select specific locations
 5. Click "Print QR Codes"
 
-Each QR code will show:
-- Location name (e.g., "Bar Stool 5", "VIP Booth A")
+Each QR code shows:
+- Location name (e.g., "Lounge Table 5", "VIP Booth A")
 - Zone icon and name
-- "Drinks Only" badge for non-food zones
+- Price differences are automatic based on zone
 
 ## Customer Experience
 
@@ -74,122 +149,105 @@ When a customer scans a QR code:
 1. **Check-in Screen** shows:
    - Zone icon and name
    - Location name (e.g., "Bar Stool 3")
-   - "Drinks Only" notice if applicable
+   - Elegant welcome message
 
 2. **Menu Display**:
-   - Only categories available in that zone are shown
-   - Food items are hidden in non-food zones
-   - Zone-specific banner at the top
+   - Shows items with **zone-specific prices**
+   - Lounge customers see Lounge prices
+   - Other zones see standard prices
+   - Beautiful descriptions without dashes
 
-3. **Staff Notifications**:
-   - Orders include zone and location info
-   - Kitchen only receives food orders from food-enabled zones
+3. **Food Service**: Available at **all locations**
 
-## Managing Locations
+## Beautiful Descriptions
 
-### File: `client/src/data/locations.ts`
+Each item has a luxurious description written without dashes:
 
-To add or modify locations:
+Example:
+> "A remarkable blend of over 40 distinct eaux de vie, aged in French oak barrels to create a bold, fragrant cognac with notes of toasted almond and fresh grapes"
 
-```typescript
-{
-  id: 'BAR-13',              // Unique identifier
-  number: 13,                // Display number
-  name: 'Bar Stool 13',      // Display name
-  type: 'bar-stool',         // Location type
-  zone: 'open-bar',          // Zone assignment
-  availableMenus: ['bar', 'drinks-only'],
-  canReceiveFood: false,     // Food delivery capability
-  isActive: true,            // Active status
-  capacity: 2                // Max capacity
-}
-```
+> "Don Julio 1942, an ultra premium anejo tequila crafted in honor of the founder's legacy, aged for at least two and a half years with notes of tropical fruit and spice"
 
-### Zone Configuration
+## Adding Zone-Specific Prices
 
-Modify zone settings in the same file:
+To set custom prices for a zone, edit `client/src/data/menu.ts`:
 
 ```typescript
-export const ZONES: Record<ZoneType, ZoneConfig> = {
-  'open-bar': {
-    id: 'open-bar',
-    name: 'Open Bar',
-    description: 'Casual bar seating with full drink selection',
-    icon: '🍺',
-    defaultMenus: ['bar', 'drinks-only'],
-    allowFood: false,
-    theme: {
-      primaryColor: '#C9A84C',
-      accentColor: '#1a1a1a'
-    }
+export const ZONE_PRICES: Partial<Record<ZoneType, Record<number, number>>> = {
+  lounge: {
+    101: 115000, // Hennessy VS Lounge price
+    102: 190000, // Hennessy VSOP Lounge price
+    // ... more items
   },
-  // ... other zones
+  'open-bar': {
+    // Add Open Bar specific prices here
+  },
+  nightclub: {
+    // Add Nightclub specific prices here
+  }
 };
 ```
 
-## Menu Items
-
-### File: `client/src/data/menu.ts`
-
-All drinks from your price list have been added:
-
-**Soft Drinks**: Bottle Water (₦500), Coke/Malt/Fayrouz (₦1,200), Hollandia/Chivita (₦4,000), 5 Alive (₦3,500)
-
-**Energy Drinks**: Red Bull/Power Horse/Monster (₦3,500), Predator/Climax/Fearless (₦1,500)
-
-**Brandy**: Hennessy VS (₦115,000), Hennessy VSOP (₦190,000), Remy VSOP (₦145,000), Martel VSOP (₦135,000), Martel Blueswift (₦165,000)
-
-**Wine**: Four Cousins (₦25,000), Carlo Rossi (₦20,000), Agor (₦20,000)
-
-**Liquor**: Baileys (₦35,000)
-
-**Shisha**: Double Pipe (₦10,000), Single Pipe (₦7,000)
-
-**Tequila**: Tequila Siera (₦55,000), Olmecca (₦60,000), Casamigos (₦390,000-₦425,000)
-
-**Sparkling Wine**: Andre (₦30,000), Martini Rose (₦40,000), Belaire (₦130,000), Moet Rose (₦235,000)
-
-**Beer**: Goldberg/Trophy/33/Desperado (₦1,800), Smirnoff Ice variants (₦1,800-₦2,500), Heineken/Budweiser/Legend (₦2,300), Stout variants (₦1,500-₦2,500)
-
-**Cigarettes**: Dunhill (₦3,000), Benson/London/Oris/Rothmans/Bohem (₦2,000)
-
-## Category Availability
-
-Edit `ZONE_CATEGORIES` in `client/src/data/locations.ts`:
-
-```typescript
-export const ZONE_CATEGORIES: Record<ZoneType, string[]> = {
-  'open-bar': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar'],
-  'lounge': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
-  // ... other zones
-};
-```
+The item ID corresponds to the `id` field in the MENU_ITEMS array.
 
 ## Staff Dashboards
 
-The existing staff dashboards (Manager, Kitchen, Bar) continue to work with the new system:
+The existing staff dashboards continue to work:
 
-- **Kitchen Dashboard**: Only sees food orders from zones that allow food
-- **Bar Dashboard**: Sees all drink orders from all zones
-- **Manager Dashboard**: Sees all orders with zone/location indicators
+- **Kitchen Dashboard**: Receives all food orders from all zones
+- **Bar Dashboard**: Receives all drink orders from all zones
+- **Manager Dashboard**: Sees all orders with zone/location indicators and correct prices
+
+## Managing the Menu
+
+### File: `client/src/data/menu.ts`
+
+**To add a new item:**
+```typescript
+{
+  id: 1001,
+  name: 'Item Name',
+  description: 'Beautiful description without dashes, using elegant flowing language',
+  price: 50000, // Base price for non-Lounge zones
+  category: 'spirits',
+  tags: ['Premium', 'Smooth'],
+  image: 'https://...',
+  isPopular: true,  // optional
+  isSignature: true, // optional
+}
+```
+
+**To set Lounge price:**
+Add to `ZONE_PRICES.lounge`:
+```typescript
+lounge: {
+  1001: 55000, // Lounge-specific price
+}
+```
+
+## Food is Available Everywhere
+
+All locations now support food delivery:
+- Bar stools and standing tables
+- Nightclub floor tables
+- Poolside cabanas
+- VIP booths
+- Lounge tables and sofas
+
+The kitchen will receive orders from all zones.
 
 ## Technical Notes
 
-- **Backward Compatible**: Old table-based QR codes continue to work
-- **URL Parameters**: The system reads `?location=XXX&zone=YYY` or `?table=N`
-- **Food Filtering**: Items with `requiresFoodService: true` are automatically hidden in non-food zones
-- **Zone Detection**: If no zone is specified, defaults to `lounge`
+- **Price Resolution**: `getItemPrice(item, zone)` checks ZONE_PRICES first, falls back to base price
+- **Backward Compatible**: Old table-based QR codes default to Lounge pricing
+- **URL Parameters**: `?location=XXX&zone=YYY` determines pricing
+- **No Price Display**: If no zone price exists, base price is shown
 
-## Troubleshooting
+## Summary of Changes
 
-**Customer sees wrong menu?**
-- Check the QR code URL has correct `location` and `zone` parameters
-- Verify location exists in `LOCATIONS` array
-
-**Food showing up in bar area?**
-- Ensure `canReceiveFood: false` is set for bar locations
-- Check `ZONE_CATEGORIES` doesn't include 'food' for that zone
-
-**New location not showing?**
-- Verify `isActive: true` in location config
-- Regenerate QR codes after adding new locations
+1. ✅ Food delivery enabled at all 52 locations
+2. ✅ Lounge-specific pricing implemented
+3. ✅ Beautiful, dash-free descriptions
+4. ✅ Elegant category organization
+5. ✅ Zone-specific price display in UI
+6. ✅ QR generator updated for location-based codes

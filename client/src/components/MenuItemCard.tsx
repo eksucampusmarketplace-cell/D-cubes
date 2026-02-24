@@ -7,18 +7,28 @@ import { CATEGORY_IMAGES } from '@/config/images';
 interface MenuItemCardProps {
   item: MenuItem;
   index?: number;
+  zonePrice?: number; // Zone-specific price override
 }
 
-export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0 }) => {
+export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0, zonePrice }) => {
   const { items, addItem, updateQuantity } = useCart();
   const cartItem = items.find(i => i.id === item.id);
   const imageSrc = item.image || CATEGORY_IMAGES[item.category as keyof typeof CATEGORY_IMAGES] || CATEGORY_IMAGES.cocktails;
+  
+  // Use zone-specific price if provided, otherwise use base price
+  const displayPrice = zonePrice ?? item.price;
+  
+  // Create a modified item with the zone price for cart
+  const itemWithZonePrice = React.useMemo(() => ({
+    ...item,
+    price: displayPrice
+  }), [item, displayPrice]);
 
   const handleAdd = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem(item);
-  }, [addItem, item]);
+    addItem(itemWithZonePrice);
+  }, [addItem, itemWithZonePrice]);
 
   const handleDecrease = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,9 +44,9 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0 }) =
     if (cartItem) {
       updateQuantity(item.id, cartItem.quantity + 1);
     } else {
-      addItem(item);
+      addItem(itemWithZonePrice);
     }
-  }, [cartItem, item, addItem, updateQuantity]);
+  }, [cartItem, itemWithZonePrice, addItem, updateQuantity]);
 
   const getTagStyle = () => {
     if (item.isNew) return { text: 'New', className: 'bg-emerald-500 text-white' };
@@ -104,7 +114,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0 }) =
 
           <div className="flex items-center justify-between gap-3">
             <p className="text-lg text-gold font-bold">
-              {formatPrice(item.price)}
+              {formatPrice(displayPrice)}
             </p>
 
             {/* Add/Quantity Controls */}

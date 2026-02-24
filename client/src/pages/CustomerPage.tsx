@@ -7,7 +7,7 @@ import { CartPanel } from '@/components/CartPanel';
 import { AccessRequests } from '@/components/AccessRequests';
 import { ChatPanel } from '@/components/ChatPanel';
 import { OrderStatus } from '@/components/OrderStatus';
-import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS } from '@/data/menu';
+import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS, getItemPrice } from '@/data/menu';
 import { getGreeting, formatPrice } from '@/utils/format';
 import { CUSTOMER_HERO, CATEGORY_IMAGES, NIGHTLIFE_FILTER } from '@/config/images';
 import { getZoneInfo, ZONES } from '@/data/locations';
@@ -16,19 +16,15 @@ import { getZoneInfo, ZONES } from '@/data/locations';
 // All possible categories
 const ALL_CATEGORIES = [
   'all',
-  'soft-drinks',
-  'energy-drinks', 
-  'beer',
-  'wine',
-  'sparkling-wine',
   'brandy',
   'spirits',
   'tequila',
   'liquor',
-  'cocktails',
-  'nonalc',
+  'mixers',
+  'energy-drinks',
+  'wine',
+  'sparkling-wine',
   'shisha',
-  'cigar',
   'food'
 ] as const;
 
@@ -199,12 +195,6 @@ export const CustomerPage: React.FC = () => {
                 </span>
                 <span className="text-white/50 text-sm">•</span>
                 <span className="text-white/80 text-sm font-medium">{zoneTheme.icon} {zoneName}</span>
-                {!canOrderFood && (
-                  <>
-                    <span className="text-white/50 text-sm">•</span>
-                    <span className="text-amber-400 text-xs font-medium">Drinks Only</span>
-                  </>
-                )}
               </div>
             )}
           </div>
@@ -302,7 +292,9 @@ export const CustomerPage: React.FC = () => {
                   <h4 className="font-serif text-white text-base font-semibold mb-1 line-clamp-1 group-hover:text-gold transition-colors">
                     {item.name}
                   </h4>
-                  <p className="text-gold text-sm font-bold">{formatPrice(item.price)}</p>
+                  <p className="text-gold text-sm font-bold">
+                    {formatPrice(zone ? getItemPrice(item, zone) : item.price)}
+                  </p>
                 </div>
               </div>
             ))}
@@ -380,7 +372,12 @@ export const CustomerPage: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {filteredItems.map((item, index) => (
-            <MenuItemCard key={item.id} item={item} index={index} />
+            <MenuItemCard 
+              key={item.id} 
+              item={item} 
+              index={index} 
+              zonePrice={zone ? getItemPrice(item, zone) : item.price}
+            />
           ))}
         </div>
         

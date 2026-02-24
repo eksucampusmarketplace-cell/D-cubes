@@ -181,11 +181,10 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return availableCategories.includes(category);
   }, [availableCategories]);
 
-  // Can order food based on zone
+  // Can order food - now enabled for all zones
   const canOrderFood = React.useMemo(() => {
-    if (!zone) return false;
-    return ['lounge', 'vip', 'poolside'].includes(zone);
-  }, [zone]);
+    return true;
+  }, []);
 
   // Zone display name
   const zoneName = React.useMemo(() => {

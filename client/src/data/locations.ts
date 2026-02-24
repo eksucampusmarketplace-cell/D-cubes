@@ -5,10 +5,10 @@ export const ZONES: Record<ZoneType, ZoneConfig> = {
   'open-bar': {
     id: 'open-bar',
     name: 'Open Bar',
-    description: 'Casual bar seating with full drink selection',
+    description: 'Casual bar seating with full drink selection and dining service',
     icon: '🍺',
     defaultMenus: ['bar', 'drinks-only'],
-    allowFood: false,
+    allowFood: true,
     theme: {
       primaryColor: '#C9A84C',
       accentColor: '#1a1a1a'
@@ -29,10 +29,10 @@ export const ZONES: Record<ZoneType, ZoneConfig> = {
   'nightclub': {
     id: 'nightclub',
     name: 'Nightclub',
-    description: 'High-energy area with drinks and bottle service',
+    description: 'High energy area with drinks, bottle service, and dining',
     icon: '🎵',
     defaultMenus: ['nightclub', 'drinks-only'],
-    allowFood: false,
+    allowFood: true,
     theme: {
       primaryColor: '#ff006e',
       accentColor: '#1a0a1a'
@@ -53,7 +53,7 @@ export const ZONES: Record<ZoneType, ZoneConfig> = {
   'poolside': {
     id: 'poolside',
     name: 'Poolside',
-    description: 'Pool cabanas and outdoor seating',
+    description: 'Pool cabanas and outdoor seating with full service',
     icon: '🏊',
     defaultMenus: ['lounge', 'drinks-only'],
     allowFood: true,
@@ -74,20 +74,20 @@ export const MENU_TYPE_NAMES: Record<MenuType, string> = {
   'food': 'Food Menu'
 };
 
-/** Category availability by zone */
+/** Category availability by zone - all zones now have food */
 export const ZONE_CATEGORIES: Record<ZoneType, string[]> = {
-  'open-bar': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar'],
+  'open-bar': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
   'lounge': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
-  'nightclub': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar'],
+  'nightclub': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
   'vip': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
-  'poolside': ['soft-drinks', 'energy-drinks', 'beer', 'wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'food']
+  'poolside': ['soft-drinks', 'energy-drinks', 'beer', 'wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food']
 };
 
-/** Generate locations for the venue */
+/** Generate locations for the venue - all locations can receive food */
 export function generateLocations(): Location[] {
   const locations: Location[] = [];
 
-  // Open Bar Stools (BAR-01 to BAR-12) - No food
+  // Open Bar Stools (BAR-01 to BAR-12)
   for (let i = 1; i <= 12; i++) {
     locations.push({
       id: `BAR-${String(i).padStart(2, '0')}`,
@@ -96,13 +96,13 @@ export function generateLocations(): Location[] {
       type: 'bar-stool',
       zone: 'open-bar',
       availableMenus: ['bar', 'drinks-only'],
-      canReceiveFood: false,
+      canReceiveFood: true,
       isActive: true,
       capacity: 2
     });
   }
 
-  // Standing Tables near bar (ST-01 to ST-06) - No food
+  // Standing Tables near bar (ST-01 to ST-06)
   for (let i = 1; i <= 6; i++) {
     locations.push({
       id: `ST-${String(i).padStart(2, '0')}`,
@@ -111,13 +111,13 @@ export function generateLocations(): Location[] {
       type: 'standing-table',
       zone: 'open-bar',
       availableMenus: ['bar', 'drinks-only'],
-      canReceiveFood: false,
+      canReceiveFood: true,
       isActive: true,
       capacity: 4
     });
   }
 
-  // Lounge Tables (T-001 to T-020) - Full service
+  // Lounge Tables (T-001 to T-020)
   for (let i = 1; i <= 20; i++) {
     locations.push({
       id: `T-${String(i).padStart(3, '0')}`,
@@ -132,7 +132,7 @@ export function generateLocations(): Location[] {
     });
   }
 
-  // Lounge Seats/Sofas (LS-01 to LS-08) - Full service
+  // Lounge Seats/Sofas (LS-01 to LS-08)
   for (let i = 1; i <= 8; i++) {
     locations.push({
       id: `LS-${String(i).padStart(2, '0')}`,
@@ -147,7 +147,7 @@ export function generateLocations(): Location[] {
     });
   }
 
-  // VIP Booths (VIP-A to VIP-H) - Full service, premium
+  // VIP Booths (VIP-A to VIP-H)
   const vipLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   vipLabels.forEach((label) => {
     locations.push({
@@ -164,7 +164,7 @@ export function generateLocations(): Location[] {
     });
   });
 
-  // Nightclub Floor Tables (NF-01 to NF-10) - Drinks only
+  // Nightclub Floor Tables (NF-01 to NF-10)
   for (let i = 1; i <= 10; i++) {
     locations.push({
       id: `NF-${String(i).padStart(2, '0')}`,
@@ -173,13 +173,13 @@ export function generateLocations(): Location[] {
       type: 'table',
       zone: 'nightclub',
       availableMenus: ['nightclub', 'drinks-only'],
-      canReceiveFood: false,
+      canReceiveFood: true,
       isActive: true,
       capacity: 6
     });
   }
 
-  // Poolside Cabanas (PC-01 to PC-06) - Full service
+  // Poolside Cabanas (PC-01 to PC-06)
   for (let i = 1; i <= 6; i++) {
     locations.push({
       id: `PC-${String(i).padStart(2, '0')}`,
