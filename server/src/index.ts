@@ -39,9 +39,152 @@ const BAR_CHAT_ID = process.env.BAR_CHAT_ID || '';
 const MANAGER_CHAT_ID = process.env.MANAGER_CHAT_ID || '';
 
 let bot: TelegramBot | null = null;
+
+// Store for pending Telegram messages (for reply functionality)
+// Maps message_id to table number for replies
+const telegramMessageToTable: Map<number, { tableNumber: number; guestName: string }> = new Map();
+
 if (TELEGRAM_BOT_TOKEN) {
   bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
   console.log('✅ Telegram bot initialized');
+
+  // Handle incoming Telegram messages (for replies from staff)
+  bot.on('message', async (msg) => {
+    const chatId = msg.chat.id.toString();
+    const text = msg.text;
+
+    // Only process messages from configured chat IDs
+    if (![KITCHEN_CHAT_ID, BAR_CHAT_ID, MANAGER_CHAT_ID].includes(chatId)) {
+      return;
+    }
+
+    // Handle reply to a message
+    if (msg.reply_to_message && text) {
+      const repliedMsgId = msg.reply_to_message.message_id;
+      const tableInfo = telegramMessageToTable.get(repliedMsgId);
+      
+      if (tableInfo) {
+        // Create staff message
+        const staffMessage: ChatMessage = {
+          id: `MSG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          tableNumber: tableInfo.tableNumber,
+          sender: 'staff',
+          text: text,
+          timestamp: new Date(),
+          senderName: 'Staff'
+        };
+
+        // Store message
+        const tableMessages = messages.get(`table-${tableInfo.tableNumber}`) || [];
+        tableMessages.push(staffMessage);
+        messages.set(`table-${tableInfo.tableNumber}`, tableMessages);
+
+        // Send to the table and all staff
+        io.to(`table-${tableInfo.tableNumber}`).emit('new-message', staffMessage);
+        io.to('staff-manager').to('staff-kitchen').to('staff-bar').emit('new-message', staffMessage);
+
+        // Confirm to Telegram
+        await bot?.sendMessage(chatId, `✅ Reply sent to Table ${tableInfo.tableNumber}`);
+        console.log(`Telegram reply to Table ${tableInfo.tableNumber}: ${text}`);
+        return;
+      }
+    }
+
+    // Handle commands
+    if (text?.startsWith('/')) {
+      const command = text.toLowerCase().trim();
+      
+      if (command === '/help') {
+        const helpText = `
+📱 <b>D CUBES PLACE - Staff Commands</b>
+
+<b>How to reply to guests:</b>
+1. Reply to any guest message
+2. Type your response
+3. Send!
+
+<b>Commands:</b>
+/orders - View pending orders
+/tables - View active tables
+/stats - View tonight's stats
+/help - Show this message
+        `;
+        await bot?.sendMessage(chatId, helpText, { parse_mode: 'HTML' });
+      }
+      else if (command === '/orders') {
+        const pendingOrders = Array.from(orders.values())
+          .filter(o => ['pending', 'confirmed', 'preparing'].includes(o.status));
+        
+        if (pendingOrders.length === 0) {
+          await bot?.sendMessage(chatId, '✅ No pending orders', { parse_mode: 'HTML' });
+        } else {
+          let ordersText = `📋 <b>PENDING ORDERS</b> (${pendingOrders.length})\n\n`;
+          pendingOrders.slice(0, 10).forEach(order => {
+            ordersText += `🪑 <b>Table ${order.tableNumber}</b>\n`;
+            ordersText += `👤 ${order.guestName}\n`;
+            ordersText += `📦 ${order.items.map(i => `${i.quantity}× ${i.name}`).join(', ')}\n`;
+            ordersText += `💰 ${formatPrice(order.total)}\n`;
+            ordersText += `━━━━━━━━━━━━━━\n`;
+          });
+          await bot?.sendMessage(chatId, ordersText, { parse_mode: 'HTML' });
+        }
+      }
+      else if (command === '/tables') {
+        const activeTablesList = Array.from(activeTables.values()).filter(t => t.isActive);
+        
+        if (activeTablesList.length === 0) {
+          await bot?.sendMessage(chatId, '📭 No active tables', { parse_mode: 'HTML' });
+        } else {
+          let tablesText = `🪑 <b>ACTIVE TABLES</b> (${activeTablesList.length})\n\n`;
+          activeTablesList.forEach(table => {
+            tablesText += `Table ${table.tableNumber}: ${table.guests.map(g => g.guestName).join(', ')}\n`;
+            tablesText += `📦 ${table.totalOrders} orders · 💰 ${formatPrice(table.totalSpent)}\n`;
+            tablesText += `━━━━━━━━━━━━━━\n`;
+          });
+          await bot?.sendMessage(chatId, tablesText, { parse_mode: 'HTML' });
+        }
+      }
+      else if (command === '/stats') {
+        const allOrders = Array.from(orders.values());
+        const totalRevenue = allOrders.reduce((sum, o) => sum + (o.status !== 'cancelled' ? o.total : 0), 0);
+        const orderCount = allOrders.filter(o => o.status !== 'cancelled').length;
+        const activeTablesCount = Array.from(activeTables.values()).filter(t => t.isActive).length;
+        
+        const statsText = `
+📊 <b>TONIGHT'S STATS</b>
+
+💰 <b>Revenue:</b> ${formatPrice(totalRevenue)}
+📦 <b>Orders:</b> ${orderCount}
+🪑 <b>Active Tables:</b> ${activeTablesCount}
+🍻 <b>Delivered:</b> ${allOrders.filter(o => o.status === 'delivered').length}
+⏳ <b>Pending:</b> ${allOrders.filter(o => ['pending', 'confirmed', 'preparing'].includes(o.status)).length}
+        `;
+        await bot?.sendMessage(chatId, statsText, { parse_mode: 'HTML' });
+      }
+    }
+  });
+
+  // Handle callback queries (inline button presses)
+  bot.on('callback_query', async (callbackQuery) => {
+    const data = callbackQuery.data;
+    const chatId = callbackQuery.message?.chat.id.toString();
+    
+    if (!data || !chatId) return;
+
+    // Handle quick reply callbacks
+    if (data.startsWith('reply_')) {
+      const tableNumber = parseInt(data.split('_')[1]);
+      await bot?.sendMessage(chatId, `💬 Reply to Table ${tableNumber}:`, { 
+        parse_mode: 'HTML',
+        reply_markup: { force_reply: true } as any
+      });
+    }
+    else if (data.startsWith('status_')) {
+      const [_, orderId, status] = data.split('_');
+      io.emit('order-status-update', { orderId, status: status as OrderStatus });
+      await bot?.answerCallbackQuery(callbackQuery.id, { text: `Order marked as ${status}` });
+    }
+  });
 }
 
 // Store orders, requests, and messages in memory (use Redis for production)
@@ -64,10 +207,38 @@ const formatTime = (date: Date): string => {
   });
 };
 
-const sendTelegramMessage = async (chatId: string, message: string) => {
+const sendTelegramMessage = async (chatId: string, message: string, replyMarkup?: any) => {
   if (!bot || !chatId) return;
   try {
-    await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+    await bot.sendMessage(chatId, message, { parse_mode: 'HTML', ...replyMarkup });
+  } catch (error) {
+    console.error('Failed to send Telegram message:', error);
+  }
+};
+
+// Send message to Telegram with table info stored for replies
+const sendTelegramMessageWithReplyContext = async (
+  chatId: string, 
+  message: string, 
+  tableNumber: number, 
+  guestName: string,
+  inlineButtons?: any
+) => {
+  if (!bot || !chatId) return;
+  try {
+    const sentMsg = await bot.sendMessage(chatId, message, { 
+      parse_mode: 'HTML',
+      ...inlineButtons
+    });
+    // Store the message ID with table context for replies
+    telegramMessageToTable.set(sentMsg.message_id, { tableNumber, guestName });
+    
+    // Clean up old entries (keep last 100)
+    if (telegramMessageToTable.size > 100) {
+      const entries = Array.from(telegramMessageToTable.entries());
+      telegramMessageToTable.clear();
+      entries.slice(-100).forEach(([k, v]) => telegramMessageToTable.set(k, v));
+    }
   } catch (error) {
     console.error('Failed to send Telegram message:', error);
   }
@@ -205,8 +376,8 @@ io.on('connection', (socket) => {
   // Join staff room
   socket.on('join-staff', (role: 'manager' | 'kitchen' | 'bar') => {
     socket.join(`staff-${role}`);
-    if (role === 'manager') socket.join('staff-all');
-    console.log(`Socket ${socket.id} joined staff-${role}`);
+    socket.join('staff-all'); // All staff join staff-all for messages
+    console.log(`Socket ${socket.id} joined staff-${role} and staff-all`);
   });
 
   // Check-in
@@ -238,7 +409,7 @@ io.on('connection', (socket) => {
 
     socket.join(`table-${tableNumber}`);
 
-    io.to('staff-manager').to('staff-all').emit('check-in', {
+    io.to('staff-manager').to('staff-kitchen').to('staff-bar').emit('check-in', {
       tableNumber,
       guestName,
       guestId,
@@ -250,7 +421,13 @@ io.on('connection', (socket) => {
       ? `✅ <b>NEW SESSION</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n🕐 ${formatTime(new Date())}`
       : `👥 <b>GUEST JOINED</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n👥 ${session.guests.length} guests\n🕐 ${formatTime(new Date())}`;
 
-    await sendTelegramMessage(MANAGER_CHAT_ID, message);
+    await sendTelegramMessageWithReplyContext(MANAGER_CHAT_ID, message, tableNumber, guestName, {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: '💬 Reply', callback_data: `reply_${tableNumber}` }
+        ]]
+      }
+    });
 
     socket.emit('check-in-success', {
       tableNumber,
@@ -306,7 +483,20 @@ io.on('connection', (socket) => {
       `💰 <b>Total:</b> ${formatPrice(order.total)}\n` +
       `💳 <b>Payment:</b> Unpaid` +
       (order.note ? `\n📝 <i>${order.note}</i>` : '');
-    await sendTelegramMessage(MANAGER_CHAT_ID, managerMsg);
+    
+    await sendTelegramMessageWithReplyContext(MANAGER_CHAT_ID, managerMsg, order.tableNumber, order.guestName, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: '✅ Confirm', callback_data: `status_${order.id}_confirmed` },
+            { text: '❌ Cancel', callback_data: `status_${order.id}_cancelled` }
+          ],
+          [
+            { text: '💬 Reply to Guest', callback_data: `reply_${order.tableNumber}` }
+          ]
+        ]
+      }
+    });
 
     if (foodItems.length > 0 && KITCHEN_CHAT_ID) {
       const kitchenItems = foodItems.map(i =>
@@ -318,7 +508,20 @@ io.on('connection', (socket) => {
         `━━━━━━━━━━━━━━\n${kitchenItems}\n` +
         `━━━━━━━━━━━━━━` +
         (order.note ? `\n📝 <i>${order.note}</i>` : '');
-      await sendTelegramMessage(KITCHEN_CHAT_ID, kitchenMsg);
+      
+      await sendTelegramMessageWithReplyContext(KITCHEN_CHAT_ID, kitchenMsg, order.tableNumber, order.guestName, {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🔥 Cooking', callback_data: `status_${order.id}_preparing` },
+              { text: '✅ Ready', callback_data: `status_${order.id}_ready` }
+            ],
+            [
+              { text: '💬 Reply to Guest', callback_data: `reply_${order.tableNumber}` }
+            ]
+          ]
+        }
+      });
     }
 
     if ((drinkItems.length > 0 || shishaItems.length > 0) && BAR_CHAT_ID) {
@@ -331,7 +534,20 @@ io.on('connection', (socket) => {
         `━━━━━━━━━━━━━━\n${barItems}\n` +
         `━━━━━━━━━━━━━━` +
         (order.note ? `\n📝 <i>${order.note}</i>` : '');
-      await sendTelegramMessage(BAR_CHAT_ID, barMsg);
+      
+      await sendTelegramMessageWithReplyContext(BAR_CHAT_ID, barMsg, order.tableNumber, order.guestName, {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🥃 Preparing', callback_data: `status_${order.id}_preparing` },
+              { text: '✅ Ready', callback_data: `status_${order.id}_ready` }
+            ],
+            [
+              { text: '💬 Reply to Guest', callback_data: `reply_${order.tableNumber}` }
+            ]
+          ]
+        }
+      });
     }
 
     console.log(`New order: ${order.id} from Table ${order.tableNumber}`);
@@ -345,20 +561,7 @@ io.on('connection', (socket) => {
       orders.set(orderId, order);
       
       // Broadcast to all relevant parties
-      io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-all').emit('order-status-update', { orderId, status });
-      
-      if (['preparing', 'ready'].includes(status)) {
-        const foodItems = order.items.filter(item => item.category === 'food');
-        if (foodItems.length > 0) {
-          io.to('staff-kitchen').emit('order-status-update', { orderId, status });
-        }
-        const drinkItems = order.items.filter(item => 
-          ['cocktails', 'spirits', 'wine', 'nonalc', 'shisha'].includes(item.category)
-        );
-        if (drinkItems.length > 0) {
-          io.to('staff-bar').emit('order-status-update', { orderId, status });
-        }
-      }
+      io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-kitchen').to('staff-bar').emit('order-status-update', { orderId, status });
       
       // Telegram notification for delivered
       if (status === 'delivered') {
@@ -374,8 +577,8 @@ io.on('connection', (socket) => {
   socket.on('access-request', async (request: AccessRequest) => {
     accessRequests.set(request.id, request);
     
-    // Notify managers
-    io.to('staff-manager').to('staff-all').emit('access-request', request);
+    // Notify all staff
+    io.to('staff-manager').to('staff-kitchen').to('staff-bar').emit('access-request', request);
     
     // Send Telegram notification
     const accessLabels: Record<string, string> = {
@@ -391,7 +594,8 @@ io.on('connection', (socket) => {
       `🪑 Table ${request.tableNumber}\n` +
       `👤 ${request.guestName}\n` +
       `📍 ${accessLabels[request.type] || request.type}`;
-    await sendTelegramMessage(MANAGER_CHAT_ID, message);
+    
+    await sendTelegramMessageWithReplyContext(MANAGER_CHAT_ID, message, request.tableNumber, request.guestName);
     
     console.log(`Access request: ${request.type} from Table ${request.tableNumber}`);
   });
@@ -410,21 +614,80 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Chat message
+  // Chat message - from guest or staff
   socket.on('chat-message', async (message: ChatMessage) => {
     const tableMessages = messages.get(`table-${message.tableNumber}`) || [];
     tableMessages.push(message);
     messages.set(`table-${message.tableNumber}`, tableMessages);
 
-    io.to(`table-${message.tableNumber}`).to('staff-manager').to('staff-all').emit('new-message', message);
+    // Broadcast to the specific table AND all staff rooms
+    io.to(`table-${message.tableNumber}`).to('staff-manager').to('staff-kitchen').to('staff-bar').emit('new-message', message);
 
     if (message.sender === 'guest') {
-      const msg = `💬 <b>MESSAGE</b> — Table ${message.tableNumber}\n` +
-        `👤 ${message.senderName}: ${message.text}`;
-      await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+      // Get session info for guest name
+      const session = activeTables.get(message.tableNumber);
+      const guestName = session?.guests[0]?.guestName || message.senderName;
+      
+      // Send to Manager with reply context
+      const msg = `💬 <b>MESSAGE from Table ${message.tableNumber}</b>\n` +
+        `👤 ${guestName}: ${message.text}\n` +
+        `🕐 ${formatTime(new Date())}`;
+      
+      await sendTelegramMessageWithReplyContext(MANAGER_CHAT_ID, msg, message.tableNumber, guestName, {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: '💬 Reply', callback_data: `reply_${message.tableNumber}` }
+          ]]
+        }
+      });
+
+      // Also notify Kitchen and Bar chat groups about the message
+      const staffMsg = `💬 <b>Guest Message</b> — Table ${message.tableNumber}\n👤 ${guestName}: ${message.text}`;
+      
+      // For kitchen and bar, we just notify them - they can reply if needed
+      if (KITCHEN_CHAT_ID && KITCHEN_CHAT_ID !== MANAGER_CHAT_ID) {
+        await sendTelegramMessageWithReplyContext(KITCHEN_CHAT_ID, staffMsg, message.tableNumber, guestName, {
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '💬 Reply', callback_data: `reply_${message.tableNumber}` }
+            ]]
+          }
+        });
+      }
+      
+      if (BAR_CHAT_ID && BAR_CHAT_ID !== MANAGER_CHAT_ID && BAR_CHAT_ID !== KITCHEN_CHAT_ID) {
+        await sendTelegramMessageWithReplyContext(BAR_CHAT_ID, staffMsg, message.tableNumber, guestName, {
+          reply_markup: {
+            inline_keyboard: [[
+              { text: '💬 Reply', callback_data: `reply_${message.tableNumber}` }
+            ]]
+          }
+        });
+      }
     }
 
     console.log(`Chat message from ${message.sender} at Table ${message.tableNumber}`);
+  });
+
+  // Staff reply - specifically for staff to reply to guests
+  socket.on('staff-reply', async ({ tableNumber, text, senderName }: { tableNumber: number; text: string; senderName: string }) => {
+    const staffMessage: ChatMessage = {
+      id: `MSG-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      tableNumber,
+      sender: 'staff',
+      text,
+      timestamp: new Date(),
+      senderName: senderName || 'Staff'
+    };
+
+    const tableMessages = messages.get(`table-${tableNumber}`) || [];
+    tableMessages.push(staffMessage);
+    messages.set(`table-${tableNumber}`, tableMessages);
+
+    // Send to the table and all staff
+    io.to(`table-${tableNumber}`).to('staff-manager').to('staff-kitchen').to('staff-bar').emit('new-message', staffMessage);
+
+    console.log(`Staff reply to Table ${tableNumber}: ${text}`);
   });
 
   // Update payment status
@@ -434,7 +697,7 @@ io.on('connection', (socket) => {
       order.paymentStatus = status;
       orders.set(orderId, order);
 
-      io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-all').emit('payment-update', { orderId, status });
+      io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-kitchen').to('staff-bar').emit('payment-update', { orderId, status });
 
       if (status === 'paid') {
         const msg = `💳 <b>PAYMENT RECEIVED</b> — Table ${order.tableNumber}\n` +
@@ -451,7 +714,7 @@ io.on('connection', (socket) => {
   socket.on('request-refund', async (request: RefundRequest) => {
     refundRequests.set(request.id, request);
 
-    io.to('staff-manager').to('staff-all').emit('refund-request', request);
+    io.to('staff-manager').to('staff-kitchen').to('staff-bar').emit('refund-request', request);
 
     const msg = `🔄 <b>REFUND REQUEST</b>\n` +
       `🪑 Table ${request.tableNumber}\n` +
@@ -479,7 +742,7 @@ io.on('connection', (socket) => {
           order.paymentStatus = 'refunded';
           orders.set(request.orderId, order);
 
-          io.to(`table-${request.tableNumber}`).to('staff-manager').to('staff-all').emit('refund-processed', { requestId, approved, amount: request.amount });
+          io.to(`table-${request.tableNumber}`).to('staff-manager').to('staff-kitchen').to('staff-bar').emit('refund-processed', { requestId, approved, amount: request.amount });
 
           const msg = `✅ <b>REFUND APPROVED</b> — Table ${request.tableNumber}\n` +
             `💰 ${formatPrice(request.amount)}\n` +
@@ -487,7 +750,7 @@ io.on('connection', (socket) => {
           await sendTelegramMessage(MANAGER_CHAT_ID, msg);
         }
       } else {
-        io.to('staff-manager').to('staff-all').emit('refund-processed', { requestId, approved });
+        io.to('staff-manager').to('staff-kitchen').to('staff-bar').emit('refund-processed', { requestId, approved });
         const msg = `❌ <b>REFUND DENIED</b> — Table ${request.tableNumber}\n` +
           `💰 ${formatPrice(request.amount)}`;
         await sendTelegramMessage(MANAGER_CHAT_ID, msg);
@@ -504,7 +767,7 @@ io.on('connection', (socket) => {
       order.status = 'cancelled';
       orders.set(orderId, order);
 
-      io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-all').emit('order-cancelled', { orderId, reason });
+      io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-kitchen').to('staff-bar').emit('order-cancelled', { orderId, reason });
 
       const msg = `❌ <b>ORDER CANCELLED</b> — Table ${order.tableNumber}\n` +
         `💰 ${formatPrice(order.total)}\n` +
@@ -524,7 +787,7 @@ io.on('connection', (socket) => {
       session.endTime = new Date();
       session.totalSpent = finalBill;
 
-      io.to('staff-manager').to('staff-all').emit('session-ended', {
+      io.to('staff-manager').to('staff-kitchen').to('staff-bar').emit('session-ended', {
         tableNumber,
         sessionId: session.id,
         duration: Math.floor((session.endTime.getTime() - session.startTime.getTime()) / 60000),
@@ -549,6 +812,12 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Get messages for a table
+  socket.on('get-messages', ({ tableNumber }: { tableNumber: number }) => {
+    const tableMessages = messages.get(`table-${tableNumber}`) || [];
+    socket.emit('table-messages', { tableNumber, messages: tableMessages });
+  });
+
   // Disconnect
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
@@ -561,9 +830,9 @@ io.on('connection', (socket) => {
         activeTables.set(tableNum, session);
 
         if (session.guests.length === 0) {
-          io.to('staff-manager').to('staff-all').emit('table-inactive', tableNum);
+          io.to('staff-manager').to('staff-kitchen').to('staff-bar').emit('table-inactive', tableNum);
         } else {
-          io.to('staff-manager').to('staff-all').emit('guest-left', {
+          io.to('staff-manager').to('staff-kitchen').to('staff-bar').emit('guest-left', {
             tableNumber: tableNum,
             guestName: guest.guestName,
             remainingGuests: session.guests.length

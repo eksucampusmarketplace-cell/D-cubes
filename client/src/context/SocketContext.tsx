@@ -9,6 +9,7 @@ interface SocketContextType {
   sendOrder: (order: Order) => void;
   sendAccessRequest: (request: AccessRequest) => void;
   sendMessage: (message: ChatMessage) => void;
+  sendStaffReply: (tableNumber: number, text: string, senderName: string) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   respondToAccess: (requestId: string, granted: boolean) => void;
   joinTable: (tableNumber: number) => void;
@@ -18,6 +19,7 @@ interface SocketContextType {
   processRefund: (requestId: string, approved: boolean) => void;
   cancelOrder: (orderId: string, reason?: string) => void;
   endSession: (tableNumber: number, finalBill: number) => void;
+  getTableMessages: (tableNumber: number) => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -64,6 +66,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket?.emit('chat-message', message);
   }, [socket]);
 
+  const sendStaffReply = useCallback((tableNumber: number, text: string, senderName: string) => {
+    socket?.emit('staff-reply', { tableNumber, text, senderName });
+  }, [socket]);
+
   const updateOrderStatus = useCallback((orderId: string, status: OrderStatus) => {
     socket?.emit('update-order-status', { orderId, status });
   }, [socket]);
@@ -100,6 +106,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket?.emit('end-session', { tableNumber, finalBill });
   }, [socket]);
 
+  const getTableMessages = useCallback((tableNumber: number) => {
+    socket?.emit('get-messages', { tableNumber });
+  }, [socket]);
+
   return (
     <SocketContext.Provider value={{
       socket,
@@ -108,6 +118,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       sendOrder,
       sendAccessRequest,
       sendMessage,
+      sendStaffReply,
       updateOrderStatus,
       respondToAccess,
       joinTable,
@@ -116,7 +127,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       requestRefund,
       processRefund,
       cancelOrder,
-      endSession
+      endSession,
+      getTableMessages
     }}>
       {children}
     </SocketContext.Provider>
