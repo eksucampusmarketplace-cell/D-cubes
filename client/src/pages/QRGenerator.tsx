@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export const QRGenerator: React.FC = () => {
-  const [baseUrl, setBaseUrl] = useState('https://velourclub.com/order');
+  const [baseUrl, setBaseUrl] = useState('https://dcubesplace.com/order');
   const [startTable, setStartTable] = useState(1);
   const [endTable, setEndTable] = useState(50);
   const printRef = useRef<HTMLDivElement>(null);
@@ -14,17 +14,17 @@ export const QRGenerator: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-dark p-8">
+    <div className="min-h-screen bg-dark p-4 lg:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="font-display text-3xl tracking-[0.25em] text-gold">D CUBES PLACE</h1>
-          <h2 className="font-serif text-2xl text-white mt-2">QR Code Generator</h2>
+          <h1 className="font-display text-2xl lg:text-3xl tracking-[0.2em] lg:tracking-[0.25em] text-gold">D CUBE'S PLACE</h1>
+          <h2 className="font-serif text-xl lg:text-2xl text-white mt-2">QR Code Generator</h2>
         </div>
         <div className="flex gap-3 no-print">
           <button
             onClick={handlePrint}
-            className="bg-gold text-dark px-6 py-3 rounded text-sm font-medium hover:bg-gold-light transition-colors"
+            className="bg-gold text-dark px-4 lg:px-6 py-2 lg:py-3 rounded text-sm font-medium hover:bg-gold-light transition-colors"
           >
             Print QR Codes
           </button>
@@ -32,9 +32,9 @@ export const QRGenerator: React.FC = () => {
       </div>
 
       {/* Settings */}
-      <div className="bg-dark-2 p-6 rounded-lg mb-8 no-print">
+      <div className="bg-dark-2 p-4 lg:p-6 rounded-lg mb-8 no-print">
         <h3 className="font-serif text-lg text-white mb-4">Settings</h3>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">Base URL</label>
             <input
@@ -87,7 +87,7 @@ export const QRGenerator: React.FC = () => {
             </div>
             <p className="text-dark font-display text-2xl tracking-wider">TABLE {tableNum}</p>
             <p className="text-dark/50 text-[10px] mt-1">Scan to order</p>
-            <p className="text-dark/30 text-[8px] mt-0.5">VELOUR Members Club</p>
+            <p className="text-dark/30 text-[8px] mt-0.5">D CUBE'S PLACE</p>
           </div>
         ))}
       </div>

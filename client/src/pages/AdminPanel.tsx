@@ -32,8 +32,8 @@ export const AdminPanel: React.FC = () => {
 
   // Club settings
   const [clubSettings, setClubSettings] = useState({
-    name: 'D CUBES PLACE',
-    tagline: 'Resort · Lounge · Nightlife',
+    name: 'D CUBE\'S PLACE',
+    tagline: 'Open Bar · Lounge · Nightlife',
     heroImage: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200&auto=format&fit=crop&q=80',
     address: 'Victoria Island, Lagos, Nigeria',
     phone: '+234 800 000 0000',
@@ -71,10 +71,22 @@ export const AdminPanel: React.FC = () => {
     setGalleryImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-dark-4">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 bottom-0 w-64 bg-dark-2 border-r border-gold/10 flex flex-col z-50">
+      <div className={`fixed lg:fixed left-0 top-0 bottom-0 w-64 bg-dark-2 border-r border-gold/10 flex flex-col z-50 transform transition-transform duration-300 ${
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
         {/* Logo */}
         <div className="p-6 border-b border-gold/10">
           <h1 className="font-display text-2xl tracking-[0.2em] text-gold">ADMIN</h1>
@@ -128,7 +140,20 @@ export const AdminPanel: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="ml-64 p-8">
+      <div className="ml-0 lg:ml-64 p-4 lg:p-8">
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden mb-4">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 -ml-2 text-cream hover:text-gold transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+
         {activeTab === 'menu' && (
           <div>
             {/* Header */}

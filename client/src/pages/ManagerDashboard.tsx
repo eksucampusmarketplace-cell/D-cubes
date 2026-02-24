@@ -233,12 +233,24 @@ export const ManagerDashboard: React.FC = () => {
   const btnGray = `${btnBase} bg-white/10 text-cream hover:bg-white/15`;
   const btnDark = `${btnBase} bg-dark-3 border border-gold/20 text-gold hover:bg-gold/10`;
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-dark flex">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-56 bg-dark-2 border-r border-gold/10 flex-shrink-0 flex flex-col sticky top-0 h-screen">
+      <div className={`fixed lg:static inset-y-0 left-0 z-50 w-56 bg-dark-2 border-r border-gold/10 flex-shrink-0 flex flex-col sticky top-0 h-screen transform transition-transform duration-300 ${
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
         <div className="p-6 border-b border-white/5">
-          <h1 className="font-display text-xl tracking-[0.25em] text-gold">D CUBES PLACE</h1>
+          <h1 className="font-display text-xl tracking-[0.25em] text-gold">D CUBE'S PLACE</h1>
           <p className="text-[10px] tracking-[0.2em] uppercase text-cream/30 mt-1">Staff Dashboard</p>
         </div>
         
@@ -260,7 +272,7 @@ export const ManagerDashboard: React.FC = () => {
           </button>
           <a
             href="/admin"
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream/50 hover:text-cream transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-cream/50 hover:text-cream transition-colors block"
           >
             ⚙️ Admin Panel
           </a>
@@ -282,30 +294,42 @@ export const ManagerDashboard: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-dark/95 backdrop-blur border-b border-white/5 px-6 py-4 flex items-center justify-between z-20">
-          <div>
-            <h2 className="text-base text-white font-normal">Live Orders & Table Management</h2>
-            <p className="text-xs text-cream/35 mt-1">{new Date().toLocaleDateString()} · Victoria Island, Lagos</p>
-          </div>
+        <div className="sticky top-0 bg-dark/95 backdrop-blur border-b border-white/5 px-4 lg:px-6 py-4 flex items-center justify-between z-20">
           <div className="flex items-center gap-3">
+            {/* Mobile Menu Button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 -ml-2 text-cream hover:text-gold transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div>
+              <h2 className="text-sm lg:text-base text-white font-normal">Live Orders & Table Management</h2>
+              <p className="text-xs text-cream/35 mt-0.5 hidden sm:block">{new Date().toLocaleDateString()} · Victoria Island, Lagos</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 lg:gap-3">
             <div
-              className={`flex items-center gap-2 px-3 py-1.5 border rounded-full text-[11px]
+              className={`flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1 lg:py-1.5 border rounded-full text-[10px] lg:text-[11px]
                 ${telegramEnabled
                   ? 'border-green-500/25 text-green-500'
                   : 'border-white/8 text-cream/40'
                 }`}
             >
-              📲 {telegramEnabled === null ? 'Checking Telegram' : telegramEnabled ? 'Telegram Connected' : 'Telegram Offline'}
+              📲 <span className="hidden sm:inline">{telegramEnabled === null ? 'Checking...' : telegramEnabled ? 'Telegram' : 'Offline'}</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 border border-green-500/25 rounded-full text-[11px] text-green-500">
+            <div className="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-3 py-1 lg:py-1.5 border border-green-500/25 rounded-full text-[10px] lg:text-[11px] text-green-500">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              {stats.activeTables} Tables Active
+              {stats.activeTables} Tables
             </div>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-5 gap-0.5 p-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-0.5 p-3 lg:p-6">
           <div className="bg-dark-2 p-5 relative overflow-hidden group hover:bg-dark-3 transition-colors">
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-red-500/80" />
             <p className="text-[10px] tracking-[0.25em] uppercase text-cream/35 mb-2">New Orders</p>
@@ -339,7 +363,7 @@ export const ManagerDashboard: React.FC = () => {
         </div>
 
         {/* Main Grid */}
-        <div className="grid grid-cols-[1fr_360px] gap-5 px-6 pb-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-5 px-4 lg:px-6 pb-6">
           {/* Left Column */}
           <div className="space-y-5">
             {/* Access Requests */}

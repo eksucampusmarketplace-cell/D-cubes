@@ -1,7 +1,7 @@
-# VELOUR Security Documentation
+# D CUBE'S PLACE Security Documentation
 
 ## Overview
-The VELOUR ordering system implements several security measures to protect customer data, prevent unauthorized access to staff areas, and ensure secure payment handling.
+The D Cube's Place ordering system implements several security measures to protect customer data, prevent unauthorized access to staff areas, and ensure secure payment handling.
 
 ## Security Features
 
