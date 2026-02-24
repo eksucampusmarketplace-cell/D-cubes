@@ -56,8 +56,15 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     const handleNewMessage = (message: ChatMessage) => {
+      // Only add if this message is for our table and not already in the list
       if (message.tableNumber === tableNumber) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+          // Check for duplicate by ID
+          if (prev.some(m => m.id === message.id)) {
+            return prev;
+          }
+          return [...prev, message];
+        });
       }
     };
 

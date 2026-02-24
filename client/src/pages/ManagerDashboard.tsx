@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSocket } from '@/context/SocketContext';
 import { Order, AccessRequest, ChatMessage, Table, OrderStatus, RefundRequest, AnalyticsData, PaymentStatus } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, getAccessTypeLabel } from '@/utils/format';
 
 export const ManagerDashboard: React.FC = () => {
-  const { socket, joinStaff, updateOrderStatus, respondToAccess, updatePayment, processRefund, cancelOrder, endSession } = useSocket();
+  const { socket, joinStaff, updateOrderStatus, respondToAccess, updatePayment, processRefund, cancelOrder, endSession, sendStaffReply } = useSocket();
   const [orders, setOrders] = useState<Order[]>([]);
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([]);
@@ -18,6 +18,7 @@ export const ManagerDashboard: React.FC = () => {
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
+  const [chatInput, setChatInput] = useState('');
   const [telegramMessages, setTelegramMessages] = useState<string[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [stats, setStats] = useState({
@@ -27,6 +28,7 @@ export const ManagerDashboard: React.FC = () => {
     delivered: 0,
     unpaidOrders: 0
   });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     joinStaff('manager');
@@ -56,7 +58,7 @@ export const ManagerDashboard: React.FC = () => {
       addTelegramMessage(`🛎️ ACCESS REQUEST — Table ${request.tableNumber}\n👤 ${request.guestName}\n📍 ${getAccessTypeLabel(request.type)}`);
     });
 
-    socket.on('chat-message', (message: ChatMessage) => {
+    socket.on('new-message', (message: ChatMessage) => {
       setMessages(prev => [...prev, message]);
       if (message.sender === 'guest') {
         updateTableStatus(message.tableNumber, { hasUnreadMessage: true });
@@ -82,14 +84,20 @@ export const ManagerDashboard: React.FC = () => {
       addTelegramMessage(`🔄 REFUND REQUEST — Table ${request.tableNumber}\n💰 ${formatPrice(request.amount)}`);
     });
 
+    socket.on('table-inactive', (tableNumber: number) => {
+      updateTableStatus(tableNumber, { isActive: false, hasPendingOrder: false });
+      setStats(prev => ({ ...prev, activeTables: Math.max(0, prev.activeTables - 1) }));
+    });
+
     return () => {
       socket.off('new-order');
       socket.off('check-in');
       socket.off('access-request');
-      socket.off('chat-message');
+      socket.off('new-message');
       socket.off('order-status-update');
       socket.off('payment-update');
       socket.off('refund-request');
+      socket.off('table-inactive');
     };
   }, [socket]);
 
@@ -114,6 +122,16 @@ export const ManagerDashboard: React.FC = () => {
     const interval = setInterval(fetchAnalytics, 60000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (selectedTable) {
+      updateTableStatus(selectedTable, { hasUnreadMessage: false });
+    }
+  }, [selectedTable]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, selectedTable]);
 
   const updateTableStatus = (tableNumber: number, updates: Partial<Table>) => {
     setTables(prev => prev.map(t => 
@@ -173,6 +191,20 @@ export const ManagerDashboard: React.FC = () => {
     processRefund(requestId, approved);
     setRefundRequests(prev => prev.filter(r => r.id !== requestId));
   }, [processRefund]);
+
+  const handleSendMessage = useCallback(() => {
+    if (!chatInput.trim() || !selectedTable) return;
+    
+    sendStaffReply(selectedTable, chatInput.trim(), 'Manager');
+    setChatInput('');
+  }, [chatInput, selectedTable, sendStaffReply]);
+
+  const handleChatKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  }, [handleSendMessage]);
 
   const selectedTableMessages = messages.filter(m => m.tableNumber === selectedTable);
   const selectedTableData = tables.find(t => t.number === selectedTable);
@@ -534,7 +566,7 @@ export const ManagerDashboard: React.FC = () => {
                 </div>
                 <div className="h-64 overflow-y-auto p-4 space-y-2">
                   {selectedTableMessages.length === 0 ? (
-                    <p className="text-center text-cream/30 text-sm py-8">No messages</p>
+                    <p className="text-center text-cream/30 text-sm py-8">No messages yet. Start the conversation!</p>
                   ) : (
                     selectedTableMessages.map(msg => (
                       <div 
@@ -546,24 +578,31 @@ export const ManagerDashboard: React.FC = () => {
                           }`}
                       >
                         {msg.sender === 'staff' && (
-                          <p className="text-[9px] text-gold uppercase tracking-wide mb-1 font-medium">Staff</p>
+                          <p className="text-[9px] text-gold uppercase tracking-wide mb-1 font-medium">{msg.senderName}</p>
                         )}
                         <p className="text-cream/90">{msg.text}</p>
                         <p className="text-[9px] text-cream/30 mt-1 text-right">{formatTime(msg.timestamp)}</p>
                       </div>
                     ))
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
                 <div className="p-3 border-t border-white/5 flex gap-2">
                   <input
                     type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={handleChatKeyDown}
                     placeholder={`Reply to Table ${selectedTable}...`}
                     className="flex-1 bg-dark-3 border border-white/6 rounded-lg px-3 py-2 text-xs text-cream
                                focus:border-gold/35 focus:outline-none placeholder:text-cream/20"
                   />
                   <button 
                     type="button"
-                    className="w-8 h-8 rounded-lg bg-gold text-dark flex items-center justify-center text-xs hover:bg-gold-light transition-colors"
+                    onClick={handleSendMessage}
+                    disabled={!chatInput.trim()}
+                    className="w-8 h-8 rounded-lg bg-gold text-dark flex items-center justify-center text-xs 
+                               hover:bg-gold-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     ➤
                   </button>
