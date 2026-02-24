@@ -9,7 +9,7 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { OrderStatus } from '@/components/OrderStatus';
 import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS } from '@/data/menu';
 import { getGreeting, formatPrice } from '@/utils/format';
-import { CUSTOMER_HERO, CATEGORY_IMAGES } from '@/config/images';
+import { CUSTOMER_HERO, CATEGORY_IMAGES, NIGHTLIFE_FILTER } from '@/config/images';
 
 type Category = 'all' | 'cocktails' | 'spirits' | 'wine' | 'food' | 'shisha' | 'nonalc';
 
@@ -67,18 +67,26 @@ export const CustomerPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Hero Section - Darkened for better text readability */}
+      {/* Hero Section with Cozy Nightlife Ambiance */}
       <div className="relative h-[40vh] min-h-[350px] overflow-hidden">
-        {/* Background Image */}
+        {/* Background Image with Nightlife Filter */}
         <div 
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${CUSTOMER_HERO.background})` }}
+          style={{ 
+            backgroundImage: `url(${CUSTOMER_HERO.background})`,
+            filter: NIGHTLIFE_FILTER.filter,
+            transform: 'scale(1.05)',
+          }}
         />
         
-        {/* Stronger Gradient Overlays for text readability */}
+        {/* Rich Nightlife Gradient Overlays */}
         <div className="absolute inset-0 bg-black/60" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black/90" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-black/50" />
+        
+        {/* Warm Ambient Tint */}
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-900/15 via-transparent to-purple-900/15" />
         
         {/* Decorative Elements */}
         <div className="absolute top-20 left-10 w-40 h-40 bg-gold/10 rounded-full blur-3xl" />
@@ -125,9 +133,14 @@ export const CustomerPage: React.FC = () => {
         }`}
       >
         <div className="px-5 py-4 flex items-center justify-between">
-          <span className="font-display text-xl tracking-[0.3em] text-gold font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-            D CUBES PLACE
-          </span>
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-gold" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.5523 18.5523 20 18 20H6C5.44772 20 5 19.5523 5 19V18H19V19Z"/>
+            </svg>
+            <span className="font-display text-xl tracking-[0.3em] text-gold font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+              D CUBES PLACE
+            </span>
+          </div>
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -306,9 +319,14 @@ export const CustomerPage: React.FC = () => {
       {/* Footer */}
       <div className="px-5 py-12 text-center border-t border-gold/10">
         <div className="gold-divider-thick w-24 mx-auto mb-6" />
-        <p className="font-display text-2xl tracking-[0.3em] text-gold/80 mb-2 font-bold">D CUBES PLACE</p>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <svg className="w-6 h-6 text-gold/80" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.5523 18.5523 20 18 20H6C5.44772 20 5 19.5523 5 19V18H19V19Z"/>
+          </svg>
+          <p className="font-display text-2xl tracking-[0.3em] text-gold/80 font-bold">D CUBES PLACE</p>
+        </div>
         <p className="text-[11px] text-white/40 tracking-wider mb-4 font-medium">
-          Resort · Lounge · Nightlife
+          Open bar, Lounge, Nightlife
         </p>
         <p className="text-[10px] text-white/30 font-medium">
           Crafted by{' '}

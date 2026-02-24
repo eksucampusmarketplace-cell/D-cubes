@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useTable } from '@/context/TableContext';
-import { HERO_IMAGES } from '@/config/images';
+import { HERO_IMAGES, NIGHTLIFE_FILTER } from '@/config/images';
 
 interface CheckInScreenProps {
   onCheckIn: () => void;
@@ -43,18 +43,24 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-hidden bg-black">
-      {/* Background Image - Darkened for better text readability */}
+      {/* Background Image with Cozy Nightlife Filter */}
       <div 
         className="absolute inset-0 bg-cover bg-center"
         style={{ 
           backgroundImage: `url(${HERO_IMAGES.primary})`,
+          filter: NIGHTLIFE_FILTER.filter,
+          transform: 'scale(1.05)', // Slight zoom to hide filter edges
         }}
       />
       
-      {/* Multiple Gradient Overlays for better text contrast */}
-      <div className="absolute inset-0 bg-black/70" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black/90" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/50" />
+      {/* Rich Nightlife Gradient Overlays for Luxurious Ambiance */}
+      <div className="absolute inset-0 bg-black/60" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/50 to-black/95" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/70" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/40" />
+      
+      {/* Warm Gold/Purple Ambient Tint for Cozy Night Feel */}
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-transparent to-purple-900/20" />
       
       {/* Decorative Gold Glows */}
       <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-gold/10 rounded-full blur-[120px]" />
@@ -87,9 +93,15 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
               {/* Outer rings */}
               <div className="absolute inset-0 rounded-full border border-gold/30 animate-pulse-ring" />
               <div className="absolute inset-2 rounded-full border border-gold/20 animate-pulse-ring" style={{ animationDelay: '0.5s' }} />
-              {/* Main circle */}
+              {/* Main circle with Crown */}
               <div className="absolute inset-4 rounded-full border-2 border-gold/50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                <span className="font-display text-4xl text-gold font-bold drop-shadow-[0_0_10px_rgba(201,168,76,0.8)]">D</span>
+                <svg 
+                  className="w-10 h-10 text-gold drop-shadow-[0_0_10px_rgba(201,168,76,0.8)]" 
+                  viewBox="0 0 24 24" 
+                  fill="currentColor"
+                >
+                  <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.5523 18.5523 20 18 20H6C5.44772 20 5 19.5523 5 19V18H19V19Z"/>
+                </svg>
               </div>
             </div>
           </div>
@@ -105,7 +117,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
           {/* Tagline - Better contrast */}
           <p className="text-[13px] tracking-[0.3em] uppercase text-gold font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
-            Resort · Lounge · Nightlife
+            Open bar, Lounge, Nightlife
           </p>
         </div>
 
