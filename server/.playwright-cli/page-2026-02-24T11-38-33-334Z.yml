@@ -1,0 +1,166 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e33]: Authenticated as
+    - generic [ref=e34]: 👔 manager
+    - button "Logout" [ref=e35] [cursor=pointer]:
+      - img [ref=e36]
+  - generic [ref=e38]:
+    - generic [ref=e39]:
+      - generic [ref=e40]:
+        - heading "D CUBE'S PLACE" [level=1] [ref=e41]
+        - paragraph [ref=e42]: Staff Dashboard
+      - generic [ref=e43]:
+        - paragraph [ref=e44]: Operations
+        - button "📋 Live Orders" [ref=e45] [cursor=pointer]
+        - button "🪑 Tables" [ref=e46] [cursor=pointer]
+        - button "💬 Messages" [ref=e47] [cursor=pointer]
+        - link "⚙️ Admin Panel" [ref=e48] [cursor=pointer]:
+          - /url: /admin
+      - generic [ref=e50]:
+        - generic [ref=e51]: AK
+        - generic [ref=e52]:
+          - paragraph [ref=e53]: Alex K.
+          - paragraph [ref=e54]: Floor Manager
+    - generic [ref=e55]:
+      - generic [ref=e56]:
+        - generic [ref=e57]:
+          - button [ref=e243] [cursor=pointer]:
+            - img [ref=e244]
+          - heading "Live Orders & Table Management" [level=2] [ref=e59]
+        - generic [ref=e61]:
+          - generic [ref=e62]: 📲
+          - generic [ref=e64]: 0 Tables
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - paragraph [ref=e69]: New Orders
+          - paragraph [ref=e70]: "0"
+          - paragraph [ref=e71]: Needs attention
+        - generic [ref=e72]:
+          - paragraph [ref=e74]: Active Tables
+          - paragraph [ref=e75]: "0"
+          - paragraph [ref=e76]: of 50 tables
+        - generic [ref=e77]:
+          - paragraph [ref=e79]: Tonight's Revenue
+          - paragraph [ref=e80]: ₦0.00M
+          - paragraph [ref=e81]: ↑ 18% vs last Friday
+        - generic [ref=e82]:
+          - paragraph [ref=e84]: Orders Delivered
+          - paragraph [ref=e85]: "0"
+          - paragraph [ref=e86]: Since 8PM
+        - generic [ref=e87]:
+          - paragraph [ref=e89]: Unpaid Orders
+          - paragraph [ref=e90]: "0"
+          - paragraph [ref=e91]: Awaiting payment
+      - generic [ref=e92]:
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - paragraph [ref=e96]: 📋 Live Orders
+            - button "Clear Completed" [ref=e97] [cursor=pointer]
+          - generic [ref=e99]: No orders yet
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - generic [ref=e102]:
+              - paragraph [ref=e103]: 🪑 Tables
+              - button "View All" [ref=e104] [cursor=pointer]
+            - generic [ref=e105]:
+              - button "1 Empty" [ref=e107] [cursor=pointer]:
+                - paragraph [ref=e108]: "1"
+                - paragraph [ref=e109]: Empty
+              - button "2 Empty" [ref=e111] [cursor=pointer]:
+                - paragraph [ref=e112]: "2"
+                - paragraph [ref=e113]: Empty
+              - button "3 Empty" [ref=e115] [cursor=pointer]:
+                - paragraph [ref=e116]: "3"
+                - paragraph [ref=e117]: Empty
+              - button "4 Empty" [ref=e119] [cursor=pointer]:
+                - paragraph [ref=e120]: "4"
+                - paragraph [ref=e121]: Empty
+              - button "5 Empty" [ref=e123] [cursor=pointer]:
+                - paragraph [ref=e124]: "5"
+                - paragraph [ref=e125]: Empty
+              - button "6 Empty" [ref=e127] [cursor=pointer]:
+                - paragraph [ref=e128]: "6"
+                - paragraph [ref=e129]: Empty
+              - button "7 Empty" [ref=e131] [cursor=pointer]:
+                - paragraph [ref=e132]: "7"
+                - paragraph [ref=e133]: Empty
+              - button "8 Empty" [ref=e135] [cursor=pointer]:
+                - paragraph [ref=e136]: "8"
+                - paragraph [ref=e137]: Empty
+              - button "9 Empty" [ref=e139] [cursor=pointer]:
+                - paragraph [ref=e140]: "9"
+                - paragraph [ref=e141]: Empty
+              - button "10 Empty" [ref=e143] [cursor=pointer]:
+                - paragraph [ref=e144]: "10"
+                - paragraph [ref=e145]: Empty
+              - button "11 Empty" [ref=e147] [cursor=pointer]:
+                - paragraph [ref=e148]: "11"
+                - paragraph [ref=e149]: Empty
+              - button "12 Empty" [ref=e151] [cursor=pointer]:
+                - paragraph [ref=e152]: "12"
+                - paragraph [ref=e153]: Empty
+              - button "13 Empty" [ref=e155] [cursor=pointer]:
+                - paragraph [ref=e156]: "13"
+                - paragraph [ref=e157]: Empty
+              - button "14 Empty" [ref=e159] [cursor=pointer]:
+                - paragraph [ref=e160]: "14"
+                - paragraph [ref=e161]: Empty
+              - button "15 Empty" [ref=e163] [cursor=pointer]:
+                - paragraph [ref=e164]: "15"
+                - paragraph [ref=e165]: Empty
+              - button "16 Empty" [ref=e167] [cursor=pointer]:
+                - paragraph [ref=e168]: "16"
+                - paragraph [ref=e169]: Empty
+              - button "17 Empty" [ref=e171] [cursor=pointer]:
+                - paragraph [ref=e172]: "17"
+                - paragraph [ref=e173]: Empty
+              - button "18 Empty" [ref=e175] [cursor=pointer]:
+                - paragraph [ref=e176]: "18"
+                - paragraph [ref=e177]: Empty
+              - button "19 Empty" [ref=e179] [cursor=pointer]:
+                - paragraph [ref=e180]: "19"
+                - paragraph [ref=e181]: Empty
+              - button "20 Empty" [ref=e183] [cursor=pointer]:
+                - paragraph [ref=e184]: "20"
+                - paragraph [ref=e185]: Empty
+              - button "21 Empty" [ref=e187] [cursor=pointer]:
+                - paragraph [ref=e188]: "21"
+                - paragraph [ref=e189]: Empty
+              - button "22 Empty" [ref=e191] [cursor=pointer]:
+                - paragraph [ref=e192]: "22"
+                - paragraph [ref=e193]: Empty
+              - button "23 Empty" [ref=e195] [cursor=pointer]:
+                - paragraph [ref=e196]: "23"
+                - paragraph [ref=e197]: Empty
+              - button "24 Empty" [ref=e199] [cursor=pointer]:
+                - paragraph [ref=e200]: "24"
+                - paragraph [ref=e201]: Empty
+              - button "25 Empty" [ref=e203] [cursor=pointer]:
+                - paragraph [ref=e204]: "25"
+                - paragraph [ref=e205]: Empty
+              - button "26 Empty" [ref=e207] [cursor=pointer]:
+                - paragraph [ref=e208]: "26"
+                - paragraph [ref=e209]: Empty
+              - button "27 Empty" [ref=e211] [cursor=pointer]:
+                - paragraph [ref=e212]: "27"
+                - paragraph [ref=e213]: Empty
+              - button "28 Empty" [ref=e215] [cursor=pointer]:
+                - paragraph [ref=e216]: "28"
+                - paragraph [ref=e217]: Empty
+              - button "29 Empty" [ref=e219] [cursor=pointer]:
+                - paragraph [ref=e220]: "29"
+                - paragraph [ref=e221]: Empty
+              - button "30 Empty" [ref=e223] [cursor=pointer]:
+                - paragraph [ref=e224]: "30"
+                - paragraph [ref=e225]: Empty
+          - generic [ref=e226]:
+            - generic [ref=e227]:
+              - paragraph [ref=e228]: 📲 Telegram Feed
+              - button "View Bot" [ref=e229] [cursor=pointer]
+            - paragraph [ref=e231]: No messages yet
+      - generic [ref=e233]:
+        - paragraph [ref=e235]: 📊 Analytics
+        - generic [ref=e236]:
+          - heading "Top Selling Items" [level=3] [ref=e238]
+          - heading "Category Breakdown" [level=3] [ref=e240]
+          - heading "Top Tables by Revenue" [level=3] [ref=e242]

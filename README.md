@@ -1,6 +1,6 @@
-# D Cubes Place — Resort & Lounge Ordering System
+# D CUBE'S PLACE — Open Bar, Lounge Ordering System
 
-A premium ordering system for resorts and lounges featuring optional QR code-based table detection, real-time communication, Telegram integration, multi-role staff dashboards, and comprehensive management features including returns, refunds, payment tracking, analytics, and session management.
+A premium ordering system for open bars and lounges featuring optional QR code-based table detection, real-time communication, Telegram integration, multi-role staff dashboards, and comprehensive management features including returns, refunds, payment tracking, analytics, and session management.
 
 ## Features
 
@@ -271,4 +271,4 @@ Web Developer
 
 ## License
 
-This project is proprietary software for D Cubes Place.
+This project is proprietary software for D Cube's Place.

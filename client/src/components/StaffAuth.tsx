@@ -125,7 +125,7 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
                           flex items-center justify-center mb-4 shadow-[0_10px_40px_rgba(201,168,76,0.2)]`}>
               <span className="text-4xl">{ROLE_ICONS[role]}</span>
             </div>
-            <h1 className="font-display text-3xl tracking-[0.25em] text-gold mb-2">D CUBES PLACE</h1>
+            <h1 className="font-display text-3xl tracking-[0.25em] text-gold mb-2">D CUBE'S PLACE</h1>
             <p className="text-[10px] tracking-[0.2em] uppercase text-cream/30">Staff Authentication</p>
           </div>
 

@@ -109,31 +109,31 @@ export const BarDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-dark">
       {/* Header */}
-      <div className="sticky top-0 bg-dark/95 backdrop-blur border-b border-gold/20 px-8 py-6 z-20">
+      <div className="sticky top-0 bg-dark/95 backdrop-blur border-b border-gold/20 px-4 lg:px-8 py-4 lg:py-6 z-20">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="font-display text-3xl tracking-[0.25em] text-gold">D CUBES PLACE</h1>
-            <div className="h-8 w-px bg-gold/30" />
-            <div>
-              <h2 className="font-serif text-2xl text-white">Bar Display</h2>
+          <div className="flex items-center gap-2 lg:gap-4">
+            <h1 className="font-display text-xl lg:text-3xl tracking-[0.2em] lg:tracking-[0.25em] text-gold">D CUBE'S PLACE</h1>
+            <div className="h-6 lg:h-8 w-px bg-gold/30 hidden sm:block" />
+            <div className="hidden sm:block">
+              <h2 className="font-serif text-lg lg:text-2xl text-white">Bar Display</h2>
               <p className="text-xs text-cream/35 mt-1">Drinks & Shisha Orders</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-4 py-2 border border-blue-500/25 rounded-full text-sm text-blue-500">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-              Live Connection
+          <div className="flex items-center gap-2 lg:gap-3">
+            <div className="flex items-center gap-1.5 lg:gap-2 px-3 lg:px-4 py-1.5 lg:py-2 border border-blue-500/25 rounded-full text-xs lg:text-sm text-blue-500">
+              <span className="w-1.5 lg:w-2 h-1.5 lg:h-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="hidden sm:inline">Live</span>
             </div>
             <div className="text-right">
-              <p className="font-display text-3xl text-gold">{barOrders.filter(o => o.status === 'pending' || o.status === 'confirmed').length}</p>
-              <p className="text-[10px] tracking-[0.2em] uppercase text-cream/35">Pending Orders</p>
+              <p className="font-display text-xl lg:text-3xl text-gold">{barOrders.filter(o => o.status === 'pending' || o.status === 'confirmed').length}</p>
+              <p className="text-[9px] lg:text-[10px] tracking-[0.2em] uppercase text-cream/35">Pending</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Orders & Messages */}
-      <div className="p-8 grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+      <div className="p-4 lg:p-8 grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4 lg:gap-6">
         <div>
           {barOrders.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[60vh] text-cream/30">
@@ -142,7 +142,7 @@ export const BarDashboard: React.FC = () => {
               <p className="text-sm">New orders will appear here automatically</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
               {barOrders.map(order => (
                 <div 
                   key={order.id}

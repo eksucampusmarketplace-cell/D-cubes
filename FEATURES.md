@@ -1,4 +1,4 @@
-# VELOUR - Complete Feature Documentation
+# D CUBE'S PLACE - Complete Feature Documentation
 
 ## Table of Contents
 1. [Core Features](#core-features)

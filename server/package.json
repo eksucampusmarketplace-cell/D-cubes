@@ -1,7 +1,7 @@
 {
   "name": "dcubes-server",
   "version": "1.0.0",
-  "description": "Backend server for D Cubes Place Ordering System",
+  "description": "Backend server for D Cube's Place Ordering System",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

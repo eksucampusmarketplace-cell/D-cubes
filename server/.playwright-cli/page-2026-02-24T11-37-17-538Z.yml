@@ -1,0 +1,17 @@
+- generic [ref=e7]:
+  - generic [ref=e8]:
+    - generic [ref=e10]: 👔
+    - heading "D CUBE'S PLACE" [level=1] [ref=e11]
+    - paragraph [ref=e12]: Staff Authentication
+  - generic [ref=e14]:
+    - generic [ref=e15]: 👔
+    - generic [ref=e16]: manager Access
+  - generic [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e19]: Enter 4-digit PIN
+      - textbox "••••" [active] [ref=e21]
+    - button "ACCESS DASHBOARD" [disabled] [ref=e27]:
+      - generic [ref=e28]:
+        - img [ref=e29]
+        - text: ACCESS DASHBOARD
+  - paragraph [ref=e32]: Unauthorized access is prohibited and monitored

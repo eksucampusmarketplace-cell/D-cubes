@@ -1,4 +1,81 @@
-# Deployment Guide for VELOUR Club System
+# Deployment Guide for D Cube's Place
+
+## WebSocket Configuration for Production
+
+### The Problem
+If your WebSocket shows "localhost" and real-time chat isn't working, it's because the client is configured to connect to localhost by default. Here's how to fix it:
+
+### The Solution
+
+The SocketContext is already configured to auto-detect the correct WebSocket URL:
+
+```typescript
+const socketUrl = import.meta.env.VITE_SOCKET_URL || (() => {
+  const { protocol, hostname, port, origin } = window.location;
+  const isDevPort = port === '3000' || port === '5173';
+  if (hostname === 'localhost' || isDevPort) {
+    return `${protocol}//${hostname}:5000`;
+  }
+  return origin;  // In production, use the same origin
+})();
+```
+
+### Configuration for Production
+
+#### Option 1: Environment Variable (Recommended)
+Create a `.env` file in the `client/` directory:
+
+```env
+VITE_SOCKET_URL=https://your-domain.com
+VITE_API_URL=https://your-domain.com
+```
+
+#### Option 2: Auto-Detection (No Config Needed)
+The system automatically detects the production environment and uses the same origin. Just make sure:
+- Your domain uses HTTPS (required for secure WebSockets)
+- The server is accessible at the same domain
+
+#### Option 3: Different Socket Server
+If your WebSocket server is on a different domain:
+
+```env
+VITE_SOCKET_URL=wss://ws.your-domain.com
+```
+
+### Server-Side Configuration
+
+In your `server/.env`:
+
+```env
+# IMPORTANT: Set this to your actual production URL
+CLIENT_URL=https://your-domain.com
+
+# Or for multiple origins (development + production)
+# CORS is configured in server/src/index.ts
+```
+
+### Testing WebSocket Connection
+
+1. Open browser DevTools (F12)
+2. Go to Network tab → WS (WebSocket)
+3. Refresh the page
+4. You should see a WebSocket connection to your domain
+
+If you see `localhost:5000` in production:
+1. Check your `.env` file has `VITE_SOCKET_URL` set
+2. Rebuild the client: `cd client && npm run build`
+3. Restart the server
+
+### Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "Connection refused" | Wrong URL | Set `VITE_SOCKET_URL` to your domain |
+| "SSL certificate error" | Mixed HTTP/HTTPS | Use `wss://` for HTTPS sites |
+| "CORS error" | Wrong `CLIENT_URL` | Update server's `CLIENT_URL` env var |
+| Real-time not working | Socket not connected | Check browser console for errors |
+
+---
 
 ## Fixed Deployment Issues
 

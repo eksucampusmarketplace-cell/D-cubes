@@ -138,7 +138,7 @@ export const CustomerPage: React.FC = () => {
               <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.5523 18.5523 20 18 20H6C5.44772 20 5 19.5523 5 19V18H19V19Z"/>
             </svg>
             <span className="font-display text-xl tracking-[0.3em] text-gold font-bold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-              D CUBES PLACE
+              D CUBE'S PLACE
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -323,10 +323,10 @@ export const CustomerPage: React.FC = () => {
           <svg className="w-6 h-6 text-gold/80" viewBox="0 0 24 24" fill="currentColor">
             <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.5523 18.5523 20 18 20H6C5.44772 20 5 19.5523 5 19V18H19V19Z"/>
           </svg>
-          <p className="font-display text-2xl tracking-[0.3em] text-gold/80 font-bold">D CUBES PLACE</p>
+          <p className="font-display text-2xl tracking-[0.3em] text-gold/80 font-bold">D CUBE'S PLACE</p>
         </div>
         <p className="text-[11px] text-white/40 tracking-wider mb-4 font-medium">
-          Open bar, Lounge, Nightlife
+          Open Bar, Lounge, Nightlife
         </p>
         <p className="text-[10px] text-white/30 font-medium">
           Crafted by{' '}
