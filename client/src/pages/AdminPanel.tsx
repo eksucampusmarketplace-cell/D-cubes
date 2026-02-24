@@ -1,9 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { MenuItem } from '@/types';
-import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS } from '@/data/menu';
+import { MenuItem, ZoneType } from '@/types';
+import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS, ZONE_PRICES } from '@/data/menu';
+import { ZONES } from '@/data/locations';
 import { formatPrice } from '@/utils/format';
 
-type Tab = 'menu' | 'gallery' | 'settings';
+type Tab = 'menu' | 'zone-prices' | 'gallery' | 'settings';
 
 const CATEGORY_IMAGES: Record<string, string> = {
   cocktails: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&auto=format&fit=crop&q=80',
@@ -12,6 +13,12 @@ const CATEGORY_IMAGES: Record<string, string> = {
   food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&auto=format&fit=crop&q=80',
   shisha: 'https://images.unsplash.com/photo-1542567455-cd733f23fbb1?w=400&auto=format&fit=crop&q=80',
   nonalc: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400&auto=format&fit=crop&q=80',
+  brandy: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+  tequila: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&auto=format&fit=crop&q=80',
+  liquor: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+  mixers: 'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=400&auto=format&fit=crop&q=80',
+  'energy-drinks': 'https://images.unsplash.com/photo-1613424188715-165f62092b30?w=400&auto=format&fit=crop&q=80',
+  'sparkling-wine': 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&auto=format&fit=crop&q=80',
 };
 
 export const AdminPanel: React.FC = () => {
@@ -21,6 +28,10 @@ export const AdminPanel: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Zone prices state
+  const [zonePrices, setZonePrices] = useState(ZONE_PRICES);
+  const [selectedZoneForPricing, setSelectedZoneForPricing] = useState<ZoneType>('lounge');
 
   // Gallery state
   const [galleryImages, setGalleryImages] = useState<string[]>([
@@ -61,6 +72,27 @@ export const AdminPanel: React.FC = () => {
     if (confirm('Are you sure you want to delete this item?')) {
       setMenuItems(prev => prev.filter(i => i.id !== id));
     }
+  };
+
+  // Zone price handlers
+  const handleZonePriceChange = (itemId: number, price: number) => {
+    setZonePrices(prev => ({
+      ...prev,
+      [selectedZoneForPricing]: {
+        ...prev[selectedZoneForPricing],
+        [itemId]: price
+      }
+    }));
+  };
+
+  const handleClearZonePrice = (itemId: number) => {
+    setZonePrices(prev => {
+      const newZonePrices = { ...prev };
+      if (newZonePrices[selectedZoneForPricing]) {
+        delete newZonePrices[selectedZoneForPricing][itemId];
+      }
+      return newZonePrices;
+    });
   };
 
   const handleAddGalleryImage = (url: string) => {
@@ -104,6 +136,16 @@ export const AdminPanel: React.FC = () => {
           >
             <span className="text-lg">📋</span>
             Menu Items
+          </button>
+          <button
+            onClick={() => setActiveTab('zone-prices')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all mb-2
+                       ${activeTab === 'zone-prices' 
+                         ? 'bg-gold/10 text-gold border border-gold/20' 
+                         : 'text-cream/50 hover:text-cream hover:bg-white/5'}`}
+          >
+            <span className="text-lg">💰</span>
+            Zone Prices
           </button>
           <button
             onClick={() => setActiveTab('gallery')}
@@ -160,7 +202,7 @@ export const AdminPanel: React.FC = () => {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="font-serif text-3xl text-white">Menu Items</h2>
-                <p className="text-cream/40 mt-1">Manage your menu items, images, and pricing</p>
+                <p className="text-cream/40 mt-1">Manage your menu items, images, and base pricing</p>
               </div>
               <button
                 onClick={() => {
@@ -251,6 +293,17 @@ export const AdminPanel: React.FC = () => {
               ))}
             </div>
           </div>
+        )}
+
+        {activeTab === 'zone-prices' && (
+          <ZonePricesManager 
+            menuItems={menuItems}
+            zonePrices={zonePrices}
+            selectedZone={selectedZoneForPricing}
+            onZoneChange={setSelectedZoneForPricing}
+            onPriceChange={handleZonePriceChange}
+            onClearPrice={handleClearZonePrice}
+          />
         )}
 
         {activeTab === 'gallery' && (
@@ -360,6 +413,146 @@ export const AdminPanel: React.FC = () => {
           }}
         />
       )}
+    </div>
+  );
+};
+
+// Zone Prices Manager Component
+interface ZonePricesManagerProps {
+  menuItems: MenuItem[];
+  zonePrices: typeof ZONE_PRICES;
+  selectedZone: ZoneType;
+  onZoneChange: (zone: ZoneType) => void;
+  onPriceChange: (itemId: number, price: number) => void;
+  onClearPrice: (itemId: number) => void;
+}
+
+const ZonePricesManager: React.FC<ZonePricesManagerProps> = ({
+  menuItems,
+  zonePrices,
+  selectedZone,
+  onZoneChange,
+  onPriceChange,
+  onClearPrice
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+
+  const filteredItems = menuItems.filter(item => {
+    const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const getZonePrice = (itemId: number) => {
+    return zonePrices[selectedZone]?.[itemId];
+  };
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="font-serif text-3xl text-white">Zone Prices</h2>
+          <p className="text-cream/40 mt-1">Set custom prices for each zone. Blank = uses base price.</p>
+        </div>
+      </div>
+
+      {/* Zone Selector */}
+      <div className="flex gap-2 mb-6">
+        {(Object.keys(ZONES) as ZoneType[]).map(zone => (
+          <button
+            key={zone}
+            onClick={() => onZoneChange(zone)}
+            className={`px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2
+                       ${selectedZone === zone 
+                         ? 'bg-gold text-black' 
+                         : 'bg-dark-2 text-cream/70 hover:bg-dark-3'}`}
+          >
+            <span>{ZONES[zone].icon}</span>
+            <span className="capitalize">{ZONES[zone].name}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-4 mb-6">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search items..."
+            className="w-full input-luxury pr-10"
+          />
+          <svg className="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-cream/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="input-luxury min-w-[200px]"
+        >
+          <option value="all">All Categories</option>
+          {Object.entries(CATEGORY_NAMES).filter(([key]) => key !== 'all').map(([key, name]) => (
+            <option key={key} value={key}>{name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Prices Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+        {filteredItems.map(item => {
+          const zonePrice = getZonePrice(item.id);
+          const hasCustomPrice = zonePrice !== undefined;
+          
+          return (
+            <div key={item.id} className={`luxury-card rounded-2xl p-4 ${hasCustomPrice ? 'border-gold/30' : ''}`}>
+              <div className="flex items-start gap-3 mb-3">
+                <img 
+                  src={item.image || CATEGORY_IMAGES[item.category]} 
+                  alt={item.name}
+                  className="w-16 h-16 rounded-lg object-cover"
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-serif text-white truncate">{item.name}</h3>
+                  <p className="text-xs text-cream/40">{CATEGORY_NAMES[item.category]}</p>
+                  <p className="text-xs text-cream/30">Base: {formatPrice(item.price)}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cream/30">₦</span>
+                  <input
+                    type="number"
+                    value={zonePrice || ''}
+                    onChange={(e) => onPriceChange(item.id, Number(e.target.value))}
+                    placeholder={item.price.toString()}
+                    className="w-full input-luxury pl-8"
+                  />
+                </div>
+                {hasCustomPrice && (
+                  <button
+                    onClick={() => onClearPrice(item.id)}
+                    className="px-3 py-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all text-sm"
+                    title="Clear custom price"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              
+              {hasCustomPrice && (
+                <p className="text-xs text-gold mt-2">
+                  Custom price active for {ZONES[selectedZone].name}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -711,7 +904,7 @@ const EditItemModal: React.FC<EditItemModalProps> = ({ item, onSave, onClose }) 
       name: '',
       description: '',
       price: 0,
-      category: 'cocktails',
+      category: 'brandy',
       tags: [],
       image: '',
     }
@@ -780,7 +973,7 @@ const EditItemModal: React.FC<EditItemModalProps> = ({ item, onSave, onClose }) 
             </div>
 
             <div>
-              <label className="text-xs text-cream/40 uppercase tracking-wider mb-2 block">Price (₦)</label>
+              <label className="text-xs text-cream/40 uppercase tracking-wider mb-2 block">Base Price (₦)</label>
               <input
                 type="number"
                 value={formData.price}

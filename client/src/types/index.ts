@@ -3,12 +3,16 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
-  category: 'cocktails' | 'spirits' | 'wine' | 'food' | 'shisha' | 'nonalc';
+  category: 'cocktails' | 'spirits' | 'wine' | 'food' | 'shisha' | 'nonalc' | 'soft-drinks' | 'energy-drinks' | 'brandy' | 'liquor' | 'tequila' | 'sparkling-wine' | 'beer' | 'cigar' | 'mixers';
   tags: string[];
   image?: string;
   isPopular?: boolean;
   isNew?: boolean;
   isSignature?: boolean;
+  /** Which zones this item is available in. Empty = all zones */
+  availableIn?: ZoneType[];
+  /** Whether this item requires food service capability */
+  requiresFoodService?: boolean;
 }
 
 export interface CartItem extends MenuItem {
@@ -165,4 +169,63 @@ export interface Category {
   image?: string;
   icon?: string;
   displayOrder: number;
+}
+
+// === ZONE & LOCATION TYPES ===
+
+/** Types of service zones in the venue - NO VIP */
+export type ZoneType = 'open-bar' | 'lounge' | 'nightclub' | 'poolside';
+
+/** Types of physical locations where guests can be seated */
+export type LocationType = 'table' | 'bar-stool' | 'lounge-seat' | 'standing-table' | 'poolside-cabana';
+
+/** Configuration for a specific location/spot in the venue */
+export interface Location {
+  /** Unique identifier (e.g., "T-001", "BAR-01", "VIP-A") */
+  id: string;
+  /** Display number or name */
+  number: number | string;
+  /** Human-readable name */
+  name: string;
+  /** Physical type of location */
+  type: LocationType;
+  /** Which service zone this location belongs to */
+  zone: ZoneType;
+  /** Which menus are available at this location */
+  availableMenus: MenuType[];
+  /** Whether food can be delivered to this location */
+  canReceiveFood: boolean;
+  /** Whether this location is currently active */
+  isActive: boolean;
+  /** Maximum capacity */
+  capacity?: number;
+  /** Special notes about this location */
+  notes?: string;
+}
+
+/** Types of menus available */
+export type MenuType = 'full' | 'drinks-only' | 'bar' | 'lounge' | 'nightclub' | 'food';
+
+/** Zone configuration */
+export interface ZoneConfig {
+  id: ZoneType;
+  name: string;
+  description: string;
+  icon: string;
+  defaultMenus: MenuType[];
+  allowFood: boolean;
+  theme?: {
+    primaryColor: string;
+    accentColor: string;
+  };
+}
+
+/** Customer session with location info */
+export interface CustomerSession {
+  locationId: string;
+  locationName: string;
+  zone: ZoneType;
+  zoneName: string;
+  canOrderFood: boolean;
+  availableCategories: string[];
 }

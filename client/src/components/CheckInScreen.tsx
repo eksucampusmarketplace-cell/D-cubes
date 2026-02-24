@@ -1,13 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import { useTable } from '@/context/TableContext';
 import { HERO_IMAGES, NIGHTLIFE_FILTER } from '@/config/images';
+import { getZoneInfo } from '@/data/locations';
 
 interface CheckInScreenProps {
   onCheckIn: () => void;
 }
 
 export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
-  const { tableNumber, checkIn } = useTable();
+  const { location, zone, zoneName, tableNumber, checkIn } = useTable();
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [shake, setShake] = useState(false);
@@ -29,6 +30,9 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
     setIsLoading(false);
   }, [name, checkIn, onCheckIn]);
 
+  // Get zone info
+  const zoneInfo = zone ? getZoneInfo(zone) : null;
+
   // Generate floating particles
   const particles = React.useMemo(() => {
     return [...Array(20)].map((_, i) => ({
@@ -49,7 +53,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
         style={{ 
           backgroundImage: `url(${HERO_IMAGES.primary})`,
           filter: NIGHTLIFE_FILTER.filter,
-          transform: 'scale(1.05)', // Slight zoom to hide filter edges
+          transform: 'scale(1.05)',
         }}
       />
       
@@ -58,6 +62,16 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
       <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/50 to-black/95" />
       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/70" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-black/40" />
+      
+      {/* Zone-Specific Tint */}
+      {zoneInfo?.theme && (
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(to bottom right, ${zoneInfo.theme.primaryColor}15, transparent, ${zoneInfo.theme.accentColor}10)`
+          }}
+        />
+      )}
       
       {/* Warm Gold/Purple Ambient Tint for Cozy Night Feel */}
       <div className="absolute inset-0 bg-gradient-to-br from-amber-900/20 via-transparent to-purple-900/20" />
@@ -106,7 +120,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
             </div>
           </div>
           
-          {/* Main Title - Enhanced contrast and shadow */}
+          {/* Main Title */}
           <h1 className="font-display text-5xl md:text-6xl tracking-[0.3em] text-gold mb-4 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]"
               style={{ textShadow: '0 0 40px rgba(201,168,76,0.5), 0 2px 4px rgba(0,0,0,0.8)' }}>
             D CUBES PLACE
@@ -114,26 +128,41 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
           
           <div className="gold-divider w-32 mx-auto mb-4" />
           
-          {/* Tagline - Better contrast */}
+          {/* Tagline */}
           <p className="text-[13px] tracking-[0.3em] uppercase text-gold font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
             Open bar, Lounge, Nightlife
           </p>
         </div>
 
-        {/* Table Badge */}
-        {tableNumber && (
+        {/* Location/Zone Badge */}
+        {(location || tableNumber || zone) && (
           <div className="relative mb-8 animate-fade-up" style={{ animationDelay: '0.2s' }}>
             <div className="relative">
-              <div className="w-36 h-36 rounded-full border-2 border-gold/40 flex flex-col items-center justify-center relative bg-black/60 backdrop-blur-xl
-                            shadow-[0_0_60px_rgba(201,168,76,0.3)]">
+              <div 
+                className="w-40 h-40 rounded-full border-2 border-gold/40 flex flex-col items-center justify-center relative bg-black/60 backdrop-blur-xl
+                          shadow-[0_0_60px_rgba(201,168,76,0.3)]"
+              >
                 <div className="absolute inset-0 rounded-full border border-gold/20 -m-3" />
-                <span className="font-display text-7xl text-gold leading-none font-bold drop-shadow-[0_0_20px_rgba(201,168,76,0.8)]"
-                      style={{ textShadow: '0 0 30px rgba(201,168,76,0.6)' }}>
-                  {tableNumber}
+                
+                {/* Zone Icon */}
+                <span className="text-4xl mb-1">{zoneInfo?.icon || '🍸'}</span>
+                
+                {/* Location Number/Name */}
+                <span 
+                  className="font-display text-5xl text-gold leading-none font-bold drop-shadow-[0_0_20px_rgba(201,168,76,0.8)]"
+                  style={{ textShadow: '0 0 30px rgba(201,168,76,0.6)' }}
+                >
+                  {location?.number || tableNumber || '?'}
                 </span>
-                <span className="text-[11px] tracking-[0.3em] uppercase text-white font-medium mt-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                  Your Table
+                
+                {/* Label */}
+                <span className="text-[10px] tracking-[0.3em] uppercase text-white font-medium mt-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                  {location?.type === 'bar-stool' ? 'Bar Stool' : 
+                   location?.type === 'lounge-seat' ? 'Lounge Seat' :
+                   location?.type === 'poolside-cabana' ? 'Cabana' :
+                   location?.type === 'standing-table' ? 'Standing Table' :
+                   'Your Table'}
                 </span>
               </div>
               
@@ -141,22 +170,40 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
               <div className="absolute inset-0 rounded-full border-2 border-gold/30 animate-pulse-ring" style={{ animationDelay: '0s' }} />
               <div className="absolute inset-0 rounded-full border border-gold/20 animate-pulse-ring" style={{ animationDelay: '0.7s' }} />
             </div>
+            
+            {/* Zone Label */}
+            <div className="mt-4 text-center">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-gold/20 border border-gold/30 rounded-full">
+                <span>{zoneInfo?.icon}</span>
+                <span className="text-gold text-sm font-semibold tracking-wider">{zoneName}</span>
+              </span>
+            </div>
           </div>
         )}
 
-        {/* Welcome Text - Enhanced readability */}
+        {/* Welcome Text */}
         <div className="text-center mb-8 max-w-md animate-fade-up px-4" style={{ animationDelay: '0.3s' }}>
           <h2 className="font-serif text-3xl md:text-4xl text-white mb-3 font-semibold drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]"
               style={{ textShadow: '0 2px 10px rgba(0,0,0,0.9)' }}>
-            {tableNumber
-              ? <>Welcome to <span className="text-gold italic">Table {tableNumber}</span></>
-              : <>Welcome to <span className="text-gold italic">D Cubes Place</span></>
+            {location 
+              ? <>Welcome to <span className="text-gold italic">{location.name}</span></>
+              : tableNumber 
+                ? <>Welcome to <span className="text-gold italic">Table {tableNumber}</span></>
+                : <>Welcome to <span className="text-gold italic">D Cubes Place</span></>
             }
           </h2>
           <p className="text-white/90 text-base leading-relaxed font-medium drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]"
              style={{ textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
-            Enter your name to begin your exclusive dining experience. Our staff will be notified of your arrival.
+            {zoneInfo?.description || 'Enter your name to begin your exclusive dining experience. Our staff will be notified of your arrival.'}
           </p>
+          
+          {/* Food availability notice */}
+          {zone && !['lounge', 'vip', 'poolside'].includes(zone) && (
+            <p className="text-amber-400 text-sm mt-3 flex items-center justify-center gap-2">
+              <span>🍸</span>
+              <span>Drinks & snacks only in this area</span>
+            </p>
+          )}
         </div>
 
         {/* Form */}
@@ -215,24 +262,41 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
           </button>
         </form>
 
-        {/* Features */}
-        <div className="mt-12 grid grid-cols-3 gap-6 text-center animate-fade-up" style={{ animationDelay: '0.5s' }}>
-          {[
-            { icon: '🍸', label: 'Premium Drinks' },
-            { icon: '🍽️', label: 'Fine Dining' },
-            { icon: '💨', label: 'Shisha Lounge' },
-          ].map((feature, idx) => (
-            <div key={idx} className="flex flex-col items-center group">
-              <div className="w-14 h-14 rounded-2xl bg-gold/20 border border-gold/40 flex items-center justify-center mb-3
-                            transition-all duration-300 group-hover:bg-gold/30 group-hover:scale-110 shadow-lg">
-                <span className="text-2xl">{feature.icon}</span>
-              </div>
-              <p className="text-[11px] tracking-[0.15em] uppercase text-white font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                {feature.label}
-              </p>
+        {/* Features based on zone */}
+        {(() => {
+          const features = zone === 'open-bar' || zone === 'nightclub' 
+            ? [
+                { icon: '🍸', label: 'Premium Drinks' },
+                { icon: '💨', label: 'Shisha' },
+                { icon: '🎵', label: 'Live Music' },
+              ]
+            : zone === 'poolside'
+              ? [
+                  { icon: '🏊', label: 'Pool Access' },
+                  { icon: '🍹', label: 'Tropical Drinks' },
+                  { icon: '🍽️', label: 'Light Bites' },
+                ]
+              : [
+                  { icon: '🍸', label: 'Premium Drinks' },
+                  { icon: '🍽️', label: 'Fine Dining' },
+                  { icon: '💨', label: 'Shisha Lounge' },
+                ];
+          return (
+            <div className="mt-12 grid grid-cols-3 gap-6 text-center animate-fade-up" style={{ animationDelay: '0.5s' }}>
+              {features.map((feature, idx) => (
+                <div key={idx} className="flex flex-col items-center group">
+                  <div className="w-14 h-14 rounded-2xl bg-gold/20 border border-gold/40 flex items-center justify-center mb-3
+                                transition-all duration-300 group-hover:bg-gold/30 group-hover:scale-110 shadow-lg">
+                    <span className="text-2xl">{feature.icon}</span>
+                  </div>
+                  <p className="text-[11px] tracking-[0.15em] uppercase text-white font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                    {feature.label}
+                  </p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
       </div>
 
       {/* Footer */}
