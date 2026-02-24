@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTable } from '@/context/TableContext';
 import { useCart } from '@/context/CartContext';
 import { CheckInScreen } from '@/components/CheckInScreen';
+import { ZoneSelectionScreen } from '@/components/ZoneSelectionScreen';
 import { MenuItemCard } from '@/components/MenuItemCard';
 import { CartPanel } from '@/components/CartPanel';
 import { AccessRequests } from '@/components/AccessRequests';
@@ -11,7 +12,7 @@ import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS, getItemPrice } from '@/data
 import { getGreeting, formatPrice } from '@/utils/format';
 import { CUSTOMER_HERO, CATEGORY_IMAGES, NIGHTLIFE_FILTER } from '@/config/images';
 import { getZoneInfo, ZONES } from '@/data/locations';
-// Zone type is handled internally
+import type { ZoneType } from '@/types';
 
 // All possible categories
 const ALL_CATEGORIES = [
@@ -40,13 +41,41 @@ export const CustomerPage: React.FC = () => {
     location,
     canOrderFood,
     availableCategories,
-    isCategoryAvailable 
+    isCategoryAvailable,
+    isExploring,
+    setExploreZone,
+    setLocationFromZone
   } = useTable();
   const { itemCount, total, isOpen: cartOpen, setIsOpen: setCartOpen } = useCart();
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category>('all');
   const [chatOpen, setChatOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showZoneSelection, setShowZoneSelection] = useState(false);
+
+  // Check if we need to show zone selection (no QR params)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasLocation = params.get('location');
+    const hasTable = params.get('table');
+    const hasZone = params.get('zone');
+    
+    // If no location/table/zone params, show zone selection
+    if (!hasLocation && !hasTable && !hasZone && !zone) {
+      setShowZoneSelection(true);
+    }
+  }, [zone]);
+
+  // Handle zone selection from the landing screen
+  const handleZoneSelect = useCallback((selectedZone: ZoneType, exploreOnly?: boolean, tableInput?: string) => {
+    if (exploreOnly) {
+      setExploreZone(selectedZone);
+    } else if (tableInput) {
+      setLocationFromZone(selectedZone, tableInput);
+    }
+    setShowZoneSelection(false);
+    setHasCheckedIn(true);
+  }, [setExploreZone, setLocationFromZone]);
 
   useEffect(() => {
     if (isCheckedIn) {
@@ -133,6 +162,11 @@ export const CustomerPage: React.FC = () => {
     return <CheckInScreen onCheckIn={() => setHasCheckedIn(true)} />;
   }
 
+  // Show zone selection if no QR params detected
+  if (showZoneSelection) {
+    return <ZoneSelectionScreen onSelectZone={handleZoneSelect} />;
+  }
+
   return (
     <div className="min-h-screen bg-black">
       {/* Hero Section with Zone-Specific Ambiance */}
@@ -186,12 +220,25 @@ export const CustomerPage: React.FC = () => {
             </p>
             
             {/* Location Badge */}
-            {(location || tableNumber) && (
+            {(location || tableNumber) && !isExploring && (
               <div className="inline-flex items-center gap-3 px-5 py-3 bg-black/60 backdrop-blur-xl rounded-full border-2 border-gold/40
                             shadow-[0_4px_30px_rgba(201,168,76,0.2)]">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-sm text-gold tracking-wider font-bold">
                   {location?.name || `Table ${tableNumber}`}
+                </span>
+                <span className="text-white/50 text-sm">•</span>
+                <span className="text-white/80 text-sm font-medium">{zoneTheme.icon} {zoneName}</span>
+              </div>
+            )}
+            
+            {/* Exploring Badge */}
+            {isExploring && (
+              <div className="inline-flex items-center gap-3 px-5 py-3 bg-black/60 backdrop-blur-xl rounded-full border-2 border-amber-500/40
+                            shadow-[0_4px_30px_rgba(245,158,11,0.2)]">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="text-sm text-amber-400 tracking-wider font-bold">
+                  Browsing Menu
                 </span>
                 <span className="text-white/50 text-sm">•</span>
                 <span className="text-white/80 text-sm font-medium">{zoneTheme.icon} {zoneName}</span>
@@ -217,16 +264,18 @@ export const CustomerPage: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleChatOpen}
-              className="flex items-center gap-2 px-4 py-2.5 bg-black/60 backdrop-blur border-2 border-gold/30 rounded-full text-white text-sm font-medium
-                         hover:border-gold hover:bg-gold/10 transition-all duration-300 shadow-lg"
-            >
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="hidden sm:inline">Chat</span>
-              <span className="sm:hidden">💬</span>
-            </button>
+            {!isExploring && (
+              <button
+                type="button"
+                onClick={handleChatOpen}
+                className="flex items-center gap-2 px-4 py-2.5 bg-black/60 backdrop-blur border-2 border-gold/30 rounded-full text-white text-sm font-medium
+                           hover:border-gold hover:bg-gold/10 transition-all duration-300 shadow-lg"
+              >
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="hidden sm:inline">Chat</span>
+                <span className="sm:hidden">💬</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -252,11 +301,11 @@ export const CustomerPage: React.FC = () => {
         )}
       </div>
 
-      {/* Access Requests */}
-      <AccessRequests />
+      {/* Access Requests - Hide for explorers */}
+      {!isExploring && <AccessRequests />}
 
-      {/* Order Status */}
-      <OrderStatus />
+      {/* Order Status - Hide for explorers */}
+      {!isExploring && <OrderStatus />}
 
       {/* Popular Items Carousel */}
       {popularItems.length > 0 && selectedCategory === 'all' && (
@@ -377,6 +426,7 @@ export const CustomerPage: React.FC = () => {
               item={item} 
               index={index} 
               zonePrice={zone ? getItemPrice(item, zone) : item.price}
+              disableAddToCart={isExploring}
             />
           ))}
         </div>
@@ -389,8 +439,8 @@ export const CustomerPage: React.FC = () => {
         )}
       </div>
 
-      {/* Cart Bar */}
-      {itemCount > 0 && (
+      {/* Cart Bar - Hide for explorers */}
+      {itemCount > 0 && !isExploring && (
         <div className="fixed bottom-0 left-0 right-0 z-[60]">
           <div className="bg-black/95 backdrop-blur-xl border-t-2 border-gold/20 px-5 py-4
                           flex items-center justify-between shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
@@ -420,6 +470,22 @@ export const CustomerPage: React.FC = () => {
         </div>
       )}
 
+      {/* Exploring Mode Banner - Show for explorers */}
+      {isExploring && (
+        <div className="fixed bottom-0 left-0 right-0 z-[60]">
+          <div className="bg-black/95 backdrop-blur-xl border-t-2 border-amber-500/30 px-5 py-4
+                          flex items-center justify-center shadow-[0_-10px_40px_rgba(0,0,0,0.6)]">
+            <div className="flex items-center gap-3 text-center">
+              <span className="text-amber-400 text-lg">👁️</span>
+              <div className="flex flex-col">
+                <span className="text-amber-400 text-sm font-semibold">Browsing Menu</span>
+                <span className="text-white/50 text-xs">Scan a QR code at your table to place orders</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="px-5 py-12 text-center border-t border-gold/10">
         <div className="gold-divider-thick w-24 mx-auto mb-6" />
@@ -437,9 +503,13 @@ export const CustomerPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Panels */}
-      <CartPanel isOpen={cartOpen} onClose={() => setCartOpen(false)} />
-      <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+      {/* Panels - Hide for explorers */}
+      {!isExploring && (
+        <>
+          <CartPanel isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+          <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+        </>
+      )}
     </div>
   );
 };
