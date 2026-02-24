@@ -1,4 +1,7 @@
-import type { Location, ZoneConfig, ZoneType, MenuType } from '@/types';
+import type { Location, ZoneConfig, MenuType } from '@/types';
+import type { ZoneType } from '@/types';
+
+export type { ZoneType };
 
 /** Zone configurations - NO VIP */
 export const ZONES: Record<ZoneType, ZoneConfig> = {

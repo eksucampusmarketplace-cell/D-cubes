@@ -22,6 +22,11 @@ interface TableContextType {
   sessionId: string;
   isCheckedIn: boolean;
   
+  // Exploring mode - zone selected but no table
+  isExploring: boolean;
+  setExploreZone: (zone: ZoneType) => void;
+  setLocationFromZone: (zone: ZoneType, tableInput: string) => void;
+  
   // Orders & messages
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
@@ -46,6 +51,9 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [location, setLocation] = useState<Location | null>(null);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [zone, setZone] = useState<ZoneType | null>(null);
+  
+  // Exploring mode - user selected zone but no specific table
+  const [isExploring, setIsExploring] = useState(false);
   
   // Guest session
   const [guestName, setGuestName] = useState('');
@@ -161,6 +169,81 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }]);
   }, [tableNumber, zone, socketCheckIn]);
 
+  // Set zone for exploring mode (no table selected)
+  const setExploreZone = useCallback((selectedZone: ZoneType) => {
+    setZone(selectedZone);
+    setIsExploring(true);
+    setIsCheckedIn(true);
+    setGuestName('Explorer');
+  }, []);
+
+  // Set location from zone and table input
+  const setLocationFromZone = useCallback((selectedZone: ZoneType, tableInput: string) => {
+    setZone(selectedZone);
+    setIsExploring(false);
+    
+    // Try to parse the table input
+    const input = tableInput.trim().toUpperCase();
+    
+    // Check if it matches a known location ID pattern
+    const knownLocation = getLocationById(input);
+    if (knownLocation) {
+      setLocation(knownLocation);
+      setLocationId(knownLocation.id);
+      setTableNumber(typeof knownLocation.number === 'number' ? knownLocation.number : null);
+      return;
+    }
+    
+    // Try to extract a number from the input
+    const numMatch = input.match(/\d+/);
+    if (numMatch) {
+      const num = parseInt(numMatch[0], 10);
+      setTableNumber(num);
+      
+      // Create a location ID based on zone and number
+      let prefix = 'T-';
+      let locType: 'table' | 'bar-stool' | 'lounge-seat' | 'standing-table' | 'poolside-cabana' = 'table';
+      
+      if (selectedZone === 'open-bar') {
+        if (input.includes('BAR')) {
+          prefix = 'BAR-';
+          locType = 'bar-stool';
+        } else if (input.includes('ST')) {
+          prefix = 'ST-';
+          locType = 'standing-table';
+        }
+      } else if (selectedZone === 'poolside') {
+        prefix = 'PC-';
+        locType = 'poolside-cabana';
+      } else if (selectedZone === 'nightclub') {
+        prefix = 'NF-';
+      } else if (selectedZone === 'lounge') {
+        if (input.includes('LS')) {
+          prefix = 'LS-';
+          locType = 'lounge-seat';
+        }
+      }
+      
+      const newLocationId = `${prefix}${String(num).padStart(prefix === 'T-' ? 3 : 2, '0')}`;
+      setLocationId(newLocationId);
+      
+      // Create a basic location object
+      setLocation({
+        id: newLocationId,
+        number: num,
+        name: `${selectedZone === 'open-bar' ? (locType === 'bar-stool' ? 'Bar Stool' : 'Standing Table') : 
+               selectedZone === 'poolside' ? 'Poolside Cabana' :
+               selectedZone === 'nightclub' ? 'Nightclub Floor' :
+               locType === 'lounge-seat' ? 'Lounge Sofa' : 'Table'} ${num}`,
+        type: locType,
+        zone: selectedZone,
+        availableMenus: ['full'],
+        canReceiveFood: true,
+        isActive: true
+      });
+    }
+  }, []);
+
   // Determine available categories based on zone
   const availableCategories = React.useMemo(() => {
     if (!zone) return [];
@@ -226,6 +309,11 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       guestId,
       sessionId,
       isCheckedIn,
+      
+      // Exploring mode
+      isExploring,
+      setExploreZone,
+      setLocationFromZone,
       
       // Orders & messages
       orders,
