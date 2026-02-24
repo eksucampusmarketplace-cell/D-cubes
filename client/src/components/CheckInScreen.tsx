@@ -241,12 +241,12 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
         <p className="text-[10px] text-white/50 font-medium">
           Crafted by{' '}
           <a 
-            href="https://wa.me/2348174143260" 
+            href="https://wa.me/2348164143260" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-gold hover:text-gold-light transition-colors"
           >
-            Toluwase Christopher
+            Decisive Analyst
           </a>
         </p>
       </div>
