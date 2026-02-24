@@ -27,9 +27,16 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const newSocket = io(window.location.hostname === 'localhost' 
-      ? 'http://localhost:5000' 
-      : window.location.origin);
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || (() => {
+      const { protocol, hostname, port, origin } = window.location;
+      const isDevPort = port === '3000' || port === '5173';
+      if (hostname === 'localhost' || isDevPort) {
+        return `${protocol}//${hostname}:5000`;
+      }
+      return origin;
+    })();
+
+    const newSocket = io(socketUrl);
 
     newSocket.on('connect', () => {
       console.log('Connected to server');

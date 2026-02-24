@@ -331,12 +331,12 @@ export const CustomerPage: React.FC = () => {
         <p className="text-[10px] text-white/30 font-medium">
           Crafted by{' '}
           <a 
-            href="https://wa.me/2348174143260" 
+            href="https://wa.me/2348164143260" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-gold/70 hover:text-gold transition-colors"
           >
-            Toluwase Christopher
+            Decisive Analyst
           </a>
         </p>
       </div>

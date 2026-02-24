@@ -87,7 +87,11 @@ const generateSessionId = (): string => {
 
 // Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    telegramEnabled: Boolean(TELEGRAM_BOT_TOKEN)
+  });
 });
 
 // Generate QR code for a table
@@ -416,7 +420,12 @@ io.on('connection', (socket) => {
     tableMessages.push(message);
     messages.set(`table-${message.tableNumber}`, tableMessages);
 
-    io.to(`table-${message.tableNumber}`).to('staff-manager').to('staff-all').emit('new-message', message);
+    io.to(`table-${message.tableNumber}`)
+      .to('staff-manager')
+      .to('staff-all')
+      .to('staff-kitchen')
+      .to('staff-bar')
+      .emit('new-message', message);
 
     if (message.sender === 'guest') {
       const msg = `💬 <b>MESSAGE</b> — Table ${message.tableNumber}\n` +

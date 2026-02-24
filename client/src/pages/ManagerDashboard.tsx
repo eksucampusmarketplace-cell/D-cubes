@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSocket } from '@/context/SocketContext';
 import { Order, AccessRequest, ChatMessage, Table, OrderStatus, RefundRequest, AnalyticsData, PaymentStatus } from '@/types';
-import { formatPrice, formatTime, getStatusLabel, getAccessTypeLabel } from '@/utils/format';
+import { formatPrice, formatTime, getStatusLabel, getAccessTypeLabel, generateMessageId } from '@/utils/format';
 
 export const ManagerDashboard: React.FC = () => {
-  const { socket, joinStaff, updateOrderStatus, respondToAccess, updatePayment, processRefund, cancelOrder, endSession } = useSocket();
+  const { socket, joinStaff, updateOrderStatus, respondToAccess, updatePayment, processRefund, cancelOrder, endSession, sendMessage } = useSocket();
   const [orders, setOrders] = useState<Order[]>([]);
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [refundRequests, setRefundRequests] = useState<RefundRequest[]>([]);
@@ -18,8 +18,10 @@ export const ManagerDashboard: React.FC = () => {
   );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
+  const [replyMessage, setReplyMessage] = useState('');
   const [telegramMessages, setTelegramMessages] = useState<string[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [telegramEnabled, setTelegramEnabled] = useState<boolean | null>(null);
   const [stats, setStats] = useState({
     newOrders: 0,
     activeTables: 0,
@@ -56,9 +58,9 @@ export const ManagerDashboard: React.FC = () => {
       addTelegramMessage(`🛎️ ACCESS REQUEST — Table ${request.tableNumber}\n👤 ${request.guestName}\n📍 ${getAccessTypeLabel(request.type)}`);
     });
 
-    socket.on('chat-message', (message: ChatMessage) => {
-      setMessages(prev => [...prev, message]);
-      if (message.sender === 'guest') {
+    socket.on('new-message', (message: ChatMessage) => {
+      setMessages(prev => prev.some(existing => existing.id === message.id) ? prev : [...prev, message]);
+      if (message.sender === 'guest' && message.tableNumber !== selectedTable) {
         updateTableStatus(message.tableNumber, { hasUnreadMessage: true });
       }
     });
@@ -86,12 +88,12 @@ export const ManagerDashboard: React.FC = () => {
       socket.off('new-order');
       socket.off('check-in');
       socket.off('access-request');
-      socket.off('chat-message');
+      socket.off('new-message');
       socket.off('order-status-update');
       socket.off('payment-update');
       socket.off('refund-request');
     };
-  }, [socket]);
+  }, [socket, selectedTable]);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -115,6 +117,25 @@ export const ManagerDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const fetchHealth = async () => {
+      try {
+        const response = await fetch('/api/health');
+        if (response.ok) {
+          const data = await response.json();
+          setTelegramEnabled(Boolean(data.telegramEnabled));
+        } else {
+          setTelegramEnabled(false);
+        }
+      } catch (error) {
+        console.error('Failed to fetch system health:', error);
+        setTelegramEnabled(false);
+      }
+    };
+
+    fetchHealth();
+  }, []);
+
   const updateTableStatus = (tableNumber: number, updates: Partial<Table>) => {
     setTables(prev => prev.map(t => 
       t.number === tableNumber ? { ...t, ...updates } : t
@@ -124,6 +145,11 @@ export const ManagerDashboard: React.FC = () => {
   const addTelegramMessage = (msg: string) => {
     setTelegramMessages(prev => [msg, ...prev].slice(0, 20));
   };
+
+  const handleSelectTable = useCallback((tableNumber: number) => {
+    setSelectedTable(tableNumber);
+    updateTableStatus(tableNumber, { hasUnreadMessage: false });
+  }, [updateTableStatus]);
 
   const handleConfirmOrder = useCallback((orderId: string) => {
     updateOrderStatus(orderId, 'confirmed');
@@ -173,6 +199,27 @@ export const ManagerDashboard: React.FC = () => {
     processRefund(requestId, approved);
     setRefundRequests(prev => prev.filter(r => r.id !== requestId));
   }, [processRefund]);
+
+  const handleSendReply = useCallback(() => {
+    if (!selectedTable || !replyMessage.trim()) return;
+
+    const message: ChatMessage = {
+      id: generateMessageId(),
+      tableNumber: selectedTable,
+      sender: 'staff',
+      text: replyMessage.trim(),
+      timestamp: new Date(),
+      senderName: 'Manager'
+    };
+
+    setMessages(prev => [...prev, message]);
+    sendMessage(message);
+    setReplyMessage('');
+  }, [replyMessage, selectedTable, sendMessage]);
+
+  useEffect(() => {
+    setReplyMessage('');
+  }, [selectedTable]);
 
   const selectedTableMessages = messages.filter(m => m.tableNumber === selectedTable);
   const selectedTableData = tables.find(t => t.number === selectedTable);
@@ -241,8 +288,14 @@ export const ManagerDashboard: React.FC = () => {
             <p className="text-xs text-cream/35 mt-1">{new Date().toLocaleDateString()} · Victoria Island, Lagos</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 border border-white/8 rounded-full text-[11px] text-cream/40">
-              📲 Telegram Connected
+            <div
+              className={`flex items-center gap-2 px-3 py-1.5 border rounded-full text-[11px]
+                ${telegramEnabled
+                  ? 'border-green-500/25 text-green-500'
+                  : 'border-white/8 text-cream/40'
+                }`}
+            >
+              📲 {telegramEnabled === null ? 'Checking Telegram' : telegramEnabled ? 'Telegram Connected' : 'Telegram Offline'}
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 border border-green-500/25 rounded-full text-[11px] text-green-500">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -461,7 +514,7 @@ export const ManagerDashboard: React.FC = () => {
                           )}
                           <button
                             type="button"
-                            onClick={() => setSelectedTable(order.tableNumber)}
+                            onClick={() => handleSelectTable(order.tableNumber)}
                             className={btnGray}
                           >
                             Reply
@@ -488,7 +541,7 @@ export const ManagerDashboard: React.FC = () => {
                   <div key={table.number} className="relative">
                     <button
                       type="button"
-                      onClick={() => setSelectedTable(table.number)}
+                      onClick={() => handleSelectTable(table.number)}
                       className={`w-full p-2.5 text-center border transition-all duration-200 relative
                         ${table.isActive
                           ? 'bg-dark-3 border-gold/40 hover:bg-dark-2'
@@ -557,13 +610,23 @@ export const ManagerDashboard: React.FC = () => {
                 <div className="p-3 border-t border-white/5 flex gap-2">
                   <input
                     type="text"
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSendReply();
+                      }
+                    }}
                     placeholder={`Reply to Table ${selectedTable}...`}
                     className="flex-1 bg-dark-3 border border-white/6 rounded-lg px-3 py-2 text-xs text-cream
                                focus:border-gold/35 focus:outline-none placeholder:text-cream/20"
                   />
                   <button 
                     type="button"
-                    className="w-8 h-8 rounded-lg bg-gold text-dark flex items-center justify-center text-xs hover:bg-gold-light transition-colors"
+                    onClick={handleSendReply}
+                    disabled={!replyMessage.trim()}
+                    className="w-8 h-8 rounded-lg bg-gold text-dark flex items-center justify-center text-xs hover:bg-gold-light transition-colors disabled:opacity-50"
                   >
                     ➤
                   </button>

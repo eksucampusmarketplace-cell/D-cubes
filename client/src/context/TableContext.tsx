@@ -57,7 +57,7 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const handleNewMessage = (message: ChatMessage) => {
       if (message.tableNumber === tableNumber) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => prev.some(existing => existing.id === message.id) ? prev : [...prev, message]);
       }
     };
 

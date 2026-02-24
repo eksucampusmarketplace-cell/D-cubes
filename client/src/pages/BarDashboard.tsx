@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSocket } from '@/context/SocketContext';
-import { Order, OrderStatus } from '@/types';
-import { formatPrice, formatTime, getStatusLabel } from '@/utils/format';
+import { Order, OrderStatus, ChatMessage } from '@/types';
+import { formatPrice, formatTime, getStatusLabel, generateMessageId } from '@/utils/format';
 
 export const BarDashboard: React.FC = () => {
-  const { socket, joinStaff, updateOrderStatus } = useSocket();
+  const { socket, joinStaff, updateOrderStatus, sendMessage } = useSocket();
   const [barOrders, setBarOrders] = useState<Order[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedTable, setSelectedTable] = useState<number | null>(null);
+  const [replyMessage, setReplyMessage] = useState('');
+  const [unreadTables, setUnreadTables] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     joinStaff('bar');
@@ -29,11 +33,25 @@ export const BarDashboard: React.FC = () => {
       setBarOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
     });
 
+    socket.on('new-message', (message: ChatMessage) => {
+      setMessages(prev => prev.some(existing => existing.id === message.id) ? prev : [...prev, message]);
+      if (message.sender === 'guest') {
+        setUnreadTables(prev => {
+          const next = new Set(prev);
+          if (message.tableNumber !== selectedTable) {
+            next.add(message.tableNumber);
+          }
+          return next;
+        });
+      }
+    });
+
     return () => {
       socket.off('new-order');
       socket.off('order-status-update');
+      socket.off('new-message');
     };
-  }, [socket]);
+  }, [socket, selectedTable]);
 
   const handleMarkPreparing = (orderId: string) => {
     updateOrderStatus(orderId, 'preparing');
@@ -42,6 +60,51 @@ export const BarDashboard: React.FC = () => {
   const handleMarkReady = (orderId: string) => {
     updateOrderStatus(orderId, 'ready');
   };
+
+  const tableOptions = useMemo(() => {
+    const tables = new Set<number>();
+    barOrders.forEach(order => tables.add(order.tableNumber));
+    messages.forEach(message => tables.add(message.tableNumber));
+    return Array.from(tables).sort((a, b) => a - b);
+  }, [barOrders, messages]);
+
+  useEffect(() => {
+    if (selectedTable === null && tableOptions.length > 0) {
+      setSelectedTable(tableOptions[0]);
+    }
+  }, [selectedTable, tableOptions]);
+
+  const handleSelectTable = useCallback((tableNumber: number) => {
+    setSelectedTable(tableNumber);
+    setUnreadTables(prev => {
+      const next = new Set(prev);
+      next.delete(tableNumber);
+      return next;
+    });
+  }, []);
+
+  const handleSendReply = useCallback(() => {
+    if (!selectedTable || !replyMessage.trim()) return;
+
+    const message: ChatMessage = {
+      id: generateMessageId(),
+      tableNumber: selectedTable,
+      sender: 'staff',
+      text: replyMessage.trim(),
+      timestamp: new Date(),
+      senderName: 'Bar'
+    };
+
+    setMessages(prev => [...prev, message]);
+    sendMessage(message);
+    setReplyMessage('');
+  }, [replyMessage, selectedTable, sendMessage]);
+
+  useEffect(() => {
+    setReplyMessage('');
+  }, [selectedTable]);
+
+  const selectedTableMessages = messages.filter(message => message.tableNumber === selectedTable);
 
   return (
     <div className="min-h-screen bg-dark">
@@ -69,155 +132,236 @@ export const BarDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Orders Grid */}
-      <div className="p-8">
-        {barOrders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[60vh] text-cream/30">
-            <span className="text-6xl mb-4">🍸</span>
-            <p className="font-serif text-2xl mb-2">No Bar Orders</p>
-            <p className="text-sm">New orders will appear here automatically</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {barOrders.map(order => (
-              <div 
-                key={order.id}
-                className={`p-6 rounded-lg border-2 transition-all
-                  ${order.status === 'pending' || order.status === 'confirmed'
-                    ? 'bg-dark-2 border-gold/50 animate-pulse'
-                    : order.status === 'preparing'
-                    ? 'bg-blue-500/5 border-blue-500/30'
-                    : 'bg-green-500/5 border-green-500/30'
-                  }`}
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <p className="font-display text-5xl text-gold leading-none">{order.tableNumber}</p>
-                    <p className="text-xs tracking-[0.15em] uppercase text-cream/40 mt-1">Table</p>
-                  </div>
-                  <span className={`text-xs tracking-[0.1em] uppercase px-3 py-1.5 rounded-full border
+      {/* Orders & Messages */}
+      <div className="p-8 grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+        <div>
+          {barOrders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-[60vh] text-cream/30">
+              <span className="text-6xl mb-4">🍸</span>
+              <p className="font-serif text-2xl mb-2">No Bar Orders</p>
+              <p className="text-sm">New orders will appear here automatically</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {barOrders.map(order => (
+                <div 
+                  key={order.id}
+                  className={`p-6 rounded-lg border-2 transition-all
                     ${order.status === 'pending' || order.status === 'confirmed'
-                      ? 'bg-red-500/15 text-red-500 border-red-500/30'
+                      ? 'bg-dark-2 border-gold/50 animate-pulse'
                       : order.status === 'preparing'
-                      ? 'bg-blue-500/15 text-blue-500 border-blue-500/30'
-                      : 'bg-green-500/15 text-green-500 border-green-500/30'
+                      ? 'bg-blue-500/5 border-blue-500/30'
+                      : 'bg-green-500/5 border-green-500/30'
                     }`}
-                  >
-                    {getStatusLabel(order.status)}
-                  </span>
-                </div>
-
-                {/* Guest */}
-                <p className="text-lg text-white mb-1">👤 {order.guestName}</p>
-                <p className="text-xs text-cream/35 mb-4">{formatTime(order.timestamp)}</p>
-
-                {/* Items - Grouped by category */}
-                <div className="space-y-4 mb-4">
-                  {/* Cocktails */}
-                  {order.items.filter(i => i.category === 'cocktails').length > 0 && (
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
                     <div>
-                      <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">🍸 Cocktails</p>
-                      {order.items.filter(i => i.category === 'cocktails').map((item, idx) => (
-                        <div key={idx} className="flex items-baseline justify-between mb-1">
-                          <p className="text-lg text-cream">
-                            <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
-                            {item.name}
-                          </p>
-                        </div>
-                      ))}
+                      <p className="font-display text-5xl text-gold leading-none">{order.tableNumber}</p>
+                      <p className="text-xs tracking-[0.15em] uppercase text-cream/40 mt-1">Table</p>
                     </div>
-                  )}
-
-                  {/* Bottles/Wine */}
-                  {order.items.filter(i => ['spirits', 'wine'].includes(i.category)).length > 0 && (
-                    <div>
-                      <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">🍷 Bottles & Wine</p>
-                      {order.items.filter(i => ['spirits', 'wine'].includes(i.category)).map((item, idx) => (
-                        <div key={idx} className="flex items-baseline justify-between mb-1">
-                          <p className="text-lg text-cream">
-                            <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
-                            {item.name}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Shisha */}
-                  {order.items.filter(i => i.category === 'shisha').length > 0 && (
-                    <div>
-                      <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">💨 Shisha</p>
-                      {order.items.filter(i => i.category === 'shisha').map((item, idx) => (
-                        <div key={idx} className="flex items-baseline justify-between mb-1">
-                          <p className="text-lg text-cream">
-                            <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
-                            {item.name}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Non-alcoholic */}
-                  {order.items.filter(i => i.category === 'nonalc').length > 0 && (
-                    <div>
-                      <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">🧃 Non-Alcoholic</p>
-                      {order.items.filter(i => i.category === 'nonalc').map((item, idx) => (
-                        <div key={idx} className="flex items-baseline justify-between mb-1">
-                          <p className="text-lg text-cream">
-                            <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
-                            {item.name}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Note */}
-                {order.note && (
-                  <div className="bg-dark-3 border-l-4 border-gold p-3 mb-4">
-                    <p className="text-xs text-cream/50 uppercase tracking-wide mb-1">Special Request</p>
-                    <p className="text-base text-gold">{order.note}</p>
+                    <span className={`text-xs tracking-[0.1em] uppercase px-3 py-1.5 rounded-full border
+                      ${order.status === 'pending' || order.status === 'confirmed'
+                        ? 'bg-red-500/15 text-red-500 border-red-500/30'
+                        : order.status === 'preparing'
+                        ? 'bg-blue-500/15 text-blue-500 border-blue-500/30'
+                        : 'bg-green-500/15 text-green-500 border-green-500/30'
+                      }`}
+                    >
+                      {getStatusLabel(order.status)}
+                    </span>
                   </div>
-                )}
 
-                {/* Total */}
-                <p className="font-display text-3xl text-gold mb-4">
-                  {formatPrice(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0))}
-                </p>
+                  {/* Guest */}
+                  <p className="text-lg text-white mb-1">👤 {order.guestName}</p>
+                  <p className="text-xs text-cream/35 mb-4">{formatTime(order.timestamp)}</p>
 
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  {(order.status === 'pending' || order.status === 'confirmed') && (
-                    <button
-                      onClick={() => handleMarkPreparing(order.id)}
-                      className="flex-1 bg-blue-500 text-white py-3 rounded text-sm font-medium
-                                 hover:bg-blue-600 transition-colors"
-                    >
-                      Start Preparing
-                    </button>
-                  )}
-                  {order.status === 'preparing' && (
-                    <button
-                      onClick={() => handleMarkReady(order.id)}
-                      className="flex-1 bg-green-500 text-white py-3 rounded text-sm font-medium
-                                 hover:bg-green-600 transition-colors"
-                    >
-                      Mark Ready
-                    </button>
-                  )}
-                  {order.status === 'ready' && (
-                    <div className="flex-1 bg-green-500/20 text-green-500 py-3 rounded text-sm font-medium text-center border border-green-500/30">
-                      ✓ Ready for Pickup
+                  {/* Items - Grouped by category */}
+                  <div className="space-y-4 mb-4">
+                    {/* Cocktails */}
+                    {order.items.filter(i => i.category === 'cocktails').length > 0 && (
+                      <div>
+                        <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">🍸 Cocktails</p>
+                        {order.items.filter(i => i.category === 'cocktails').map((item, idx) => (
+                          <div key={idx} className="flex items-baseline justify-between mb-1">
+                            <p className="text-lg text-cream">
+                              <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
+                              {item.name}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Bottles/Wine */}
+                    {order.items.filter(i => ['spirits', 'wine'].includes(i.category)).length > 0 && (
+                      <div>
+                        <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">🍷 Bottles & Wine</p>
+                        {order.items.filter(i => ['spirits', 'wine'].includes(i.category)).map((item, idx) => (
+                          <div key={idx} className="flex items-baseline justify-between mb-1">
+                            <p className="text-lg text-cream">
+                              <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
+                              {item.name}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Shisha */}
+                    {order.items.filter(i => i.category === 'shisha').length > 0 && (
+                      <div>
+                        <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">💨 Shisha</p>
+                        {order.items.filter(i => i.category === 'shisha').map((item, idx) => (
+                          <div key={idx} className="flex items-baseline justify-between mb-1">
+                            <p className="text-lg text-cream">
+                              <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
+                              {item.name}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Non-alcoholic */}
+                    {order.items.filter(i => i.category === 'nonalc').length > 0 && (
+                      <div>
+                        <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">🧃 Non-Alcoholic</p>
+                        {order.items.filter(i => i.category === 'nonalc').map((item, idx) => (
+                          <div key={idx} className="flex items-baseline justify-between mb-1">
+                            <p className="text-lg text-cream">
+                              <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
+                              {item.name}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Note */}
+                  {order.note && (
+                    <div className="bg-dark-3 border-l-4 border-gold p-3 mb-4">
+                      <p className="text-xs text-cream/50 uppercase tracking-wide mb-1">Special Request</p>
+                      <p className="text-base text-gold">{order.note}</p>
                     </div>
                   )}
+
+                  {/* Total */}
+                  <p className="font-display text-3xl text-gold mb-4">
+                    {formatPrice(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0))}
+                  </p>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    {(order.status === 'pending' || order.status === 'confirmed') && (
+                      <button
+                        onClick={() => handleMarkPreparing(order.id)}
+                        className="flex-1 bg-blue-500 text-white py-3 rounded text-sm font-medium
+                                   hover:bg-blue-600 transition-colors"
+                      >
+                        Start Preparing
+                      </button>
+                    )}
+                    {order.status === 'preparing' && (
+                      <button
+                        onClick={() => handleMarkReady(order.id)}
+                        className="flex-1 bg-green-500 text-white py-3 rounded text-sm font-medium
+                                   hover:bg-green-600 transition-colors"
+                      >
+                        Mark Ready
+                      </button>
+                    )}
+                    {order.status === 'ready' && (
+                      <div className="flex-1 bg-green-500/20 text-green-500 py-3 rounded text-sm font-medium text-center border border-green-500/30">
+                        ✓ Ready for Pickup
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-dark-2 rounded-lg border border-gold/10 h-fit xl:sticky xl:top-28">
+          <div className="px-5 py-4 border-b border-white/5">
+            <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">💬 Guest Messages</p>
+            <p className="text-[11px] text-cream/35 mt-1">Bar replies</p>
           </div>
-        )}
+          <div className="p-4">
+            {tableOptions.length === 0 ? (
+              <p className="text-xs text-cream/30 text-center py-6">No active tables yet</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {tableOptions.map(tableNumber => (
+                  <button
+                    key={tableNumber}
+                    type="button"
+                    onClick={() => handleSelectTable(tableNumber)}
+                    className={`relative px-3 py-1.5 rounded-full text-[11px] border transition-colors
+                      ${selectedTable === tableNumber
+                        ? 'bg-gold/20 border-gold/50 text-gold'
+                        : 'bg-dark-3 border-white/10 text-cream/60 hover:border-gold/30'
+                      }`}
+                  >
+                    Table {tableNumber}
+                    {unreadTables.has(tableNumber) && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="h-64 overflow-y-auto px-4 pb-4 space-y-2">
+            {selectedTableMessages.length === 0 ? (
+              <p className="text-xs text-cream/30 text-center py-6">No messages yet</p>
+            ) : (
+              selectedTableMessages.map(msg => (
+                <div
+                  key={msg.id}
+                  className={`max-w-[85%] p-3 rounded-lg text-xs
+                    ${msg.sender === 'guest'
+                      ? 'bg-gold/10 border border-gold/20 ml-auto rounded-br-sm'
+                      : 'bg-dark-3 border border-white/5 mr-auto rounded-bl-sm'
+                    }`}
+                >
+                  {msg.sender === 'staff' && (
+                    <p className="text-[9px] text-gold uppercase tracking-wide mb-1 font-medium">Bar</p>
+                  )}
+                  <p className="text-cream/90">{msg.text}</p>
+                  <p className="text-[9px] text-cream/30 mt-1 text-right">{formatTime(msg.timestamp)}</p>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="p-3 border-t border-white/5 flex gap-2">
+            <input
+              type="text"
+              value={replyMessage}
+              onChange={(e) => setReplyMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendReply();
+                }
+              }}
+              placeholder={selectedTable ? `Reply to Table ${selectedTable}...` : 'Select a table to reply...'}
+              disabled={!selectedTable}
+              className="flex-1 bg-dark-3 border border-white/6 rounded-lg px-3 py-2 text-xs text-cream
+                         focus:border-gold/35 focus:outline-none placeholder:text-cream/20 disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={handleSendReply}
+              disabled={!selectedTable || !replyMessage.trim()}
+              className="w-8 h-8 rounded-lg bg-gold text-dark flex items-center justify-center text-xs hover:bg-gold-light transition-colors disabled:opacity-50"
+            >
+              ➤
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
