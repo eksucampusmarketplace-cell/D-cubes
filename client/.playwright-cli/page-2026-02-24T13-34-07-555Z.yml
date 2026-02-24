@@ -1,0 +1,35 @@
+- generic [ref=e3]:
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - img [ref=e17]
+      - heading "D CUBES PLACE" [level=1] [ref=e19]
+      - paragraph [ref=e21]: Open Bar · Lounge · Nightlife
+    - generic [ref=e22]:
+      - generic [ref=e23]: "1"
+      - generic [ref=e25]: "2"
+      - generic [ref=e27]: "3"
+    - generic [ref=e89]:
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - generic [ref=e92]: 🛋️
+          - generic [ref=e93]: Lounge
+          - generic [ref=e94]: ·
+          - generic [ref=e95]: Table 5
+        - heading "Almost there!" [level=2] [ref=e96]
+        - paragraph [ref=e97]: Enter your name to start your experience
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - textbox "Your name or party name" [active] [ref=e100]
+          - img [ref=e102]
+        - button "✦ BEGIN EXPERIENCE" [disabled] [ref=e104]:
+          - generic [ref=e105]:
+            - generic [ref=e106]: ✦
+            - generic [ref=e107]: BEGIN EXPERIENCE
+            - img [ref=e108]
+      - button "Back" [ref=e110] [cursor=pointer]:
+        - img [ref=e111]
+        - text: Back
+  - paragraph [ref=e66]:
+    - text: Crafted by
+    - link "Decisive Analyst" [ref=e67] [cursor=pointer]:
+      - /url: https://wa.me/2348164143260

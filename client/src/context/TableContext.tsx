@@ -21,6 +21,11 @@ interface TableContextType {
   guestId: string;
   sessionId: string;
   isCheckedIn: boolean;
+
+  // Walk-in mode
+  isBrowsing: boolean;
+  isWalkIn: boolean;
+  walkInTableLabel: string | null;
   
   // Orders & messages
   orders: Order[];
@@ -30,6 +35,7 @@ interface TableContextType {
   
   // Actions
   checkIn: (name: string) => void;
+  setWalkInZone: (zone: ZoneType, tableLabel: string | null, browseOnly: boolean) => void;
   currentOrderStatus: OrderStatus | null;
   
   // Helper
@@ -46,6 +52,11 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [location, setLocation] = useState<Location | null>(null);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [zone, setZone] = useState<ZoneType | null>(null);
+  
+  // Walk-in flow state
+  const [isWalkIn, setIsWalkIn] = useState(false);
+  const [isBrowsing, setIsBrowsing] = useState(false);
+  const [walkInTableLabel, setWalkInTableLabel] = useState<string | null>(null);
   
   // Guest session
   const [guestName, setGuestName] = useState('');
@@ -92,6 +103,9 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setZone('lounge');
         }
       }
+    } else {
+      // No QR params — walk-in visitor
+      setIsWalkIn(true);
     }
     
     // Zone can be overridden via URL
@@ -140,39 +154,69 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [socket, tableNumber]);
 
+  // Walk-in zone setter — called from VenueLanding after zone/table selection
+  const setWalkInZone = useCallback((selectedZone: ZoneType, tableLabel: string | null, browseOnly: boolean) => {
+    setZone(selectedZone);
+    setIsBrowsing(browseOnly);
+    setWalkInTableLabel(tableLabel);
+
+    if (tableLabel) {
+      // Try to parse a number from the label for legacy socket support
+      const match = tableLabel.match(/\d+/);
+      if (match) {
+        const num = parseInt(match[0], 10);
+        setTableNumber(num);
+        setLocationId(`WALKIN-${num}`);
+      } else {
+        setTableNumber(99);
+        setLocationId('WALKIN-99');
+      }
+    } else {
+      // Browsing or no table - use placeholder
+      setTableNumber(isBrowsing ? 0 : 99);
+      setLocationId(browseOnly ? 'BROWSE' : 'WALKIN-GENERAL');
+    }
+  }, [isBrowsing]);
+
   const checkIn = useCallback((name: string) => {
     const targetTable = tableNumber || 1;
     
-    if (!targetTable || !name.trim()) return;
+    if (!name.trim()) return;
     
     setGuestName(name);
     setIsCheckedIn(true);
-    socketCheckIn(targetTable, name);
+
+    // Only emit socket check-in for actual table guests, not pure browsers
+    if (!isBrowsing && targetTable > 0) {
+      socketCheckIn(targetTable, name);
+    }
     
     // Add welcome message with zone info
     const zoneDisplayName = zone ? getZoneInfo(zone).name : 'D CUBES PLACE';
+    const welcomeText = isBrowsing
+      ? `Welcome, ${name}! 👀 You're browsing our menu. Feel free to explore our full selection — find a spot and scan the QR code when you're ready to order!`
+      : `Welcome to ${zoneDisplayName}, ${name}! 👋 How can we make your visit special?`;
+
     setMessages([{
       id: 'welcome',
       tableNumber: targetTable,
       sender: 'staff',
-      text: `Welcome to ${zoneDisplayName}, ${name}! 👋 How can we make your visit special?`,
+      text: welcomeText,
       timestamp: new Date(),
       senderName: 'Staff'
     }]);
-  }, [tableNumber, zone, socketCheckIn]);
+  }, [tableNumber, zone, isBrowsing, socketCheckIn]);
 
   // Determine available categories based on zone
   const availableCategories = React.useMemo(() => {
-    if (!zone) return [];
-    
+    const baseZone = zone || 'lounge';
     const zoneCategoryMap: Record<ZoneType, string[]> = {
       'open-bar': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
       'lounge': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
       'nightclub': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
       'poolside': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food']
     };
-    
-    return zoneCategoryMap[zone] || zoneCategoryMap['lounge'];
+    return zoneCategoryMap[baseZone] || zoneCategoryMap['lounge'];
   }, [zone]);
 
   // Check if a category is available
@@ -180,10 +224,8 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return availableCategories.includes(category);
   }, [availableCategories]);
 
-  // Can order food - now enabled for all zones
-  const canOrderFood = React.useMemo(() => {
-    return true;
-  }, []);
+  // Can order food - enabled for all zones
+  const canOrderFood = React.useMemo(() => true, []);
 
   // Zone display name
   const zoneName = React.useMemo(() => {
@@ -197,13 +239,13 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     return {
       locationId: locationId || location?.id || 'unknown',
-      locationName: location?.name || `Table ${tableNumber}`,
+      locationName: location?.name || (walkInTableLabel ? walkInTableLabel : `Table ${tableNumber}`),
       zone: zone || 'lounge',
       zoneName: zoneName,
       canOrderFood: canOrderFood,
       availableCategories: availableCategories
     };
-  }, [location, locationId, zone, zoneName, canOrderFood, availableCategories, tableNumber]);
+  }, [location, locationId, zone, zoneName, canOrderFood, availableCategories, tableNumber, walkInTableLabel]);
 
   const currentOrderStatus = orders.length > 0 ? orders[orders.length - 1].status : null;
 
@@ -221,6 +263,11 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       availableCategories,
       customerSession,
       
+      // Walk-in
+      isWalkIn,
+      isBrowsing,
+      walkInTableLabel,
+      
       // Guest info
       guestName,
       guestId,
@@ -235,6 +282,7 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       
       // Actions
       checkIn,
+      setWalkInZone,
       currentOrderStatus,
       
       // Helper

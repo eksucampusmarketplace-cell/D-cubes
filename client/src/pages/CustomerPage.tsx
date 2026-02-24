@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTable } from '@/context/TableContext';
 import { useCart } from '@/context/CartContext';
 import { CheckInScreen } from '@/components/CheckInScreen';
+import { VenueLanding } from '@/pages/VenueLanding';
 import { MenuItemCard } from '@/components/MenuItemCard';
 import { CartPanel } from '@/components/CartPanel';
 import { AccessRequests } from '@/components/AccessRequests';
@@ -11,7 +12,6 @@ import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS, getItemPrice } from '@/data
 import { getGreeting, formatPrice } from '@/utils/format';
 import { CUSTOMER_HERO, CATEGORY_IMAGES, NIGHTLIFE_FILTER } from '@/config/images';
 import { getZoneInfo, ZONES } from '@/data/locations';
-// Zone type is handled internally
 
 // All possible categories
 const ALL_CATEGORIES = [
@@ -40,7 +40,10 @@ export const CustomerPage: React.FC = () => {
     location,
     canOrderFood,
     availableCategories,
-    isCategoryAvailable 
+    isCategoryAvailable,
+    isWalkIn,
+    isBrowsing,
+    walkInTableLabel,
   } = useTable();
   const { itemCount, total, isOpen: cartOpen, setIsOpen: setCartOpen } = useCart();
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
@@ -130,6 +133,9 @@ export const CustomerPage: React.FC = () => {
   }, [setCartOpen]);
 
   if (!hasCheckedIn) {
+    if (isWalkIn) {
+      return <VenueLanding onContinue={() => setHasCheckedIn(true)} />;
+    }
     return <CheckInScreen onCheckIn={() => setHasCheckedIn(true)} />;
   }
 
@@ -186,12 +192,14 @@ export const CustomerPage: React.FC = () => {
             </p>
             
             {/* Location Badge */}
-            {(location || tableNumber) && (
+            {(location || tableNumber || walkInTableLabel || isWalkIn) && (
               <div className="inline-flex items-center gap-3 px-5 py-3 bg-black/60 backdrop-blur-xl rounded-full border-2 border-gold/40
                             shadow-[0_4px_30px_rgba(201,168,76,0.2)]">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <div className={`w-2 h-2 rounded-full animate-pulse ${isBrowsing ? 'bg-blue-400' : 'bg-green-500'}`} />
                 <span className="text-sm text-gold tracking-wider font-bold">
-                  {location?.name || `Table ${tableNumber}`}
+                  {isBrowsing
+                    ? 'Browsing'
+                    : walkInTableLabel || location?.name || `Table ${tableNumber}`}
                 </span>
                 <span className="text-white/50 text-sm">•</span>
                 <span className="text-white/80 text-sm font-medium">{zoneTheme.icon} {zoneName}</span>
@@ -251,6 +259,35 @@ export const CustomerPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Browse-Mode Banner */}
+      {isBrowsing && (
+        <div className="mx-5 mb-2 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/30 border border-blue-500/20 backdrop-blur-sm">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-blue-300 text-xs font-semibold tracking-wide uppercase mb-0.5">Browse Mode</p>
+              <p className="text-white/60 text-xs leading-relaxed">
+                You're viewing our menu &amp; prices. Find a seat and scan the QR code at your table to place an order.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Walk-in table label */}
+      {isWalkIn && !isBrowsing && walkInTableLabel && (
+        <div className="mx-5 mb-2 px-4 py-2.5 rounded-xl bg-gold/10 border border-gold/20">
+          <p className="text-gold/80 text-xs font-medium text-center">
+            📍 {walkInTableLabel} · {zoneName}
+          </p>
+        </div>
+      )}
 
       {/* Access Requests */}
       <AccessRequests />

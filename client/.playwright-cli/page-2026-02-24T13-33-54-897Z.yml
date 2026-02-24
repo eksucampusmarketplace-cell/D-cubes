@@ -1,0 +1,31 @@
+- generic [ref=e3]:
+  - generic [ref=e10]:
+    - generic [ref=e11]:
+      - img [ref=e17]
+      - heading "D CUBES PLACE" [level=1] [ref=e19]
+      - paragraph [ref=e21]: Open Bar · Lounge · Nightlife
+    - generic [ref=e22]:
+      - generic [ref=e23]: "1"
+      - generic [ref=e25]: "2"
+      - generic [ref=e27]: "3"
+    - generic [ref=e68]:
+      - generic [ref=e69]:
+        - generic [ref=e70]:
+          - generic [ref=e71]: 🛋️
+          - generic [ref=e72]: Lounge
+        - heading "What's your table or seat?" [level=2] [ref=e73]
+        - paragraph [ref=e74]: Optional — helps staff find you faster
+      - generic [ref=e75]:
+        - generic [ref=e76]:
+          - textbox "e.g. Table 5, Sofa 2, Bar Stool 3…" [active] [ref=e77]: Table 5
+          - img [ref=e79]
+        - button "Continue" [ref=e88] [cursor=pointer]:
+          - generic [ref=e82]: Continue
+          - img [ref=e83]
+      - button "Back to zone selection" [ref=e85] [cursor=pointer]:
+        - img [ref=e86]
+        - text: Back to zone selection
+  - paragraph [ref=e66]:
+    - text: Crafted by
+    - link "Decisive Analyst" [ref=e67] [cursor=pointer]:
+      - /url: https://wa.me/2348164143260

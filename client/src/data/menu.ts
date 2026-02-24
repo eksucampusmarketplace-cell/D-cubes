@@ -81,7 +81,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 115000,
     category: 'brandy',
     tags: ['Cognac', 'Premium', 'French'],
-    image: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1643834334546-c0a98a856c8b?w=400&auto=format&fit=crop&q=80',
     isPopular: true,
   },
   {
@@ -110,7 +110,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 145000,
     category: 'brandy',
     tags: ['Cognac', 'Premium', 'VSOP'],
-    image: 'https://images.unsplash.com/photo-1600788886242-5c96aabe3757?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1536935338788-846bb9981813?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 105,
@@ -129,7 +129,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 165000,
     category: 'brandy',
     tags: ['Cognac', 'Innovation', 'Bourbon Finish'],
-    image: 'https://images.unsplash.com/photo-1600788886242-5c96aabe3757?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&auto=format&fit=crop&q=80',
   },
 
   // ========== WHISKY ==========
@@ -140,7 +140,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 570000,
     category: 'spirits',
     tags: ['Whisky', 'Scotch', 'Luxury', 'Aged'],
-    image: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=400&auto=format&fit=crop&q=80',
     isSignature: true,
   },
   {
@@ -150,7 +150,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 270000,
     category: 'spirits',
     tags: ['Whisky', 'Scotch', 'Premium'],
-    image: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1560512823-829485b8bf24?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 203,
@@ -159,7 +159,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 180000,
     category: 'spirits',
     tags: ['Whisky', 'Scotch', 'Premium'],
-    image: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1574968248721-92e0e3f1ecde?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 204,
@@ -168,7 +168,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 405000,
     category: 'spirits',
     tags: ['Whisky', 'Scotch', 'Luxury'],
-    image: 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1602925430498-5b8a7e1aa7b6?w=400&auto=format&fit=crop&q=80',
     isPopular: true,
   },
   {
@@ -178,7 +178,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 35000,
     category: 'spirits',
     tags: ['Whisky', 'Scotch', 'Blended'],
-    image: 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1555631091-8feba5fa9f30?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 206,
@@ -187,7 +187,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 80000,
     category: 'spirits',
     tags: ['Whisky', 'Scotch', 'Aged'],
-    image: 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1477968835468-71acd6c82e99?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 207,
@@ -196,7 +196,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 70000,
     category: 'spirits',
     tags: ['Whisky', 'Tennessee', 'Classic'],
-    image: 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1583873934347-74bb7f82dfb7?w=400&auto=format&fit=crop&q=80',
     isPopular: true,
   },
   {
@@ -206,7 +206,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 65000,
     category: 'spirits',
     tags: ['Whisky', 'Tennessee', 'Large Format'],
-    image: 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1604430456920-4a5e5ff3eb4e?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 209,
@@ -215,7 +215,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 45000,
     category: 'spirits',
     tags: ['Whisky', 'Irish', 'Smooth'],
-    image: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1629803806613-b1f2a9661dc7?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 210,
@@ -224,7 +224,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 80000,
     category: 'spirits',
     tags: ['Whisky', 'Irish', 'Premium'],
-    image: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1508243771214-6e95d137426b?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 211,
@@ -243,7 +243,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 40000,
     category: 'spirits',
     tags: ['Whisky', 'Blended', 'Smooth'],
-    image: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1451396730305-bcdf51a51b05?w=400&auto=format&fit=crop&q=80',
   },
 
   // ========== TEQUILA ==========
@@ -254,7 +254,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 55000,
     category: 'tequila',
     tags: ['Tequila', 'Gold', 'Mexican'],
-    image: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1631168028741-09c35eb40b29?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 302,
@@ -263,7 +263,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 60000,
     category: 'tequila',
     tags: ['Tequila', 'Silver', 'Premium'],
-    image: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1615397349754-cfa2066a298e?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 303,
@@ -282,7 +282,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 390000,
     category: 'tequila',
     tags: ['Tequila', 'Reposado', 'Celebrity', 'Luxury'],
-    image: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1567593810070-7a3d471af022?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 305,
@@ -291,7 +291,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 390000,
     category: 'tequila',
     tags: ['Tequila', 'Blanco', 'Celebrity', 'Luxury'],
-    image: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 306,
@@ -300,7 +300,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 425000,
     category: 'tequila',
     tags: ['Tequila', 'Blanco', 'Large Format', 'Luxury'],
-    image: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1493962853295-0fd70327578a?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 307,
@@ -309,7 +309,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 700000,
     category: 'tequila',
     tags: ['Tequila', 'Anejo', 'Ultra Luxury'],
-    image: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1541614101331-1a5a3a194e92?w=400&auto=format&fit=crop&q=80',
     isSignature: true,
   },
   {
@@ -319,7 +319,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 650000,
     category: 'tequila',
     tags: ['Tequila', 'Reposado', 'Artisan', 'Luxury'],
-    image: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1582106245687-cbb466a9f07f?w=400&auto=format&fit=crop&q=80',
     isSignature: true,
   },
 
@@ -331,7 +331,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 35000,
     category: 'liquor',
     tags: ['Cream Liqueur', 'Irish', 'Sweet'],
-    image: 'https://images.unsplash.com/photo-1569529465841-dfecdab7503b?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1619451334792-150fd785ee74?w=400&auto=format&fit=crop&q=80',
     isPopular: true,
   },
 
@@ -389,7 +389,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 1500,
     category: 'mixers',
     tags: ['Soft Drink', 'Classic', 'Mixer'],
-    image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1581636625402-29b2a704ef13?w=400&auto=format&fit=crop&q=80',
     isPopular: true,
   },
   {
@@ -399,7 +399,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 1000,
     category: 'mixers',
     tags: ['Tonic', 'Mixer', 'Premium'],
-    image: 'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 508,
@@ -417,7 +417,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 2000,
     category: 'mixers',
     tags: ['Malt', 'Non Alcoholic', 'Refreshing'],
-    image: 'https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=400&auto=format&fit=crop&q=80',
   },
 
   // ========== RED WINE ==========
@@ -458,7 +458,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 235000,
     category: 'sparkling-wine',
     tags: ['Champagne', 'Rose', 'Luxury', 'French'],
-    image: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1518098268026-4e89f1a2cd8e?w=400&auto=format&fit=crop&q=80',
     isSignature: true,
   },
   {
@@ -487,7 +487,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 130000,
     category: 'sparkling-wine',
     tags: ['Sparkling', 'White', 'Luxury'],
-    image: 'https://images.unsplash.com/photo-1594372365401-3b5ff14eaaed?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1470338745628-171cf53de3a8?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 705,
@@ -505,7 +505,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 30000,
     category: 'sparkling-wine',
     tags: ['Sparkling', 'California', 'Festive'],
-    image: 'https://images.unsplash.com/photo-1549918864-48ac978761a4?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1576716534518-2ce7fa4b4b77?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 707,
@@ -514,7 +514,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 55000,
     category: 'sparkling-wine',
     tags: ['Sparkling', 'Rose', 'German'],
-    image: 'https://images.unsplash.com/photo-1558001373-7b93ee48ffa0?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400&auto=format&fit=crop&q=80',
   },
 
   // ========== VODKA ==========
@@ -525,7 +525,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 12000,
     category: 'spirits',
     tags: ['Vodka', 'Premium', 'Smooth'],
-    image: 'https://images.unsplash.com/photo-1608885898957-a559228e8749?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 802,
@@ -534,7 +534,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 8000,
     category: 'spirits',
     tags: ['Vodka', 'Flavored', 'Fruity'],
-    image: 'https://images.unsplash.com/photo-1608885898957-a559228e8749?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400&auto=format&fit=crop&q=80',
     isNew: true,
   },
 
@@ -556,7 +556,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 8000,
     category: 'shisha',
     tags: ['Shisha', 'Classic', 'Two Hours'],
-    image: 'https://images.unsplash.com/photo-1542567455-cd733f23fbb1?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&auto=format&fit=crop&q=80',
   },
   {
     id: 903,
@@ -673,7 +673,7 @@ export const MENU_ITEMS: MenuItem[] = [
     price: 42000,
     category: 'food',
     tags: ['Lamb', 'Premium', 'Grilled'],
-    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=400&auto=format&fit=crop&q=80',
+    image: 'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=400&auto=format&fit=crop&q=80',
     isSignature: true,
     requiresFoodService: true,
   },
