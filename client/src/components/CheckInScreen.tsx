@@ -160,7 +160,6 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
                 <span className="text-[10px] tracking-[0.3em] uppercase text-white font-medium mt-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                   {location?.type === 'bar-stool' ? 'Bar Stool' : 
                    location?.type === 'lounge-seat' ? 'Lounge Seat' :
-                   location?.type === 'vip-booth' ? 'VIP Booth' :
                    location?.type === 'poolside-cabana' ? 'Cabana' :
                    location?.type === 'standing-table' ? 'Standing Table' :
                    'Your Table'}
@@ -271,23 +270,17 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
                 { icon: '💨', label: 'Shisha' },
                 { icon: '🎵', label: 'Live Music' },
               ]
-            : zone === 'vip'
+            : zone === 'poolside'
               ? [
-                  { icon: '🍾', label: 'Bottle Service' },
-                  { icon: '🍽️', label: 'Fine Dining' },
-                  { icon: '👑', label: 'VIP Treatment' },
+                  { icon: '🏊', label: 'Pool Access' },
+                  { icon: '🍹', label: 'Tropical Drinks' },
+                  { icon: '🍽️', label: 'Light Bites' },
                 ]
-              : zone === 'poolside'
-                ? [
-                    { icon: '🏊', label: 'Pool Access' },
-                    { icon: '🍹', label: 'Tropical Drinks' },
-                    { icon: '🍽️', label: 'Light Bites' },
-                  ]
-                : [
-                    { icon: '🍸', label: 'Premium Drinks' },
-                    { icon: '🍽️', label: 'Fine Dining' },
-                    { icon: '💨', label: 'Shisha Lounge' },
-                  ];
+              : [
+                  { icon: '🍸', label: 'Premium Drinks' },
+                  { icon: '🍽️', label: 'Fine Dining' },
+                  { icon: '💨', label: 'Shisha Lounge' },
+                ];
           return (
             <div className="mt-12 grid grid-cols-3 gap-6 text-center animate-fade-up" style={{ animationDelay: '0.5s' }}>
               {features.map((feature, idx) => (

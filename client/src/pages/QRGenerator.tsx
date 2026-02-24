@@ -6,7 +6,7 @@ import type { ZoneType } from '@/types';
 export const QRGenerator: React.FC = () => {
   const [baseUrl, setBaseUrl] = useState('https://dcubesplace.com/order');
   
-  // Mode selection: 'legacy' (old table numbers) or 'location' (new zone-based)
+  // Mode selection: 'location' (new zone-based) or 'legacy' (old table numbers)
   const [mode, setMode] = useState<'location' | 'legacy'>('location');
   
   // Legacy mode state
@@ -16,6 +16,11 @@ export const QRGenerator: React.FC = () => {
   // Location mode state
   const [selectedZone, setSelectedZone] = useState<ZoneType | 'all'>('all');
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  
+  // Export settings
+  const [qrSize, setQrSize] = useState(120);
+  const [showZoneBadge, setShowZoneBadge] = useState(true);
+  const [paperSize, setPaperSize] = useState<'a4' | 'letter'>('a4');
   
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -32,7 +37,6 @@ export const QRGenerator: React.FC = () => {
     name: string;
     zone: ZoneType;
     zoneIcon: string;
-    canReceiveFood: boolean;
     url: string;
   }
 
@@ -44,7 +48,6 @@ export const QRGenerator: React.FC = () => {
         name: `Table ${startTable + i}`,
         zone: 'lounge' as ZoneType,
         zoneIcon: ZONES['lounge'].icon,
-        canReceiveFood: true,
         url: `${baseUrl}?table=${startTable + i}`
       }));
     }
@@ -60,13 +63,35 @@ export const QRGenerator: React.FC = () => {
       name: loc.name,
       zone: loc.zone,
       zoneIcon: ZONES[loc.zone].icon,
-      canReceiveFood: loc.canReceiveFood,
       url: `${baseUrl}?location=${loc.id}&zone=${loc.zone}`
     }));
   }, [mode, startTable, endTable, baseUrl, selectedZone, filteredLocations, selectedLocations]);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['Location ID', 'Name', 'Zone', 'QR URL'];
+    const rows = displayItems.map(item => [
+      item.id,
+      item.name,
+      item.zone,
+      item.url
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `qr-codes-${selectedZone}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const toggleLocationSelection = (locationId: string) => {
@@ -85,6 +110,14 @@ export const QRGenerator: React.FC = () => {
     setSelectedLocations([]);
   };
 
+  // Get columns per row based on paper size
+  const getGridClasses = () => {
+    if (paperSize === 'a4') {
+      return 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
+    }
+    return 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5';
+  };
+
   return (
     <div className="min-h-screen bg-dark p-4 lg:p-8">
       {/* Header */}
@@ -96,10 +129,16 @@ export const QRGenerator: React.FC = () => {
         </div>
         <div className="flex gap-3 no-print">
           <button
+            onClick={handleExportCSV}
+            className="px-4 lg:px-6 py-2 lg:py-3 rounded text-sm font-medium bg-dark-2 text-cream border border-gold/20 hover:border-gold/40 transition-colors"
+          >
+            📥 Export CSV
+          </button>
+          <button
             onClick={handlePrint}
             className="bg-gold text-dark px-4 lg:px-6 py-2 lg:py-3 rounded text-sm font-medium hover:bg-gold-light transition-colors"
           >
-            Print QR Codes
+            🖨️ Print QR Codes
           </button>
         </div>
       </div>
@@ -188,18 +227,18 @@ export const QRGenerator: React.FC = () => {
                 >
                   All Zones
                 </button>
-                {Object.entries(ZONES).map(([key, zone]) => (
+                {(Object.keys(ZONES) as ZoneType[]).map((key) => (
                   <button
                     key={key}
-                    onClick={() => { setSelectedZone(key as ZoneType); clearSelection(); }}
+                    onClick={() => { setSelectedZone(key); clearSelection(); }}
                     className={`px-3 py-1.5 rounded text-xs font-medium transition-colors flex items-center gap-1 ${
                       selectedZone === key 
                         ? 'bg-gold text-dark' 
                         : 'bg-dark-3 text-cream hover:bg-dark-4'
                     }`}
                   >
-                    <span>{zone.icon}</span>
-                    <span>{zone.name}</span>
+                    <span>{ZONES[key].icon}</span>
+                    <span>{ZONES[key].name}</span>
                   </button>
                 ))}
               </div>
@@ -243,9 +282,6 @@ export const QRGenerator: React.FC = () => {
                       <span>{ZONES[loc.zone].icon}</span>
                       <span className="font-medium truncate">{loc.name}</span>
                     </div>
-                    {!loc.canReceiveFood && (
-                      <span className="text-[8px] opacity-70 block">🍸 Drinks only</span>
-                    )}
                   </button>
                 ))}
               </div>
@@ -261,17 +297,56 @@ export const QRGenerator: React.FC = () => {
                 <span className="w-2 h-2 rounded-full bg-dark-4 border border-cream/20"></span>
                 Available
               </span>
-              <span className="flex items-center gap-1">
-                <span>🍸</span>
-                Drinks only (no food)
-              </span>
             </div>
           </div>
         )}
+
+        {/* Print Settings */}
+        <div className="mt-6 pt-6 border-t border-gold/10">
+          <h4 className="text-sm text-white mb-4">Print Settings</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">QR Code Size</label>
+              <select
+                value={qrSize}
+                onChange={(e) => setQrSize(Number(e.target.value))}
+                className="w-full bg-dark-3 border border-gold/20 rounded px-4 py-2 text-cream text-sm focus:border-gold focus:outline-none"
+              >
+                <option value={80}>Small (80px)</option>
+                <option value={100}>Medium (100px)</option>
+                <option value={120}>Large (120px)</option>
+                <option value={150}>Extra Large (150px)</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">Paper Size</label>
+              <select
+                value={paperSize}
+                onChange={(e) => setPaperSize(e.target.value as 'a4' | 'letter')}
+                className="w-full bg-dark-3 border border-gold/20 rounded px-4 py-2 text-cream text-sm focus:border-gold focus:outline-none"
+              >
+                <option value="a4">A4</option>
+                <option value="letter">Letter</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">Options</label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showZoneBadge}
+                  onChange={(e) => setShowZoneBadge(e.target.checked)}
+                  className="w-4 h-4 rounded border-gold/30 bg-dark-3 text-gold"
+                />
+                <span className="text-sm text-cream/70">Show Zone Badge</span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Summary */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between no-print">
         <p className="text-cream/70 text-sm">
           Showing <span className="text-gold font-bold">{displayItems.length}</span> QR codes
         </p>
@@ -283,7 +358,7 @@ export const QRGenerator: React.FC = () => {
       </div>
 
       {/* QR Codes Grid */}
-      <div ref={printRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      <div ref={printRef} className={`grid ${getGridClasses()} gap-4`}>
         {displayItems.map((item) => (
           <div 
             key={item.id} 
@@ -292,7 +367,7 @@ export const QRGenerator: React.FC = () => {
             <div className="mb-2">
               <QRCodeSVG
                 value={item.url}
-                size={100}
+                size={qrSize}
                 level="H"
                 includeMargin={false}
                 bgColor="#ffffff"
@@ -306,16 +381,13 @@ export const QRGenerator: React.FC = () => {
             </p>
             
             {/* Zone Badge */}
-            <div className="flex items-center gap-1 mt-1">
-              <span className="text-sm">{item.zoneIcon || ZONES[item.zone as ZoneType]?.icon}</span>
-              <span className="text-dark/60 text-[10px]">
-                {ZONES[item.zone as ZoneType]?.name || item.zone}
-              </span>
-            </div>
-            
-            {/* Food Availability */}
-            {mode === 'location' && !item.canReceiveFood && (
-              <p className="text-amber-600 text-[9px] mt-1 font-medium">🍸 Drinks Only</p>
+            {showZoneBadge && (
+              <div className="flex items-center gap-1 mt-1">
+                <span className="text-sm">{item.zoneIcon}</span>
+                <span className="text-dark/60 text-[10px]">
+                  {ZONES[item.zone].name}
+                </span>
+              </div>
             )}
             
             <p className="text-dark/40 text-[8px] mt-2">D CUBE&apos;S PLACE</p>
@@ -342,6 +414,10 @@ export const QRGenerator: React.FC = () => {
           }
           body {
             background: white !important;
+          }
+          @page {
+            margin: 10mm;
+            size: ${paperSize};
           }
         }
       `}</style>

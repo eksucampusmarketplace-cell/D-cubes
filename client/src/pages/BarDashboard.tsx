@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSocket } from '@/context/SocketContext';
-import { Order, OrderStatus, ChatMessage } from '@/types';
+import { Order, OrderStatus, ChatMessage, ZoneType } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, generateMessageId } from '@/utils/format';
+import { ZONES } from '@/data/locations';
 
+// Zone-specific bar dashboard
 export const BarDashboard: React.FC = () => {
   const { socket, joinStaff, updateOrderStatus, sendMessage } = useSocket();
   const [barOrders, setBarOrders] = useState<Order[]>([]);
@@ -10,6 +12,7 @@ export const BarDashboard: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [unreadTables, setUnreadTables] = useState<Set<number>>(new Set());
+  const [activeZone, setActiveZone] = useState<ZoneType>('lounge');
 
   useEffect(() => {
     joinStaff('bar');
@@ -19,9 +22,10 @@ export const BarDashboard: React.FC = () => {
     if (!socket) return;
 
     socket.on('new-order', (order: Order) => {
-      // Only add drinks and shisha items
+      // Filter orders by zone - check if order has zone info or infer from table
+      // For now, show all drink orders to bar staff
       const barItems = order.items.filter(item => 
-        ['cocktails', 'spirits', 'wine', 'nonalc', 'shisha'].includes(item.category)
+        ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha'].includes(item.category)
       );
       if (barItems.length > 0) {
         const barOrder = { ...order, items: barItems };
@@ -61,6 +65,10 @@ export const BarDashboard: React.FC = () => {
     updateOrderStatus(orderId, 'ready');
   };
 
+  const handleMarkDelivered = (orderId: string) => {
+    updateOrderStatus(orderId, 'delivered');
+  };
+
   const tableOptions = useMemo(() => {
     const tables = new Set<number>();
     barOrders.forEach(order => tables.add(order.tableNumber));
@@ -98,269 +106,267 @@ export const BarDashboard: React.FC = () => {
     setMessages(prev => [...prev, message]);
     sendMessage(message);
     setReplyMessage('');
-  }, [replyMessage, selectedTable, sendMessage]);
+  }, [selectedTable, replyMessage, sendMessage]);
 
-  useEffect(() => {
-    setReplyMessage('');
-  }, [selectedTable]);
+  const selectedTableOrders = barOrders.filter(o => o.tableNumber === selectedTable);
+  const selectedTableMessages = messages.filter(m => m.tableNumber === selectedTable);
 
-  const selectedTableMessages = messages.filter(message => message.tableNumber === selectedTable);
+  // Zone tabs for bar sections
+  const zoneTabs: ZoneType[] = ['lounge', 'nightclub', 'open-bar'];
 
   return (
-    <div className="min-h-screen bg-dark">
+    <div className="min-h-screen bg-dark-4">
       {/* Header */}
-      <div className="sticky top-0 bg-dark/95 backdrop-blur border-b border-gold/20 px-4 lg:px-8 py-4 lg:py-6 z-20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 lg:gap-4">
-            <h1 className="font-display text-xl lg:text-3xl tracking-[0.2em] lg:tracking-[0.25em] text-gold">D CUBE'S PLACE</h1>
-            <div className="h-6 lg:h-8 w-px bg-gold/30 hidden sm:block" />
-            <div className="hidden sm:block">
-              <h2 className="font-serif text-lg lg:text-2xl text-white">Bar Display</h2>
-              <p className="text-xs text-cream/35 mt-1">Drinks & Shisha Orders</p>
+      <header className="bg-dark-2 border-b border-gold/10 sticky top-0 z-50">
+        <div className="px-4 lg:px-8 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <h1 className="font-display text-2xl tracking-[0.2em] text-gold">BAR DASHBOARD</h1>
+              <span className="px-3 py-1 bg-gold/10 border border-gold/20 rounded-full text-gold text-sm">
+                🍸 Drinks & Shisha
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <a href="/manager" className="px-4 py-2 text-sm text-cream/50 hover:text-cream transition-colors">
+                Manager
+              </a>
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-sm text-cream/50">Online</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 lg:gap-3">
-            <div className="flex items-center gap-1.5 lg:gap-2 px-3 lg:px-4 py-1.5 lg:py-2 border border-blue-500/25 rounded-full text-xs lg:text-sm text-blue-500">
-              <span className="w-1.5 lg:w-2 h-1.5 lg:h-2 rounded-full bg-blue-500 animate-pulse" />
-              <span className="hidden sm:inline">Live</span>
-            </div>
-            <div className="text-right">
-              <p className="font-display text-xl lg:text-3xl text-gold">{barOrders.filter(o => o.status === 'pending' || o.status === 'confirmed').length}</p>
-              <p className="text-[9px] lg:text-[10px] tracking-[0.2em] uppercase text-cream/35">Pending</p>
-            </div>
+          
+          {/* Zone Tabs */}
+          <div className="flex gap-2">
+            {zoneTabs.map(zone => (
+              <button
+                key={zone}
+                onClick={() => setActiveZone(zone)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2
+                           ${activeZone === zone 
+                             ? 'bg-gold text-black' 
+                             : 'bg-dark-3 text-cream/60 hover:bg-dark-4 hover:text-cream'}`}
+              >
+                <span>{ZONES[zone].icon}</span>
+                <span className="capitalize">{ZONES[zone].name}</span>
+              </button>
+            ))}
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Orders & Messages */}
-      <div className="p-4 lg:p-8 grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4 lg:gap-6">
-        <div>
-          {barOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-cream/30">
-              <span className="text-6xl mb-4">🍸</span>
-              <p className="font-serif text-2xl mb-2">No Bar Orders</p>
-              <p className="text-sm">New orders will appear here automatically</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
-              {barOrders.map(order => (
-                <div 
-                  key={order.id}
-                  className={`p-6 rounded-lg border-2 transition-all
-                    ${order.status === 'pending' || order.status === 'confirmed'
-                      ? 'bg-dark-2 border-gold/50 animate-pulse'
-                      : order.status === 'preparing'
-                      ? 'bg-blue-500/5 border-blue-500/30'
-                      : 'bg-green-500/5 border-green-500/30'
-                    }`}
-                >
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="font-display text-5xl text-gold leading-none">{order.tableNumber}</p>
-                      <p className="text-xs tracking-[0.15em] uppercase text-cream/40 mt-1">Table</p>
-                    </div>
-                    <span className={`text-xs tracking-[0.1em] uppercase px-3 py-1.5 rounded-full border
-                      ${order.status === 'pending' || order.status === 'confirmed'
-                        ? 'bg-red-500/15 text-red-500 border-red-500/30'
-                        : order.status === 'preparing'
-                        ? 'bg-blue-500/15 text-blue-500 border-blue-500/30'
-                        : 'bg-green-500/15 text-green-500 border-green-500/30'
-                      }`}
-                    >
-                      {getStatusLabel(order.status)}
-                    </span>
-                  </div>
-
-                  {/* Guest */}
-                  <p className="text-lg text-white mb-1">👤 {order.guestName}</p>
-                  <p className="text-xs text-cream/35 mb-4">{formatTime(order.timestamp)}</p>
-
-                  {/* Items - Grouped by category */}
-                  <div className="space-y-4 mb-4">
-                    {/* Cocktails */}
-                    {order.items.filter(i => i.category === 'cocktails').length > 0 && (
-                      <div>
-                        <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">🍸 Cocktails</p>
-                        {order.items.filter(i => i.category === 'cocktails').map((item, idx) => (
-                          <div key={idx} className="flex items-baseline justify-between mb-1">
-                            <p className="text-lg text-cream">
-                              <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
-                              {item.name}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Bottles/Wine */}
-                    {order.items.filter(i => ['spirits', 'wine'].includes(i.category)).length > 0 && (
-                      <div>
-                        <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">🍷 Bottles & Wine</p>
-                        {order.items.filter(i => ['spirits', 'wine'].includes(i.category)).map((item, idx) => (
-                          <div key={idx} className="flex items-baseline justify-between mb-1">
-                            <p className="text-lg text-cream">
-                              <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
-                              {item.name}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Shisha */}
-                    {order.items.filter(i => i.category === 'shisha').length > 0 && (
-                      <div>
-                        <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">💨 Shisha</p>
-                        {order.items.filter(i => i.category === 'shisha').map((item, idx) => (
-                          <div key={idx} className="flex items-baseline justify-between mb-1">
-                            <p className="text-lg text-cream">
-                              <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
-                              {item.name}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Non-alcoholic */}
-                    {order.items.filter(i => i.category === 'nonalc').length > 0 && (
-                      <div>
-                        <p className="text-[10px] tracking-[0.2em] uppercase text-gold/60 mb-2">🧃 Non-Alcoholic</p>
-                        {order.items.filter(i => i.category === 'nonalc').map((item, idx) => (
-                          <div key={idx} className="flex items-baseline justify-between mb-1">
-                            <p className="text-lg text-cream">
-                              <span className="text-gold font-display text-2xl mr-2">{item.quantity}×</span>
-                              {item.name}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Note */}
-                  {order.note && (
-                    <div className="bg-dark-3 border-l-4 border-gold p-3 mb-4">
-                      <p className="text-xs text-cream/50 uppercase tracking-wide mb-1">Special Request</p>
-                      <p className="text-base text-gold">{order.note}</p>
-                    </div>
-                  )}
-
-                  {/* Total */}
-                  <p className="font-display text-3xl text-gold mb-4">
-                    {formatPrice(order.items.reduce((sum, i) => sum + i.price * i.quantity, 0))}
-                  </p>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2">
-                    {(order.status === 'pending' || order.status === 'confirmed') && (
-                      <button
-                        onClick={() => handleMarkPreparing(order.id)}
-                        className="flex-1 bg-blue-500 text-white py-3 rounded text-sm font-medium
-                                   hover:bg-blue-600 transition-colors"
-                      >
-                        Start Preparing
-                      </button>
-                    )}
-                    {order.status === 'preparing' && (
-                      <button
-                        onClick={() => handleMarkReady(order.id)}
-                        className="flex-1 bg-green-500 text-white py-3 rounded text-sm font-medium
-                                   hover:bg-green-600 transition-colors"
-                      >
-                        Mark Ready
-                      </button>
-                    )}
-                    {order.status === 'ready' && (
-                      <div className="flex-1 bg-green-500/20 text-green-500 py-3 rounded text-sm font-medium text-center border border-green-500/30">
-                        ✓ Ready for Pickup
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-dark-2 rounded-lg border border-gold/10 h-fit xl:sticky xl:top-28">
-          <div className="px-5 py-4 border-b border-white/5">
-            <p className="text-[11px] tracking-[0.2em] uppercase text-cream/50">💬 Guest Messages</p>
-            <p className="text-[11px] text-cream/35 mt-1">Bar replies</p>
+      <div className="flex h-[calc(100vh-140px)]">
+        {/* Sidebar - Table List */}
+        <div className="w-64 bg-dark-2 border-r border-gold/10 flex flex-col">
+          <div className="p-4 border-b border-gold/10">
+            <h2 className="text-xs text-cream/40 uppercase tracking-wider mb-1">Active Tables</h2>
+            <p className="text-2xl text-white font-serif">{tableOptions.length}</p>
           </div>
-          <div className="p-4">
+          
+          <div className="flex-1 overflow-y-auto">
             {tableOptions.length === 0 ? (
-              <p className="text-xs text-cream/30 text-center py-6">No active tables yet</p>
+              <div className="p-4 text-center">
+                <p className="text-cream/30 text-sm">No active tables</p>
+              </div>
             ) : (
-              <div className="flex flex-wrap gap-2">
-                {tableOptions.map(tableNumber => (
+              tableOptions.map(tableNumber => {
+                const hasUnread = unreadTables.has(tableNumber);
+                const pendingOrders = barOrders.filter(o => 
+                  o.tableNumber === tableNumber && 
+                  ['pending', 'confirmed', 'preparing'].includes(o.status)
+                ).length;
+                
+                return (
                   <button
                     key={tableNumber}
-                    type="button"
                     onClick={() => handleSelectTable(tableNumber)}
-                    className={`relative px-3 py-1.5 rounded-full text-[11px] border transition-colors
-                      ${selectedTable === tableNumber
-                        ? 'bg-gold/20 border-gold/50 text-gold'
-                        : 'bg-dark-3 border-white/10 text-cream/60 hover:border-gold/30'
-                      }`}
+                    className={`w-full p-4 text-left border-b border-gold/5 transition-all
+                               ${selectedTable === tableNumber 
+                                 ? 'bg-gold/10 border-l-4 border-l-gold' 
+                                 : 'hover:bg-dark-3 border-l-4 border-l-transparent'}`}
                   >
-                    Table {tableNumber}
-                    {unreadTables.has(tableNumber) && (
-                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
-                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🪑</span>
+                        <span className="font-medium text-white">Table {tableNumber}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {pendingOrders > 0 && (
+                          <span className="px-2 py-0.5 bg-gold text-black text-xs rounded-full font-bold">
+                            {pendingOrders}
+                          </span>
+                        )}
+                        {hasUnread && (
+                          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        )}
+                      </div>
+                    </div>
                   </button>
-                ))}
-              </div>
+                );
+              })
             )}
           </div>
-          <div className="h-64 overflow-y-auto px-4 pb-4 space-y-2">
-            {selectedTableMessages.length === 0 ? (
-              <p className="text-xs text-cream/30 text-center py-6">No messages yet</p>
-            ) : (
-              selectedTableMessages.map(msg => (
-                <div
-                  key={msg.id}
-                  className={`max-w-[85%] p-3 rounded-lg text-xs
-                    ${msg.sender === 'guest'
-                      ? 'bg-gold/10 border border-gold/20 ml-auto rounded-br-sm'
-                      : 'bg-dark-3 border border-white/5 mr-auto rounded-bl-sm'
-                    }`}
-                >
-                  {msg.sender === 'staff' && (
-                    <p className="text-[9px] text-gold uppercase tracking-wide mb-1 font-medium">Bar</p>
-                  )}
-                  <p className="text-cream/90">{msg.text}</p>
-                  <p className="text-[9px] text-cream/30 mt-1 text-right">{formatTime(msg.timestamp)}</p>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {selectedTable ? (
+            <>
+              {/* Orders Section */}
+              <div className="flex-1 overflow-y-auto p-4 lg:p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-serif text-2xl text-white">Table {selectedTable}</h2>
+                  <div className="flex gap-2">
+                    {selectedTableOrders.some(o => o.status === 'pending') && (
+                      <span className="px-3 py-1 bg-amber-500/20 text-amber-400 text-sm rounded-full">
+                        ⏳ Pending Orders
+                      </span>
+                    )}
+                  </div>
                 </div>
-              ))
-            )}
-          </div>
-          <div className="p-3 border-t border-white/5 flex gap-2">
-            <input
-              type="text"
-              value={replyMessage}
-              onChange={(e) => setReplyMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSendReply();
-                }
-              }}
-              placeholder={selectedTable ? `Reply to Table ${selectedTable}...` : 'Select a table to reply...'}
-              disabled={!selectedTable}
-              className="flex-1 bg-dark-3 border border-white/6 rounded-lg px-3 py-2 text-xs text-cream
-                         focus:border-gold/35 focus:outline-none placeholder:text-cream/20 disabled:opacity-50"
-            />
-            <button
-              type="button"
-              onClick={handleSendReply}
-              disabled={!selectedTable || !replyMessage.trim()}
-              className="w-8 h-8 rounded-lg bg-gold text-dark flex items-center justify-center text-xs hover:bg-gold-light transition-colors disabled:opacity-50"
-            >
-              ➤
-            </button>
-          </div>
+
+                {/* Orders List */}
+                <div className="space-y-4 mb-8">
+                  {selectedTableOrders.length === 0 ? (
+                    <div className="luxury-card rounded-2xl p-8 text-center">
+                      <p className="text-cream/30">No orders for this table</p>
+                    </div>
+                  ) : (
+                    selectedTableOrders.map(order => (
+                      <div key={order.id} className="luxury-card rounded-2xl p-6">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs text-cream/40 uppercase tracking-wider">
+                                Order #{order.id.slice(-6)}
+                              </span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium
+                                ${order.status === 'pending' ? 'bg-amber-500/20 text-amber-400' :
+                                  order.status === 'preparing' ? 'bg-blue-500/20 text-blue-400' :
+                                  order.status === 'ready' ? 'bg-green-500/20 text-green-400' :
+                                  'bg-cream/10 text-cream/60'}`}>
+                                {getStatusLabel(order.status)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-cream/60">{order.guestName}</p>
+                            <p className="text-xs text-cream/40">{formatTime(order.timestamp)}</p>
+                          </div>
+                          <span className="text-xl text-gold font-bold">
+                            {formatPrice(order.total)}
+                          </span>
+                        </div>
+
+                        {/* Order Items */}
+                        <div className="space-y-2 mb-4">
+                          {order.items.map((item, idx) => (
+                            <div key={idx} className="flex items-center justify-between py-2 border-b border-gold/5 last:border-0">
+                              <div className="flex items-center gap-3">
+                                <span className="text-cream/40">{item.quantity}×</span>
+                                <span className="text-cream">{item.name}</span>
+                              </div>
+                              <span className="text-cream/60">{formatPrice(item.price * item.quantity)}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2">
+                          {order.status === 'pending' && (
+                            <button
+                              onClick={() => handleMarkPreparing(order.id)}
+                              className="flex-1 py-3 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-all text-sm font-medium"
+                            >
+                              🍸 Start Preparing
+                            </button>
+                          )}
+                          {order.status === 'preparing' && (
+                            <button
+                              onClick={() => handleMarkReady(order.id)}
+                              className="flex-1 py-3 bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500/30 transition-all text-sm font-medium"
+                            >
+                              ✅ Mark Ready
+                            </button>
+                          )}
+                          {order.status === 'ready' && (
+                            <button
+                              onClick={() => handleMarkDelivered(order.id)}
+                              className="flex-1 py-3 bg-gold/20 text-gold rounded-xl hover:bg-gold/30 transition-all text-sm font-medium"
+                            >
+                              🚚 Mark Delivered
+                            </button>
+                          )}
+                        </div>
+
+                        {order.note && (
+                          <div className="mt-4 p-3 bg-gold/5 border border-gold/10 rounded-xl">
+                            <p className="text-sm text-cream/60">
+                              <span className="text-gold">📝 Note:</span> {order.note}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Chat Section */}
+                <div className="luxury-card rounded-2xl overflow-hidden">
+                  <div className="p-4 border-b border-gold/10 bg-dark-3">
+                    <h3 className="font-serif text-lg text-white">💬 Chat with Table {selectedTable}</h3>
+                  </div>
+                  
+                  {/* Messages */}
+                  <div className="h-64 overflow-y-auto p-4 space-y-3">
+                    {selectedTableMessages.length === 0 ? (
+                      <p className="text-center text-cream/30 text-sm">No messages yet</p>
+                    ) : (
+                      selectedTableMessages.map(msg => (
+                        <div key={msg.id} className={`flex ${msg.sender === 'staff' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[70%] px-4 py-2 rounded-2xl
+                            ${msg.sender === 'staff' 
+                              ? 'bg-gold/20 text-cream rounded-br-md' 
+                              : 'bg-dark-3 text-cream rounded-bl-md'}`}>
+                            <p className="text-sm">{msg.text}</p>
+                            <span className="text-xs text-cream/40 mt-1 block">
+                              {formatTime(msg.timestamp)}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Reply Input */}
+                  <div className="p-4 border-t border-gold/10 bg-dark-3">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={replyMessage}
+                        onChange={(e) => setReplyMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendReply()}
+                        placeholder="Type a message..."
+                        className="flex-1 input-luxury"
+                      />
+                      <button
+                        onClick={handleSendReply}
+                        disabled={!replyMessage.trim()}
+                        className="px-6 py-3 bg-gold text-black rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gold-light transition-all"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <span className="text-6xl mb-4 block">🍸</span>
+                <h2 className="font-serif text-2xl text-white mb-2">Bar Dashboard</h2>
+                <p className="text-cream/40">Select a table to view orders and chat</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -116,10 +116,10 @@ export interface AnalyticsData {
         quantity: number;
     }[]>;
 }
-/** Types of service zones in the venue */
-export type ZoneType = 'open-bar' | 'lounge' | 'nightclub' | 'vip' | 'poolside';
+/** Types of service zones in the venue - NO VIP */
+export type ZoneType = 'open-bar' | 'lounge' | 'nightclub' | 'poolside';
 /** Types of physical locations where guests can be seated */
-export type LocationType = 'table' | 'bar-stool' | 'lounge-seat' | 'vip-booth' | 'standing-table' | 'poolside-cabana';
+export type LocationType = 'table' | 'bar-stool' | 'lounge-seat' | 'standing-table' | 'poolside-cabana';
 /** Configuration for a specific location/spot in the venue */
 export interface Location {
     /** Unique identifier (e.g., "T-001", "BAR-01", "VIP-A") */

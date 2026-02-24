@@ -166,11 +166,10 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!zone) return [];
     
     const zoneCategoryMap: Record<ZoneType, string[]> = {
-      'open-bar': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar'],
-      'lounge': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
-      'nightclub': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar'],
-      'vip': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
-      'poolside': ['soft-drinks', 'energy-drinks', 'beer', 'wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'food']
+      'open-bar': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
+      'lounge': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
+      'nightclub': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
+      'poolside': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food']
     };
     
     return zoneCategoryMap[zone] || zoneCategoryMap['lounge'];

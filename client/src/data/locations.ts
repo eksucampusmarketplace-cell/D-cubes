@@ -1,6 +1,6 @@
 import type { Location, ZoneConfig, ZoneType, MenuType } from '@/types';
 
-/** Zone configurations */
+/** Zone configurations - NO VIP */
 export const ZONES: Record<ZoneType, ZoneConfig> = {
   'open-bar': {
     id: 'open-bar',
@@ -38,18 +38,6 @@ export const ZONES: Record<ZoneType, ZoneConfig> = {
       accentColor: '#1a0a1a'
     }
   },
-  'vip': {
-    id: 'vip',
-    name: 'VIP',
-    description: 'Exclusive VIP booths with premium service',
-    icon: '👑',
-    defaultMenus: ['full', 'lounge', 'nightclub'],
-    allowFood: true,
-    theme: {
-      primaryColor: '#ffd700',
-      accentColor: '#1a1a1a'
-    }
-  },
   'poolside': {
     id: 'poolside',
     name: 'Poolside',
@@ -76,14 +64,13 @@ export const MENU_TYPE_NAMES: Record<MenuType, string> = {
 
 /** Category availability by zone - all zones now have food */
 export const ZONE_CATEGORIES: Record<ZoneType, string[]> = {
-  'open-bar': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
-  'lounge': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
-  'nightclub': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
-  'vip': ['soft-drinks', 'energy-drinks', 'beer', 'brandy', 'wine', 'liquor', 'tequila', 'sparkling-wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food'],
-  'poolside': ['soft-drinks', 'energy-drinks', 'beer', 'wine', 'spirits', 'cocktails', 'nonalc', 'shisha', 'cigar', 'food']
+  'open-bar': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
+  'lounge': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
+  'nightclub': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
+  'poolside': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food']
 };
 
-/** Generate locations for the venue - all locations can receive food */
+/** Generate locations for the venue - NO VIP booths */
 export function generateLocations(): Location[] {
   const locations: Location[] = [];
 
@@ -146,23 +133,6 @@ export function generateLocations(): Location[] {
       capacity: 6
     });
   }
-
-  // VIP Booths (VIP-A to VIP-H)
-  const vipLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-  vipLabels.forEach((label) => {
-    locations.push({
-      id: `VIP-${label}`,
-      number: label,
-      name: `VIP Booth ${label}`,
-      type: 'vip-booth',
-      zone: 'vip',
-      availableMenus: ['full', 'lounge', 'nightclub'],
-      canReceiveFood: true,
-      isActive: true,
-      capacity: 8,
-      notes: 'Premium bottle service available'
-    });
-  });
 
   // Nightclub Floor Tables (NF-01 to NF-10)
   for (let i = 1; i <= 10; i++) {
