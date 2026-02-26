@@ -339,7 +339,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 501,
     name: 'Cranberry',
-    description: 'Premium cranberry juice with a perfect balance of tart and sweet, ideal for crafting sophisticated cocktails or enjoying as a refreshing mixer',
+    description: 'Premium cranberry juice blend with the perfect balance of tart and sweet flavors. Ideal for mixing with vodka, whiskey, or champagne. Served chilled.',
     price: 12000,
     category: 'mixers',
     tags: ['Mixer', 'Juice', 'Cocktail Essential'],
@@ -348,7 +348,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 502,
     name: 'Red Bull',
-    description: 'The original energy drink that gives you wings, with a unique blend of caffeine, taurine, and B vitamins for an invigorating boost of energy',
+    description: 'The original Austrian energy drink with a unique blend of caffeine, taurine, B-vitamins, and sugars. Perfect as a mixer or for an energizing boost.',
     price: 4000,
     category: 'energy-drinks',
     tags: ['Energy Drink', 'Mixer', 'Premium'],
@@ -358,7 +358,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 503,
     name: 'Power Horse',
-    description: 'A dynamic energy drink packed with vitality boosting ingredients, delivering sustained energy with a bold, refreshing taste that awakens the senses',
+    description: 'High-energy drink packed with taurine, caffeine, and essential vitamins. Delivers a refreshing boost with a smooth taste profile.',
     price: 4000,
     category: 'energy-drinks',
     tags: ['Energy Drink', 'Mixer'],
@@ -367,7 +367,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 504,
     name: 'Monster',
-    description: 'Unleash the beast with this intense energy drink, packed with a powerful blend of caffeine, ginseng, and B vitamins for maximum energy and focus',
+    description: 'The legendary energy drink with a bold flavor and powerful blend of caffeine, ginseng, taurine, and B-vitamins. Unleash the beast.',
     price: 4000,
     category: 'energy-drinks',
     tags: ['Energy Drink', 'Intense'],
@@ -376,7 +376,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 505,
     name: 'Water',
-    description: 'Pure, refreshing bottled water to cleanse the palate and keep you hydrated throughout your evening of fine dining and exquisite spirits',
+    description: 'Pure, refreshing bottled still water. Perfect for staying hydrated and cleansing the palate between drinks.',
     price: 700,
     category: 'mixers',
     tags: ['Water', 'Essential', 'Refreshing'],
@@ -385,7 +385,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 506,
     name: 'Coke',
-    description: 'The iconic Coca Cola, a timeless classic with its signature blend of caramel sweetness and refreshing effervescence, perfect on its own or as a mixer',
+    description: 'The original Coca-Cola with its signature refreshing taste. Perfect on its own over ice or as a classic mixer with spirits.',
     price: 1500,
     category: 'mixers',
     tags: ['Soft Drink', 'Classic', 'Mixer'],
@@ -395,7 +395,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 507,
     name: 'Schweppes',
-    description: 'Premium tonic water and mixers with a heritage of excellence, delivering the perfect balance of bitterness and bubbles to elevate any cocktail',
+    description: 'Premium carbonated tonic water with a distinctive bitter-sweet taste and fine bubbles. The perfect companion for gin and vodka.',
     price: 1000,
     category: 'mixers',
     tags: ['Tonic', 'Mixer', 'Premium'],
@@ -404,7 +404,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 508,
     name: 'Hollandia',
-    description: 'Rich and creamy malt drink with a smooth, satisfying taste, offering a nourishing blend of dairy goodness and malted barley for a wholesome refreshment',
+    description: 'Rich and creamy non-alcoholic malt drink from the Netherlands. Smooth, satisfying, and perfect for those who prefer a wholesome alternative.',
     price: 4000,
     category: 'mixers',
     tags: ['Malt Drink', 'Nourishing', 'Creamy'],
@@ -413,7 +413,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 509,
     name: 'Malt Drink',
-    description: 'A refreshing non alcoholic malt beverage with a distinctive sweet taste and energizing properties, perfect for those who prefer a wholesome alternative',
+    description: 'Refreshing non-alcoholic malt beverage with a distinctive sweet, malty taste. A popular Nigerian favorite for any occasion.',
     price: 2000,
     category: 'mixers',
     tags: ['Malt', 'Non Alcoholic', 'Refreshing'],
@@ -424,7 +424,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 601,
     name: 'Carlo Rossi',
-    description: 'A California red wine offering exceptional value with smooth, fruity flavors of ripe berries and a soft, approachable finish that pairs beautifully with any occasion',
+    description: 'California red wine with smooth, approachable flavors of ripe berries, cherry, and subtle oak. A versatile wine that pairs well with grilled meats and casual dining.',
     price: 20000,
     category: 'wine',
     tags: ['Red Wine', 'California', 'Smooth'],
@@ -433,7 +433,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 602,
     name: 'Four Cousin Red',
-    description: 'A South African red blend combining the best of traditional winemaking with modern techniques, delivering rich fruit flavors and a velvety smooth texture',
+    description: 'South African red blend combining Merlot, Cabernet Sauvignon, Shiraz, and Pinotage. Rich fruit flavors with hints of spice and a velvety smooth finish.',
     price: 25000,
     category: 'wine',
     tags: ['Red Wine', 'South African', 'Blend'],
@@ -443,7 +443,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 603,
     name: 'Agor',
-    description: 'A premium red wine with deep ruby color and complex aromas of dark fruits, offering a sophisticated drinking experience with elegant tannins and a lasting finish',
+    description: 'Premium red wine with deep ruby color, complex aromas of dark fruits and subtle earthiness. Smooth tannins lead to an elegant, lasting finish.',
     price: 20000,
     category: 'wine',
     tags: ['Red Wine', 'Premium', 'Elegant'],
@@ -454,7 +454,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 701,
     name: 'Moet Rose',
-    description: 'Moet and Chandon Rose Imperial, a glamorous champagne with radiant color and seductive palate of wild strawberries, raspberries, and a hint of peppermint',
+    description: 'Moet & Chandon Rose Imperial Champagne. A glamorous rose with vibrant bubbles, seductive notes of wild strawberries, raspberries, and a hint of pink peppercorn.',
     price: 235000,
     category: 'sparkling-wine',
     tags: ['Champagne', 'Rose', 'Luxury', 'French'],
@@ -464,7 +464,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 702,
     name: 'Belaire Rose',
-    description: 'Luc Belaire Rare Rose, a beautiful sparkling wine from Provence with fresh strawberry and blackcurrant flavors, wrapped in an iconic black bottle',
+    description: 'Luc Belaire Rare Rose from Provence. Beautiful salmon-pink color with fresh strawberry, blackcurrant, and delicate floral notes. Presented in an iconic black bottle.',
     price: 130000,
     category: 'sparkling-wine',
     tags: ['Sparkling', 'Rose', 'Provence'],
@@ -474,7 +474,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 703,
     name: 'Belaire Brut',
-    description: 'Luc Belaire Rare Brut, an elegant sparkling wine crafted in Burgundy with delicate bubbles, crisp apple notes, and a refined, dry finish',
+    description: 'Luc Belaire Rare Brut from Burgundy. Elegant and crisp with delicate bubbles, bright apple and pear flavors, and a refined dry finish. Perfect for celebrations.',
     price: 130000,
     category: 'sparkling-wine',
     tags: ['Sparkling', 'Brut', 'Burgundy'],
@@ -483,7 +483,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 704,
     name: 'Belaire White',
-    description: 'Luc Belaire Rare Luxe, a luxurious Blanc de Blancs with rich flavors of peach, apricot, and tropical fruits, finished with a hint of vanilla sweetness',
+    description: 'Luc Belaire Rare Luxe Blanc de Blancs. Rich and creamy with layers of peach, apricot, tropical fruits, and a subtle hint of vanilla sweetness.',
     price: 130000,
     category: 'sparkling-wine',
     tags: ['Sparkling', 'White', 'Luxury'],
@@ -492,7 +492,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 705,
     name: 'Martini',
-    description: 'Martini Asti, a sweet sparkling wine from Italy with enchanting aromas of fresh grapes, melon, and peach, delivering a delightful burst of fruity sweetness',
+    description: 'Martini Asti DOCG from Piedmont, Italy. Sweet sparkling wine with enchanting aromas of fresh grapes, melon, and peach. Perfect for desserts and celebrations.',
     price: 40000,
     category: 'sparkling-wine',
     tags: ['Sparkling', 'Sweet', 'Italian'],
@@ -501,7 +501,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 706,
     name: 'Andre',
-    description: 'Andre California Champagne, an affordable sparkling wine with bright apple and pear flavors, offering a festive experience for any celebration',
+    description: 'Andre California Champagne. Affordable sparkling wine with bright apple and pear flavors. Light, refreshing, and perfect for casual celebrations.',
     price: 30000,
     category: 'sparkling-wine',
     tags: ['Sparkling', 'California', 'Festive'],
@@ -510,7 +510,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 707,
     name: 'Blue Nun Rose',
-    description: 'Blue Nun Rose Edition, a German sparkling wine with a beautiful pink hue and delicate flavors of red berries, offering a light and refreshing experience',
+    description: 'Blue Nun Rose Edition from Germany. Delicate pink sparkling wine with fresh red berry flavors and a light, refreshing character. Served chilled.',
     price: 55000,
     category: 'sparkling-wine',
     tags: ['Sparkling', 'Rose', 'German'],
@@ -521,7 +521,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 801,
     name: 'Petrovskaia',
-    description: 'A premium vodka with exceptional purity and smoothness, distilled using traditional methods for a clean, crisp taste with subtle grain sweetness',
+    description: 'Premium vodka distilled using traditional methods for exceptional purity. Clean, crisp taste with subtle grain sweetness and a smooth finish. Perfect for cocktails.',
     price: 12000,
     category: 'spirits',
     tags: ['Vodka', 'Premium', 'Smooth'],
@@ -530,7 +530,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 802,
     name: 'Absolute Water Melon',
-    description: 'Absolut Watermelon vodka, a refreshing flavored spirit infused with natural watermelon taste, perfect for summer cocktails with juicy, mouthwatering flavor',
+    description: 'Absolut Watermelon vodka infused with natural watermelon flavor. Juicy, refreshing taste perfect for summer cocktails and mixed drinks. A seasonal favorite.',
     price: 8000,
     category: 'spirits',
     tags: ['Vodka', 'Flavored', 'Fruity'],
@@ -542,7 +542,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 901,
     name: 'Double Pipe',
-    description: 'An exquisite dual hose shisha experience featuring premium tobacco in your choice of flavor, perfect for sharing with a friend over two hours of smooth, flavorful clouds',
+    description: 'Premium shisha for two with dual hoses, allowing you and a companion to enjoy simultaneously. Choose from our selection of expertly blended flavors including mint, grape, apple, and mixed fruit. Served with fresh charcoal and ice for a smooth, cool experience lasting up to two hours.',
     price: 12000,
     category: 'shisha',
     tags: ['Shisha', 'Premium', 'Sharing', 'Two Hours'],
@@ -552,7 +552,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 902,
     name: 'Single Pipe',
-    description: 'A classic single hose shisha session with premium flavored tobacco, delivering rich, aromatic clouds for a relaxing two hour experience of traditional enjoyment',
+    description: 'Classic single-hose shisha experience with premium flavored tobacco. Perfect for solo relaxation or passing among friends. Available in mint, double apple, grape, watermelon, blueberry, and exotic mixed blends. Includes fresh charcoal service and ice for enhanced smoothness.',
     price: 8000,
     category: 'shisha',
     tags: ['Shisha', 'Classic', 'Two Hours'],
@@ -561,7 +561,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 903,
     name: 'Special',
-    description: 'Our signature shisha experience featuring premium tobaccos, fresh fruit heads, and exotic flavor combinations for the ultimate two hour journey of luxury smoking',
+    description: 'Our signature luxury shisha experience featuring fresh fruit heads carved from real oranges, pineapples, or watermelons infused with premium tobacco blends. Includes specialty flavors not available elsewhere, enhanced cooling system, and dedicated attendant service for a truly exceptional session.',
     price: 15000,
     category: 'shisha',
     tags: ['Shisha', 'Signature', 'Luxury', 'Two Hours'],
@@ -573,7 +573,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1001,
     name: 'Suya Platter',
-    description: 'Grilled beef suya with onions, tomatoes, and spiced groundnut, offering authentic Nigerian flavors in every bite',
+    description: 'Tender, thinly sliced beef skewers marinated in a blend of ground peanuts, cayenne pepper, ginger, and traditional suya spices, grilled over open flame to perfection. Served with fresh sliced onions, tomatoes, and cabbage for a complete authentic Nigerian street food experience.',
     price: 25000,
     category: 'food',
     tags: ['Nigerian', 'Popular', 'Spicy'],
@@ -584,7 +584,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1002,
     name: 'Grilled Lobster',
-    description: 'Whole lobster prepared with garlic butter, fresh lemon, and aromatic herbs, a true ocean luxury',
+    description: 'Fresh whole Atlantic lobster split and grilled with garlic butter, fresh lemon juice, and a medley of aromatic herbs including thyme, rosemary, and parsley. Served with drawn butter for dipping, roasted vegetables, and your choice of side. A true delicacy from the ocean.',
     price: 48000,
     category: 'food',
     tags: ['Seafood', 'Premium', 'Luxury'],
@@ -595,7 +595,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1003,
     name: 'Wagyu Sliders',
-    description: 'Three mini wagyu beef burgers with truffle mayonnaise and caramelized onions, indulgent bites of perfection',
+    description: 'Three mini burgers made with premium Japanese Wagyu beef patties, topped with melted aged cheddar, caramelized onions slow-cooked for hours, and our house-made truffle mayonnaise on toasted brioche buns. Each bite delivers an explosion of rich, buttery flavor.',
     price: 32000,
     category: 'food',
     tags: ['Burger', 'Premium', 'Wagyu'],
@@ -606,7 +606,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1004,
     name: 'Seafood Tower',
-    description: 'An impressive tower of oysters, prawns, lobster, and scallops, a coastal abundance served for four guests',
+    description: 'An impressive multi-tiered presentation of the freshest catches: chilled jumbo prawns, premium oysters on the half shell, succulent lobster tails, and pan-seared scallops. Accompanied by cocktail sauce, mignonette, and lemon wedges. Perfect for sharing among four guests.',
     price: 95000,
     category: 'food',
     tags: ['Seafood', 'Sharing', 'Premium'],
@@ -617,7 +617,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1005,
     name: 'Jollof Rice and Chicken',
-    description: 'Premium smoked jollof rice served with grilled chicken and sweet plantain, the ultimate party perfection',
+    description: 'Our signature party-style jollof rice slow-cooked with tomatoes, scotch bonnet peppers, onions, and a special blend of West African spices until perfectly smoky. Served with succulent grilled chicken marinated in suya spices and sweet fried plantains on the side.',
     price: 18000,
     category: 'food',
     tags: ['Nigerian', 'Local', 'Popular'],
@@ -628,7 +628,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1006,
     name: 'Pepper Soup Platter',
-    description: 'Hearty goat meat and catfish pepper soup served steaming hot, a warming tradition of Nigerian cuisine',
+    description: 'Traditional Nigerian pepper soup featuring your choice of tender goat meat or fresh catfish, simmered in a rich, aromatic broth with calabash nutmeg, scent leaves, utazi, and scotch bonnet peppers. Served piping hot with a side of agidi or white rice.',
     price: 22000,
     category: 'food',
     tags: ['Nigerian', 'Spicy', 'Soup'],
@@ -638,7 +638,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1007,
     name: 'Truffle Fries',
-    description: 'Hand cut fries drizzled with truffle oil, parmesan cheese, and fresh herbs, elevated comfort food at its finest',
+    description: 'Hand-cut Kennebec potatoes double-fried for crispy exterior and fluffy interior, then tossed in aromatic black truffle oil, generous shavings of aged Parmigiano-Reggiano, and fresh chopped parsley and chives. Served with house-made garlic aioli for dipping.',
     price: 12000,
     category: 'food',
     tags: ['Snack', 'Truffle', 'Side'],
@@ -648,7 +648,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1008,
     name: 'Chicken Wings',
-    description: 'Crispy chicken wings glazed with your choice of spicy or BBQ sauce, served with cool ranch dip',
+    description: 'Crispy golden chicken wings marinated overnight, then fried to perfection and tossed in your choice of sauce: fiery scotch bonnet spicy, smoky BBQ, honey garlic, or lemon pepper. Served with cool ranch dressing and fresh celery sticks.',
     price: 15000,
     category: 'food',
     tags: ['Wings', 'Snack', 'Popular'],
@@ -659,7 +659,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1009,
     name: 'Caesar Salad',
-    description: 'Classic Caesar salad with crisp romaine lettuce, crunchy croutons, parmesan cheese, and traditional anchovy dressing',
+    description: 'Crisp romaine lettuce hearts hand-tossed with our signature Caesar dressing made from egg yolks, Dijon mustard, anchovies, garlic, and aged Parmesan. Topped with house-made croutons toasted with garlic butter and additional shaved Parmesan.',
     price: 14000,
     category: 'food',
     tags: ['Salad', 'Healthy', 'Classic'],
@@ -669,7 +669,7 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: 1010,
     name: 'Grilled Lamb Chops',
-    description: 'Herb crusted lamb chops served with mint sauce and seasonal vegetables, refined protein for discerning palates',
+    description: 'Premium New Zealand lamb chops encrusted with fresh rosemary, thyme, and garlic, then grilled to your preferred doneness over an open flame. Served with house-made mint sauce, roasted seasonal vegetables, and creamy mashed potatoes.',
     price: 42000,
     category: 'food',
     tags: ['Lamb', 'Premium', 'Grilled'],
