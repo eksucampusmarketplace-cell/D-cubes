@@ -183,6 +183,8 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         locationId,
         tableNumber
       });
+    } else {
+      clearPersistedSession();
     }
   }, [isCheckedIn, isExploring, zone, guestName, locationId, tableNumber]);
 
