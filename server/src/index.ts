@@ -7,6 +7,7 @@ import path from 'path';
 import QRCode from 'qrcode';
 import TelegramBot from 'node-telegram-bot-api';
 import { Order, AccessRequest, ChatMessage, OrderStatus, TableSession, TableGuest, RefundRequest, PaymentStatus, AnalyticsData } from './types';
+import { db } from './database';
 
 dotenv.config();
 
@@ -44,12 +45,41 @@ if (TELEGRAM_BOT_TOKEN) {
   console.log('✅ Telegram bot initialized');
 }
 
-// Store orders, requests, and messages in memory (use Redis for production)
+// Store orders, requests, and messages in memory (synced with Supabase)
 const orders: Map<string, Order> = new Map();
 const accessRequests: Map<string, AccessRequest> = new Map();
 const messages: Map<string, ChatMessage[]> = new Map();
 const activeTables: Map<number, TableSession> = new Map();
 const refundRequests: Map<string, RefundRequest> = new Map();
+
+// Initialize database and load existing data
+async function initializeDatabase() {
+  db.initialize();
+  
+  if (db.isConnected()) {
+    const data = await db.loadAllData();
+    data.orders.forEach((order, id) => orders.set(id, order));
+    data.accessRequests.forEach((req, id) => accessRequests.set(id, req));
+    data.messages.forEach((msgs, key) => messages.set(key, msgs));
+    data.activeTables.forEach((session, tableNum) => activeTables.set(tableNum, session));
+    data.refundRequests.forEach((req, id) => refundRequests.set(id, req));
+    
+    // Schedule automatic cleanup every hour
+    setInterval(async () => {
+      try {
+        await db.cleanupOldData();
+      } catch (error) {
+        console.error('Cleanup error:', error);
+      }
+    }, 60 * 60 * 1000); // Every hour
+    
+    console.log('✅ Database initialized with persistent storage');
+  } else {
+    console.log('⚠️ Using in-memory storage (data will be lost on restart)');
+  }
+}
+
+initializeDatabase();
 
 // Helper functions
 const formatPrice = (price: number): string => {
@@ -229,6 +259,9 @@ io.on('connection', (socket) => {
         totalSpent: 0
       };
       activeTables.set(tableNumber, session);
+      
+      // Save to Supabase
+      db.saveTableSession(session).catch(err => console.error('Failed to save session to DB:', err));
     }
 
     const guest: TableGuest = {
@@ -271,6 +304,9 @@ io.on('connection', (socket) => {
     order.id = order.id || generateId();
     order.paymentStatus = 'unpaid';
     orders.set(order.id, order);
+    
+    // Save to Supabase
+    db.saveOrder(order).catch(err => console.error('Failed to save order to DB:', err));
 
     const session = activeTables.get(order.tableNumber);
     if (session) {
@@ -378,6 +414,9 @@ io.on('connection', (socket) => {
   socket.on('access-request', async (request: AccessRequest) => {
     accessRequests.set(request.id, request);
     
+    // Save to Supabase
+    db.saveAccessRequest(request).catch(err => console.error('Failed to save access request to DB:', err));
+    
     // Notify managers
     io.to('staff-manager').to('staff-all').emit('access-request', request);
     
@@ -419,6 +458,9 @@ io.on('connection', (socket) => {
     const tableMessages = messages.get(`table-${message.tableNumber}`) || [];
     tableMessages.push(message);
     messages.set(`table-${message.tableNumber}`, tableMessages);
+    
+    // Save to Supabase
+    db.saveMessage(message).catch(err => console.error('Failed to save message to DB:', err));
 
     io.to(`table-${message.tableNumber}`)
       .to('staff-manager')
@@ -459,6 +501,9 @@ io.on('connection', (socket) => {
   // Request refund
   socket.on('request-refund', async (request: RefundRequest) => {
     refundRequests.set(request.id, request);
+    
+    // Save to Supabase
+    db.saveRefundRequest(request).catch(err => console.error('Failed to save refund request to DB:', err));
 
     io.to('staff-manager').to('staff-all').emit('refund-request', request);
 

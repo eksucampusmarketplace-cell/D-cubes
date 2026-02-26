@@ -55,8 +55,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
   const handleQuickMessage = useCallback((msg: string) => (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setInput(msg);
-  }, []);
+    
+    // Auto-send the quick message
+    if (!tableNumber || !guestName) return;
+    
+    const newMessage = {
+      id: generateMessageId(),
+      tableNumber,
+      sender: 'guest' as const,
+      text: msg,
+      timestamp: new Date(),
+      senderName: guestName
+    };
+
+    setMessages((prev: any[]) => [...prev, newMessage]);
+    sendMessage(newMessage);
+  }, [tableNumber, guestName, sendMessage, setMessages]);
 
   const handleClose = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
