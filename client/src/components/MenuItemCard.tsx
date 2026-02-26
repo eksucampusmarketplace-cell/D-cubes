@@ -93,7 +93,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, index = 0, zon
                 {item.name}
               </h3>
             </div>
-            <p className="text-sm text-white/70 leading-relaxed line-clamp-2 mb-2 font-medium">
+            <p className="text-sm text-white/70 leading-relaxed mb-2 font-medium">
               {item.description}
             </p>
             
