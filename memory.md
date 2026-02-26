@@ -25,6 +25,7 @@
 - `/server/src/index.ts` - Main server with Socket.IO handlers
 - `/server/src/types.ts` - Shared TypeScript types
 - In-memory storage (orders, sessions, messages)
+- New orders without an active session auto-create a `TableSession` and emit a staff check-in event
 - Telegram bot integration for notifications
 
 ## Naming Conventions
