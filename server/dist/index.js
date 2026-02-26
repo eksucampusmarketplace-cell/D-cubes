@@ -11,6 +11,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
 const qrcode_1 = __importDefault(require("qrcode"));
 const node_telegram_bot_api_1 = __importDefault(require("node-telegram-bot-api"));
+const database_1 = require("./database");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
@@ -40,12 +41,38 @@ if (TELEGRAM_BOT_TOKEN) {
     bot = new node_telegram_bot_api_1.default(TELEGRAM_BOT_TOKEN, { polling: true });
     console.log('✅ Telegram bot initialized');
 }
-// Store orders, requests, and messages in memory (use Redis for production)
+// Store orders, requests, and messages in memory (synced with Supabase)
 const orders = new Map();
 const accessRequests = new Map();
 const messages = new Map();
 const activeTables = new Map();
 const refundRequests = new Map();
+// Initialize database and load existing data
+async function initializeDatabase() {
+    database_1.db.initialize();
+    if (database_1.db.isConnected()) {
+        const data = await database_1.db.loadAllData();
+        data.orders.forEach((order, id) => orders.set(id, order));
+        data.accessRequests.forEach((req, id) => accessRequests.set(id, req));
+        data.messages.forEach((msgs, key) => messages.set(key, msgs));
+        data.activeTables.forEach((session, tableNum) => activeTables.set(tableNum, session));
+        data.refundRequests.forEach((req, id) => refundRequests.set(id, req));
+        // Schedule automatic cleanup every hour
+        setInterval(async () => {
+            try {
+                await database_1.db.cleanupOldData();
+            }
+            catch (error) {
+                console.error('Cleanup error:', error);
+            }
+        }, 60 * 60 * 1000); // Every hour
+        console.log('✅ Database initialized with persistent storage');
+    }
+    else {
+        console.log('⚠️ Using in-memory storage (data will be lost on restart)');
+    }
+}
+initializeDatabase();
 // Helper functions
 const formatPrice = (price) => {
     return `₦${price.toLocaleString('en-NG')}`;
@@ -201,6 +228,8 @@ io.on('connection', (socket) => {
                 totalSpent: 0
             };
             activeTables.set(tableNumber, session);
+            // Save to Supabase
+            database_1.db.saveTableSession(session).catch(err => console.error('Failed to save session to DB:', err));
         }
         const guest = {
             id: guestId,
@@ -234,6 +263,8 @@ io.on('connection', (socket) => {
         order.id = order.id || generateId();
         order.paymentStatus = 'unpaid';
         orders.set(order.id, order);
+        // Save to Supabase
+        database_1.db.saveOrder(order).catch(err => console.error('Failed to save order to DB:', err));
         const session = activeTables.get(order.tableNumber);
         if (session) {
             session.totalOrders++;
@@ -315,6 +346,8 @@ io.on('connection', (socket) => {
     // Access request
     socket.on('access-request', async (request) => {
         accessRequests.set(request.id, request);
+        // Save to Supabase
+        database_1.db.saveAccessRequest(request).catch(err => console.error('Failed to save access request to DB:', err));
         // Notify managers
         io.to('staff-manager').to('staff-all').emit('access-request', request);
         // Send Telegram notification
@@ -349,6 +382,8 @@ io.on('connection', (socket) => {
         const tableMessages = messages.get(`table-${message.tableNumber}`) || [];
         tableMessages.push(message);
         messages.set(`table-${message.tableNumber}`, tableMessages);
+        // Save to Supabase
+        database_1.db.saveMessage(message).catch(err => console.error('Failed to save message to DB:', err));
         io.to(`table-${message.tableNumber}`)
             .to('staff-manager')
             .to('staff-all')
@@ -381,6 +416,8 @@ io.on('connection', (socket) => {
     // Request refund
     socket.on('request-refund', async (request) => {
         refundRequests.set(request.id, request);
+        // Save to Supabase
+        database_1.db.saveRefundRequest(request).catch(err => console.error('Failed to save refund request to DB:', err));
         io.to('staff-manager').to('staff-all').emit('refund-request', request);
         const msg = `🔄 <b>REFUND REQUEST</b>\n` +
             `🪑 Table ${request.tableNumber}\n` +
