@@ -1,0 +1,33 @@
+- generic [ref=e56]:
+  - generic [ref=e64]:
+    - generic [ref=e65]:
+      - img [ref=e71]
+      - heading "D CUBES PLACE" [level=1] [ref=e73]
+      - paragraph [ref=e75]: Open bar, Lounge, Nightlife
+    - generic [ref=e104]:
+      - button "Back to zones" [ref=e105] [cursor=pointer]:
+        - img [ref=e106]
+        - generic [ref=e108]: Back to zones
+      - generic [ref=e109]:
+        - generic [ref=e110]: 🛋️
+        - heading "Lounge" [level=2] [ref=e111]
+        - paragraph [ref=e112]: Relaxed seating with full menu service
+      - generic [ref=e113]:
+        - button "Just Exploring View menu and prices without ordering" [ref=e114] [cursor=pointer]:
+          - generic [ref=e115]:
+            - img [ref=e117]
+            - generic [ref=e120]:
+              - heading "Just Exploring" [level=3] [ref=e121]
+              - paragraph [ref=e122]: View menu and prices without ordering
+            - img [ref=e123]
+        - button "Place an Order Enter your table/seat number to order" [ref=e125] [cursor=pointer]:
+          - generic [ref=e126]:
+            - img [ref=e128]
+            - generic [ref=e130]:
+              - heading "Place an Order" [level=3] [ref=e131]
+              - paragraph [ref=e132]: Enter your table/seat number to order
+            - img [ref=e133]
+  - paragraph [ref=e102]:
+    - text: Crafted by
+    - link "Decisive Analyst" [ref=e103] [cursor=pointer]:
+      - /url: https://wa.me/2348164143260

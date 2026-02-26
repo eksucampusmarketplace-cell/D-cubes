@@ -3,6 +3,45 @@ import type { Order, ChatMessage, OrderStatus, Location, ZoneType, CustomerSessi
 import { useSocket } from './SocketContext';
 import { getLocationById, getLocationByNumber, getZoneInfo } from '@/data/locations';
 
+const SESSION_KEY = 'customer_session';
+
+interface PersistedSession {
+  isCheckedIn: boolean;
+  isExploring: boolean;
+  zone: ZoneType | null;
+  guestName: string;
+  locationId: string | null;
+  tableNumber: number | null;
+}
+
+function loadPersistedSession(): PersistedSession | null {
+  try {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
+}
+
+function savePersistedSession(session: PersistedSession) {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function clearPersistedSession() {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 interface TableContextType {
   // Legacy support
   tableNumber: number | null;
@@ -44,22 +83,37 @@ interface TableContextType {
 const TableContext = createContext<TableContextType | undefined>(undefined);
 
 export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Load persisted session on initial mount
+  const persistedSession = React.useMemo(() => loadPersistedSession(), []);
+  
   // Legacy support
-  const [tableNumber, setTableNumber] = useState<number | null>(null);
+  const [tableNumber, setTableNumber] = useState<number | null>(
+    persistedSession?.tableNumber ?? null
+  );
   
   // New location system
   const [location, setLocation] = useState<Location | null>(null);
-  const [locationId, setLocationId] = useState<string | null>(null);
-  const [zone, setZone] = useState<ZoneType | null>(null);
+  const [locationId, setLocationId] = useState<string | null>(
+    persistedSession?.locationId ?? null
+  );
+  const [zone, setZone] = useState<ZoneType | null>(
+    persistedSession?.zone ?? null
+  );
   
   // Exploring mode - user selected zone but no specific table
-  const [isExploring, setIsExploring] = useState(false);
+  const [isExploring, setIsExploring] = useState(
+    persistedSession?.isExploring ?? false
+  );
   
   // Guest session
-  const [guestName, setGuestName] = useState('');
+  const [guestName, setGuestName] = useState(
+    persistedSession?.guestName ?? ''
+  );
   const [guestId, setGuestId] = useState('');
   const [sessionId, setSessionId] = useState('');
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [isCheckedIn, setIsCheckedIn] = useState(
+    persistedSession?.isCheckedIn ?? false
+  );
   
   // Orders & messages
   const [orders, setOrders] = useState<Order[]>([]);
@@ -107,6 +161,30 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setZone(zoneParam);
     }
   }, []);
+
+  // Restore location from persisted session on mount
+  useEffect(() => {
+    if (persistedSession?.locationId && !location) {
+      const loc = getLocationById(persistedSession.locationId);
+      if (loc) {
+        setLocation(loc);
+      }
+    }
+  }, [persistedSession, location]);
+
+  // Persist session state when it changes
+  useEffect(() => {
+    if (isCheckedIn) {
+      savePersistedSession({
+        isCheckedIn,
+        isExploring,
+        zone,
+        guestName,
+        locationId,
+        tableNumber
+      });
+    }
+  }, [isCheckedIn, isExploring, zone, guestName, locationId, tableNumber]);
 
   // Join table room when checked in
   useEffect(() => {
