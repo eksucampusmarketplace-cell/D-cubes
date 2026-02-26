@@ -66,8 +66,7 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
         oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
         oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
         gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialDecayToValueAtTime?.(0.01, audioContext.currentTime + 0.3) || 
-          gainNode.gain.setValueAtTime(0.01, audioContext.currentTime + 0.3);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.3);
       } else if (type === 'chat') {
