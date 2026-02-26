@@ -233,8 +233,55 @@ io.on('connection', (socket) => {
     socket.on('new-order', async (order) => {
         order.id = order.id || generateId();
         order.paymentStatus = 'unpaid';
+        let session = activeTables.get(order.tableNumber);
+        const hasActiveSession = session && session.isActive;
+        const resolvedGuestName = order.guestName?.trim() || session?.guests[0]?.guestName || 'Guest';
+        const resolvedGuestId = order.guestId || session?.guests[0]?.id || generateGuestId();
+        order.guestName = resolvedGuestName;
+        order.guestId = resolvedGuestId;
+        if (!hasActiveSession) {
+            session = {
+                id: order.sessionId || generateSessionId(),
+                tableNumber: order.tableNumber,
+                startTime: new Date(),
+                isActive: true,
+                guests: [],
+                totalOrders: 0,
+                totalSpent: 0
+            };
+            const guest = {
+                id: resolvedGuestId,
+                guestName: resolvedGuestName,
+                socketId: socket.id,
+                checkInTime: new Date()
+            };
+            session.guests.push(guest);
+            activeTables.set(order.tableNumber, session);
+            order.sessionId = session.id;
+            io.to('staff-manager').to('staff-all').emit('check-in', {
+                tableNumber: order.tableNumber,
+                guestName: resolvedGuestName,
+                guestId: resolvedGuestId,
+                sessionId: session.id,
+                guestCount: session.guests.length
+            });
+            const message = `✅ <b>NEW SESSION</b>\n🪑 Table ${order.tableNumber}\n👤 ${resolvedGuestName}\n🕐 ${formatTime(new Date())}`;
+            await sendTelegramMessage(MANAGER_CHAT_ID, message);
+        }
+        else if (session) {
+            if (!order.sessionId) {
+                order.sessionId = session.id;
+            }
+            if (session.guests.length === 0) {
+                session.guests.push({
+                    id: resolvedGuestId,
+                    guestName: resolvedGuestName,
+                    socketId: socket.id,
+                    checkInTime: new Date()
+                });
+            }
+        }
         orders.set(order.id, order);
-        const session = activeTables.get(order.tableNumber);
         if (session) {
             session.totalOrders++;
             session.totalSpent += order.total;
