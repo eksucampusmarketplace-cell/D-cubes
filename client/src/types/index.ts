@@ -13,6 +13,10 @@ export interface MenuItem {
   availableIn?: ZoneType[];
   /** Whether this item requires food service capability */
   requiresFoodService?: boolean;
+  /** Whether this item is currently available/in stock */
+  isAvailable?: boolean;
+  /** Stock quantity (null = unlimited) */
+  stockQuantity?: number | null;
 }
 
 export interface CartItem extends MenuItem {
@@ -134,6 +138,76 @@ export interface AnalyticsData {
   hourlySales: { hour: number; orders: number; revenue: number }[];
   tablePerformance: { tableNumber: number; orders: number; revenue: number }[];
   popularItemsByCategory: Record<string, { name: string; quantity: number }[]>;
+}
+
+// === RECEIPT TYPES ===
+
+export interface Receipt {
+  id: string;
+  orderId: string;
+  tableNumber: number;
+  guestName: string;
+  items: ReceiptItem[];
+  subtotal: number;
+  serviceCharge?: number;
+  total: number;
+  createdAt: Date;
+  expiresAt: Date;
+  status: 'pending' | 'sent' | 'paid' | 'expired';
+  pdfUrl?: string;
+}
+
+export interface ReceiptItem {
+  id: number;
+  name: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
+
+// === AUDIT LOG TYPES ===
+
+export interface AuditLog {
+  id: string;
+  timestamp: Date;
+  action: string;
+  actor: string;
+  actorType: 'staff' | 'system';
+  resource: string;
+  resourceId?: string;
+  details: Record<string, any>;
+  ipAddress?: string;
+}
+
+// === INVENTORY TYPES ===
+
+export interface InventoryUpdate {
+  itemId: number;
+  isAvailable: boolean;
+  stockQuantity?: number | null;
+  updatedBy: string;
+  updatedAt: Date;
+  reason?: string;
+}
+
+// === TELEGRAM CONFIG ===
+
+export interface TelegramNotificationConfig {
+  newOrder: boolean;
+  orderStatus: boolean;
+  payment: boolean;
+  refund: boolean;
+  accessRequest: boolean;
+  chat: boolean;
+  session: boolean;
+}
+
+// === APP SETTINGS ===
+
+export interface AppSettings {
+  darkMode: boolean;
+  soundEnabled: boolean;
+  telegramNotifications: TelegramNotificationConfig;
 }
 
 export interface ClubSettings {

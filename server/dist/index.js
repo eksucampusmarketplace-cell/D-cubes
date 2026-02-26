@@ -21,8 +21,57 @@ const io = new socket_io_1.Server(httpServer, {
         methods: ["GET", "POST"]
     }
 });
+const rateLimitStore = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 100; // requests per window
+const rateLimiter = (req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const now = Date.now();
+    const entry = rateLimitStore.get(ip);
+    if (!entry || now > entry.resetTime) {
+        rateLimitStore.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+        next();
+    }
+    else if (entry.count < RATE_LIMIT_MAX) {
+        entry.count++;
+        next();
+    }
+    else {
+        res.status(429).json({ error: 'Too many requests, please try again later' });
+    }
+};
+// Clean up rate limit store every 5 minutes
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, entry] of rateLimitStore.entries()) {
+        if (now > entry.resetTime) {
+            rateLimitStore.delete(ip);
+        }
+    }
+}, 5 * 60 * 1000);
+// ============================================
+// IP WHITELIST MIDDLEWARE
+// ============================================
+const WHITELIST_ENABLED = process.env.IP_WHITELIST_ENABLED === 'true';
+const WHITELISTED_IPS = (process.env.WHITELISTED_IPS || '').split(',').filter(Boolean);
+const ipWhitelist = (req, res, next) => {
+    if (!WHITELIST_ENABLED) {
+        return next();
+    }
+    const ip = req.ip || req.connection.remoteAddress || '';
+    const path = req.path;
+    // Only protect staff routes
+    if (path.startsWith('/manager') || path.startsWith('/kitchen') || path.startsWith('/bar') || path.startsWith('/api/staff')) {
+        if (!WHITELISTED_IPS.includes(ip)) {
+            return res.status(403).json({ error: 'Access denied from this IP address' });
+        }
+    }
+    next();
+};
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+app.use(rateLimiter);
+app.use(ipWhitelist);
 // Serve static files from client in production
 if (process.env.NODE_ENV === 'production') {
     app.use(express_1.default.static(path_1.default.join(__dirname, '../../client/dist')));
@@ -31,7 +80,9 @@ if (process.env.NODE_ENV === 'production') {
         res.sendFile(path_1.default.join(__dirname, '../../client/dist/index.html'));
     });
 }
-// Telegram Bot Setup
+// ============================================
+// TELEGRAM BOT SETUP
+// ============================================
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const KITCHEN_CHAT_ID = process.env.KITCHEN_CHAT_ID || '';
 const BAR_CHAT_ID = process.env.BAR_CHAT_ID || '';
@@ -41,13 +92,52 @@ if (TELEGRAM_BOT_TOKEN) {
     bot = new node_telegram_bot_api_1.default(TELEGRAM_BOT_TOKEN, { polling: true });
     console.log('✅ Telegram bot initialized');
 }
-// Store orders, requests, and messages in memory (synced with Supabase)
+// Telegram notification configuration (can be updated at runtime)
+let telegramConfig = {
+    newOrder: true,
+    orderStatus: true,
+    payment: true,
+    refund: true,
+    accessRequest: true,
+    chat: true,
+    session: true
+};
+// ============================================
+// IN-MEMORY DATA STORES
+// ============================================
 const orders = new Map();
 const accessRequests = new Map();
 const messages = new Map();
 const activeTables = new Map();
 const refundRequests = new Map();
-// Initialize database and load existing data
+const receipts = new Map();
+const auditLogs = [];
+const inventoryStatus = new Map();
+// ============================================
+// AUDIT LOGGING
+// ============================================
+const logAudit = (action, actor, actorType, resource, resourceId, details, ipAddress) => {
+    const log = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date(),
+        action,
+        actor,
+        actorType,
+        resource,
+        resourceId,
+        details: details || {},
+        ipAddress
+    };
+    auditLogs.push(log);
+    // Keep only last 1000 logs in memory
+    if (auditLogs.length > 1000) {
+        auditLogs.shift();
+    }
+    console.log(`📋 AUDIT: ${action} by ${actor} on ${resource}${resourceId ? ` (${resourceId})` : ''}`);
+};
+// ============================================
+// DATABASE INITIALIZATION
+// ============================================
 async function initializeDatabase() {
     database_1.db.initialize();
     if (database_1.db.isConnected()) {
@@ -61,11 +151,22 @@ async function initializeDatabase() {
         setInterval(async () => {
             try {
                 await database_1.db.cleanupOldData();
+                logAudit('DATA_CLEANUP', 'system', 'system', 'database', undefined, { reason: 'Scheduled cleanup' });
             }
             catch (error) {
                 console.error('Cleanup error:', error);
             }
         }, 60 * 60 * 1000); // Every hour
+        // Schedule receipt expiration cleanup every 10 minutes
+        setInterval(() => {
+            const now = new Date();
+            for (const [id, receipt] of receipts.entries()) {
+                if (new Date(receipt.expiresAt) < now) {
+                    receipts.delete(id);
+                    logAudit('RECEIPT_EXPIRED', 'system', 'system', 'receipt', id);
+                }
+            }
+        }, 10 * 60 * 1000);
         console.log('✅ Database initialized with persistent storage');
     }
     else {
@@ -73,7 +174,9 @@ async function initializeDatabase() {
     }
 }
 initializeDatabase();
-// Helper functions
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 const formatPrice = (price) => {
     return `₦${price.toLocaleString('en-NG')}`;
 };
@@ -84,8 +187,8 @@ const formatTime = (date) => {
         hour12: true
     });
 };
-const sendTelegramMessage = async (chatId, message) => {
-    if (!bot || !chatId)
+const sendTelegramMessage = async (chatId, message, enabled = true) => {
+    if (!bot || !chatId || !enabled)
         return;
     try {
         await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
@@ -103,12 +206,110 @@ const generateGuestId = () => {
 const generateSessionId = () => {
     return `session-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
 };
-// Routes
+// ============================================
+// RECEIPT GENERATION
+// ============================================
+const generateReceipt = (order) => {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours
+    const receipt = {
+        id: `receipt-${generateId()}`,
+        orderId: order.id,
+        tableNumber: order.tableNumber,
+        guestName: order.guestName,
+        items: order.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.price * item.quantity
+        })),
+        subtotal: order.total,
+        total: order.total,
+        createdAt: now,
+        expiresAt,
+        status: 'pending'
+    };
+    receipts.set(receipt.id, receipt);
+    logAudit('RECEIPT_CREATED', 'system', 'system', 'receipt', receipt.id, { orderId: order.id, tableNumber: order.tableNumber });
+    return receipt;
+};
+const generateReceiptHTML = (receipt) => {
+    const itemsHTML = receipt.items.map(item => `
+    <tr>
+      <td style="padding: 8px; border-bottom: 1px solid #333;">${item.name}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #333; text-align: center;">${item.quantity}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #333; text-align: right;">₦${item.price.toLocaleString()}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #333; text-align: right;">₦${item.total.toLocaleString()}</td>
+    </tr>
+  `).join('');
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Receipt - D Cube's Place</title>
+      <style>
+        body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #fff; padding: 20px; }
+        .receipt { max-width: 400px; margin: 0 auto; background: #1a1a1a; padding: 20px; border-radius: 8px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #C9A84C; padding-bottom: 15px; }
+        .header h1 { color: #C9A84C; margin: 0; font-size: 24px; }
+        .header p { color: #888; margin: 5px 0 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th { text-align: left; padding: 8px; border-bottom: 2px solid #C9A84C; color: #C9A84C; }
+        .total { font-size: 18px; font-weight: bold; margin-top: 15px; padding-top: 15px; border-top: 2px solid #C9A84C; }
+        .total span { color: #C9A84C; }
+        .footer { margin-top: 20px; text-align: center; color: #666; font-size: 12px; }
+        .expires { background: #ff4444; color: #fff; padding: 5px 10px; border-radius: 4px; display: inline-block; margin-top: 10px; }
+      </style>
+    </head>
+    <body>
+      <div class="receipt">
+        <div class="header">
+          <h1>D CUBE'S PLACE</h1>
+          <p>Resort & Lounge</p>
+        </div>
+        <p><strong>Table:</strong> ${receipt.tableNumber}</p>
+        <p><strong>Guest:</strong> ${receipt.guestName}</p>
+        <p><strong>Date:</strong> ${new Date(receipt.createdAt).toLocaleString()}</p>
+        <p><strong>Receipt #:</strong> ${receipt.id.slice(-8).toUpperCase()}</p>
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th style="text-align: center;">Qty</th>
+              <th style="text-align: right;">Price</th>
+              <th style="text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHTML}
+          </tbody>
+        </table>
+        
+        <div class="total">
+          TOTAL: <span>₦${receipt.total.toLocaleString()}</span>
+        </div>
+        
+        <div class="footer">
+          <p>Thank you for visiting D Cube's Place!</p>
+          <p class="expires">⚠️ Save this receipt - Expires in 2 hours</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+// ============================================
+// API ROUTES
+// ============================================
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
-        telegramEnabled: Boolean(TELEGRAM_BOT_TOKEN)
+        telegramEnabled: Boolean(TELEGRAM_BOT_TOKEN),
+        databaseConnected: database_1.db.isConnected()
     });
 });
 // Generate QR code for a table
@@ -198,7 +399,86 @@ app.get('/api/table/:tableNumber', (req, res) => {
         session
     });
 });
-// Socket.io handling
+// Get all receipts
+app.get('/api/receipts', (req, res) => {
+    const receiptList = Array.from(receipts.values())
+        .filter(r => new Date(r.expiresAt) > new Date())
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    res.json(receiptList);
+});
+// Get receipt by ID
+app.get('/api/receipts/:id', (req, res) => {
+    const receipt = receipts.get(req.params.id);
+    if (!receipt) {
+        return res.status(404).json({ error: 'Receipt not found' });
+    }
+    if (new Date(receipt.expiresAt) < new Date()) {
+        receipts.delete(req.params.id);
+        return res.status(410).json({ error: 'Receipt has expired' });
+    }
+    res.json(receipt);
+});
+// Get receipt HTML
+app.get('/api/receipts/:id/html', (req, res) => {
+    const receipt = receipts.get(req.params.id);
+    if (!receipt) {
+        return res.status(404).send('Receipt not found');
+    }
+    if (new Date(receipt.expiresAt) < new Date()) {
+        receipts.delete(req.params.id);
+        return res.status(410).send('Receipt has expired');
+    }
+    res.send(generateReceiptHTML(receipt));
+});
+// Create receipt for an order
+app.post('/api/receipts', (req, res) => {
+    const { orderId } = req.body;
+    const order = orders.get(orderId);
+    if (!order) {
+        return res.status(404).json({ error: 'Order not found' });
+    }
+    const receipt = generateReceipt(order);
+    res.json(receipt);
+});
+// Get inventory status
+app.get('/api/inventory', (req, res) => {
+    res.json(Object.fromEntries(inventoryStatus));
+});
+// Update inventory status
+app.post('/api/inventory', (req, res) => {
+    const update = req.body;
+    inventoryStatus.set(update.itemId, {
+        isAvailable: update.isAvailable,
+        stockQuantity: update.stockQuantity ?? null
+    });
+    logAudit('INVENTORY_UPDATE', update.updatedBy, 'staff', 'inventory', undefined, {
+        itemId: update.itemId,
+        isAvailable: update.isAvailable,
+        reason: update.reason
+    }, req.ip);
+    // Broadcast to all clients
+    io.emit('inventory-update', Object.fromEntries(inventoryStatus));
+    res.json({ success: true });
+});
+// Get audit logs
+app.get('/api/audit-logs', (req, res) => {
+    const limit = parseInt(req.query.limit) || 100;
+    const logs = auditLogs.slice(-limit);
+    res.json(logs);
+});
+// Get telegram config
+app.get('/api/telegram-config', (req, res) => {
+    res.json(telegramConfig);
+});
+// Update telegram config
+app.post('/api/telegram-config', (req, res) => {
+    telegramConfig = { ...telegramConfig, ...req.body };
+    logAudit('TELEGRAM_CONFIG_UPDATE', 'admin', 'staff', 'telegram-config', undefined, req.body, req.ip);
+    res.json(telegramConfig);
+});
+// ============================================
+// SOCKET.IO HANDLING
+// ============================================
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
     // Join table room
@@ -212,8 +492,11 @@ io.on('connection', (socket) => {
         if (role === 'manager')
             socket.join('staff-all');
         console.log(`Socket ${socket.id} joined staff-${role}`);
+        // Send current inventory status to staff
+        socket.emit('inventory-update', Object.fromEntries(inventoryStatus));
+        socket.emit('telegram-config', telegramConfig);
     });
-    // Check-in
+    // Check-in - supports multiple guests at same table
     socket.on('check-in', async ({ tableNumber, guestName }) => {
         const guestId = generateGuestId();
         let session = activeTables.get(tableNumber);
@@ -228,7 +511,6 @@ io.on('connection', (socket) => {
                 totalSpent: 0
             };
             activeTables.set(tableNumber, session);
-            // Save to Supabase
             database_1.db.saveTableSession(session).catch(err => console.error('Failed to save session to DB:', err));
         }
         const guest = {
@@ -246,24 +528,27 @@ io.on('connection', (socket) => {
             sessionId: session.id,
             guestCount: session.guests.length
         });
-        const message = session.guests.length === 1
-            ? `✅ <b>NEW SESSION</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n🕐 ${formatTime(new Date())}`
-            : `👥 <b>GUEST JOINED</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n👥 ${session.guests.length} guests\n🕐 ${formatTime(new Date())}`;
-        await sendTelegramMessage(MANAGER_CHAT_ID, message);
+        if (telegramConfig.session) {
+            const message = session.guests.length === 1
+                ? `✅ <b>NEW SESSION</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n🕐 ${formatTime(new Date())}`
+                : `👥 <b>GUEST JOINED</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n👥 ${session.guests.length} guests\n🕐 ${formatTime(new Date())}`;
+            await sendTelegramMessage(MANAGER_CHAT_ID, message);
+        }
         socket.emit('check-in-success', {
             tableNumber,
             guestName,
             guestId,
-            sessionId: session.id
+            sessionId: session.id,
+            guestCount: session.guests.length
         });
-        console.log(`Check-in: Table ${tableNumber} - ${guestName} (Session: ${session.id})`);
+        logAudit('CHECK_IN', guestName, 'staff', 'table', session.id, { tableNumber, guestId }, socket.handshake.address);
+        console.log(`Check-in: Table ${tableNumber} - ${guestName} (Session: ${session.id}, Guests: ${session.guests.length})`);
     });
-    // New order
+    // New order - each guest can order independently
     socket.on('new-order', async (order) => {
         order.id = order.id || generateId();
         order.paymentStatus = 'unpaid';
         orders.set(order.id, order);
-        // Save to Supabase
         database_1.db.saveOrder(order).catch(err => console.error('Failed to save order to DB:', err));
         const session = activeTables.get(order.tableNumber);
         if (session) {
@@ -272,7 +557,7 @@ io.on('connection', (socket) => {
             activeTables.set(order.tableNumber, session);
         }
         const foodItems = order.items.filter(item => item.category === 'food');
-        const drinkItems = order.items.filter(item => ['cocktails', 'spirits', 'wine', 'nonalc'].includes(item.category));
+        const drinkItems = order.items.filter(item => ['cocktails', 'spirits', 'wine', 'nonalc', 'brandy', 'tequila', 'sparkling-wine', 'liquor'].includes(item.category));
         const shishaItems = order.items.filter(item => item.category === 'shisha');
         io.to('staff-manager').to('staff-all').emit('new-order', order);
         if (foodItems.length > 0) {
@@ -286,36 +571,43 @@ io.on('connection', (socket) => {
         }
         io.to(`table-${order.tableNumber}`).emit('order-confirmation', { orderId: order.id });
         const itemsList = order.items.map(i => `${i.quantity}× ${i.name} (${formatPrice(i.price * i.quantity)})`).join('\n');
-        const managerMsg = `🍾 <b>NEW ORDER</b> — Table ${order.tableNumber}\n` +
-            `👤 ${order.guestName}\n` +
-            `🆔 Order: ${order.id.slice(-8)}\n` +
-            `━━━━━━━━━━━━━━\n${itemsList}\n` +
-            `━━━━━━━━━━━━━━\n` +
-            `💰 <b>Total:</b> ${formatPrice(order.total)}\n` +
-            `💳 <b>Payment:</b> Unpaid` +
-            (order.note ? `\n📝 <i>${order.note}</i>` : '');
-        await sendTelegramMessage(MANAGER_CHAT_ID, managerMsg);
-        if (foodItems.length > 0 && KITCHEN_CHAT_ID) {
-            const kitchenItems = foodItems.map(i => `${i.quantity}× ${i.name}`).join('\n');
-            const kitchenMsg = `👨‍🍳 <b>KITCHEN ORDER</b> — Table ${order.tableNumber}\n` +
+        if (telegramConfig.newOrder) {
+            const managerMsg = `🍾 <b>NEW ORDER</b> — Table ${order.tableNumber}\n` +
                 `👤 ${order.guestName}\n` +
-                `🆔 ${order.id.slice(-8)}\n` +
-                `━━━━━━━━━━━━━━\n${kitchenItems}\n` +
-                `━━━━━━━━━━━━━━` +
+                `🆔 Order: ${order.id.slice(-8)}\n` +
+                `━━━━━━━━━━━━━━\n${itemsList}\n` +
+                `━━━━━━━━━━━━━━\n` +
+                `💰 <b>Total:</b> ${formatPrice(order.total)}\n` +
+                `💳 <b>Payment:</b> Unpaid` +
                 (order.note ? `\n📝 <i>${order.note}</i>` : '');
-            await sendTelegramMessage(KITCHEN_CHAT_ID, kitchenMsg);
+            await sendTelegramMessage(MANAGER_CHAT_ID, managerMsg);
+            if (foodItems.length > 0 && KITCHEN_CHAT_ID) {
+                const kitchenItems = foodItems.map(i => `${i.quantity}× ${i.name}`).join('\n');
+                const kitchenMsg = `👨‍🍳 <b>KITCHEN ORDER</b> — Table ${order.tableNumber}\n` +
+                    `👤 ${order.guestName}\n` +
+                    `🆔 ${order.id.slice(-8)}\n` +
+                    `━━━━━━━━━━━━━━\n${kitchenItems}\n` +
+                    `━━━━━━━━━━━━━━` +
+                    (order.note ? `\n📝 <i>${order.note}</i>` : '');
+                await sendTelegramMessage(KITCHEN_CHAT_ID, kitchenMsg);
+            }
+            if ((drinkItems.length > 0 || shishaItems.length > 0) && BAR_CHAT_ID) {
+                const barItems = [...drinkItems, ...shishaItems].map(i => `${i.quantity}× ${i.name}`).join('\n');
+                const barMsg = `🍸 <b>BAR ORDER</b> — Table ${order.tableNumber}\n` +
+                    `👤 ${order.guestName}\n` +
+                    `🆔 ${order.id.slice(-8)}\n` +
+                    `━━━━━━━━━━━━━━\n${barItems}\n` +
+                    `━━━━━━━━━━━━━━` +
+                    (order.note ? `\n📝 <i>${order.note}</i>` : '');
+                await sendTelegramMessage(BAR_CHAT_ID, barMsg);
+            }
         }
-        if ((drinkItems.length > 0 || shishaItems.length > 0) && BAR_CHAT_ID) {
-            const barItems = [...drinkItems, ...shishaItems].map(i => `${i.quantity}× ${i.name}`).join('\n');
-            const barMsg = `🍸 <b>BAR ORDER</b> — Table ${order.tableNumber}\n` +
-                `👤 ${order.guestName}\n` +
-                `🆔 ${order.id.slice(-8)}\n` +
-                `━━━━━━━━━━━━━━\n${barItems}\n` +
-                `━━━━━━━━━━━━━━` +
-                (order.note ? `\n📝 <i>${order.note}</i>` : '');
-            await sendTelegramMessage(BAR_CHAT_ID, barMsg);
-        }
-        console.log(`New order: ${order.id} from Table ${order.tableNumber}`);
+        logAudit('ORDER_CREATED', order.guestName, 'staff', 'order', order.id, {
+            tableNumber: order.tableNumber,
+            total: order.total,
+            items: order.items.length
+        }, socket.handshake.address);
+        console.log(`New order: ${order.id} from Table ${order.tableNumber} - Guest: ${order.guestName}`);
     });
     // Update order status
     socket.on('update-order-status', async ({ orderId, status }) => {
@@ -323,47 +615,49 @@ io.on('connection', (socket) => {
         if (order) {
             order.status = status;
             orders.set(orderId, order);
-            // Broadcast to all relevant parties
             io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-all').emit('order-status-update', { orderId, status });
             if (['preparing', 'ready'].includes(status)) {
                 const foodItems = order.items.filter(item => item.category === 'food');
                 if (foodItems.length > 0) {
                     io.to('staff-kitchen').emit('order-status-update', { orderId, status });
                 }
-                const drinkItems = order.items.filter(item => ['cocktails', 'spirits', 'wine', 'nonalc', 'shisha'].includes(item.category));
+                const drinkItems = order.items.filter(item => ['cocktails', 'spirits', 'wine', 'nonalc', 'shisha', 'brandy', 'tequila', 'sparkling-wine', 'liquor'].includes(item.category));
                 if (drinkItems.length > 0) {
                     io.to('staff-bar').emit('order-status-update', { orderId, status });
                 }
             }
-            // Telegram notification for delivered
-            if (status === 'delivered') {
+            if (status === 'delivered' && telegramConfig.orderStatus) {
                 const msg = `✅ <b>DELIVERED</b> — Table ${order.tableNumber}\nOrder completed`;
                 await sendTelegramMessage(MANAGER_CHAT_ID, msg);
             }
+            logAudit('ORDER_STATUS_UPDATE', 'staff', 'staff', 'order', orderId, { status }, socket.handshake.address);
             console.log(`Order ${orderId} status updated to ${status}`);
         }
     });
     // Access request
     socket.on('access-request', async (request) => {
         accessRequests.set(request.id, request);
-        // Save to Supabase
         database_1.db.saveAccessRequest(request).catch(err => console.error('Failed to save access request to DB:', err));
-        // Notify managers
         io.to('staff-manager').to('staff-all').emit('access-request', request);
-        // Send Telegram notification
-        const accessLabels = {
-            'pool-spa': 'Pool & Spa Access',
-            'lounge-entry': 'Lounge Entry',
-            'vip-dance': 'VIP Dance Floor',
-            'call-waiter': 'Call a Waiter',
-            'extra-ice': 'Extra Ice/Cups',
-            'bill-request': 'Bill Request'
-        };
-        const message = `🛎️ <b>ACCESS REQUEST</b>\n` +
-            `🪑 Table ${request.tableNumber}\n` +
-            `👤 ${request.guestName}\n` +
-            `📍 ${accessLabels[request.type] || request.type}`;
-        await sendTelegramMessage(MANAGER_CHAT_ID, message);
+        if (telegramConfig.accessRequest) {
+            const accessLabels = {
+                'pool-spa': 'Pool & Spa Access',
+                'lounge-entry': 'Lounge Entry',
+                'vip-dance': 'VIP Dance Floor',
+                'call-waiter': 'Call a Waiter',
+                'extra-ice': 'Extra Ice/Cups',
+                'bill-request': 'Bill Request'
+            };
+            const message = `🛎️ <b>ACCESS REQUEST</b>\n` +
+                `🪑 Table ${request.tableNumber}\n` +
+                `👤 ${request.guestName}\n` +
+                `📍 ${accessLabels[request.type] || request.type}`;
+            await sendTelegramMessage(MANAGER_CHAT_ID, message);
+        }
+        logAudit('ACCESS_REQUEST', request.guestName, 'staff', 'access-request', request.id, {
+            tableNumber: request.tableNumber,
+            type: request.type
+        }, socket.handshake.address);
         console.log(`Access request: ${request.type} from Table ${request.tableNumber}`);
     });
     // Access response
@@ -372,8 +666,11 @@ io.on('connection', (socket) => {
         if (request) {
             request.status = granted ? 'granted' : 'denied';
             accessRequests.set(requestId, request);
-            // Notify table
             io.to(`table-${request.tableNumber}`).emit('access-response', { requestId, granted });
+            logAudit('ACCESS_RESPONSE', 'staff', 'staff', 'access-request', requestId, {
+                granted,
+                tableNumber: request.tableNumber
+            }, socket.handshake.address);
             console.log(`Access request ${requestId} ${granted ? 'granted' : 'denied'}`);
         }
     });
@@ -382,7 +679,6 @@ io.on('connection', (socket) => {
         const tableMessages = messages.get(`table-${message.tableNumber}`) || [];
         tableMessages.push(message);
         messages.set(`table-${message.tableNumber}`, tableMessages);
-        // Save to Supabase
         database_1.db.saveMessage(message).catch(err => console.error('Failed to save message to DB:', err));
         io.to(`table-${message.tableNumber}`)
             .to('staff-manager')
@@ -390,7 +686,7 @@ io.on('connection', (socket) => {
             .to('staff-kitchen')
             .to('staff-bar')
             .emit('new-message', message);
-        if (message.sender === 'guest') {
+        if (message.sender === 'guest' && telegramConfig.chat) {
             const msg = `💬 <b>MESSAGE</b> — Table ${message.tableNumber}\n` +
                 `👤 ${message.senderName}: ${message.text}`;
             await sendTelegramMessage(MANAGER_CHAT_ID, msg);
@@ -404,27 +700,36 @@ io.on('connection', (socket) => {
             order.paymentStatus = status;
             orders.set(orderId, order);
             io.to(`table-${order.tableNumber}`).to('staff-manager').to('staff-all').emit('payment-update', { orderId, status });
-            if (status === 'paid') {
+            if (status === 'paid' && telegramConfig.payment) {
                 const msg = `💳 <b>PAYMENT RECEIVED</b> — Table ${order.tableNumber}\n` +
                     `💰 ${formatPrice(order.total)}\n` +
                     `🆔 ${order.id.slice(-8)}`;
                 await sendTelegramMessage(MANAGER_CHAT_ID, msg);
             }
+            logAudit('PAYMENT_UPDATE', 'staff', 'staff', 'order', orderId, {
+                paymentStatus: status,
+                tableNumber: order.tableNumber
+            }, socket.handshake.address);
             console.log(`Order ${orderId} payment updated to ${status}`);
         }
     });
     // Request refund
     socket.on('request-refund', async (request) => {
         refundRequests.set(request.id, request);
-        // Save to Supabase
         database_1.db.saveRefundRequest(request).catch(err => console.error('Failed to save refund request to DB:', err));
         io.to('staff-manager').to('staff-all').emit('refund-request', request);
-        const msg = `🔄 <b>REFUND REQUEST</b>\n` +
-            `🪑 Table ${request.tableNumber}\n` +
-            `👤 ${request.guestName}\n` +
-            `💰 Amount: ${formatPrice(request.amount)}\n` +
-            `📝 Reason: ${request.reason}`;
-        await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+        if (telegramConfig.refund) {
+            const msg = `🔄 <b>REFUND REQUEST</b>\n` +
+                `🪑 Table ${request.tableNumber}\n` +
+                `👤 ${request.guestName}\n` +
+                `💰 Amount: ${formatPrice(request.amount)}\n` +
+                `📝 Reason: ${request.reason}`;
+            await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+        }
+        logAudit('REFUND_REQUEST', request.guestName, 'staff', 'refund-request', request.id, {
+            amount: request.amount,
+            reason: request.reason
+        }, socket.handshake.address);
         console.log(`Refund request: ${request.id} from Table ${request.tableNumber}`);
     });
     // Process refund
@@ -442,18 +747,26 @@ io.on('connection', (socket) => {
                     order.paymentStatus = 'refunded';
                     orders.set(request.orderId, order);
                     io.to(`table-${request.tableNumber}`).to('staff-manager').to('staff-all').emit('refund-processed', { requestId, approved, amount: request.amount });
-                    const msg = `✅ <b>REFUND APPROVED</b> — Table ${request.tableNumber}\n` +
-                        `💰 ${formatPrice(request.amount)}\n` +
-                        `📝 ${request.reason}`;
-                    await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+                    if (telegramConfig.refund) {
+                        const msg = `✅ <b>REFUND APPROVED</b> — Table ${request.tableNumber}\n` +
+                            `💰 ${formatPrice(request.amount)}\n` +
+                            `📝 ${request.reason}`;
+                        await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+                    }
                 }
             }
             else {
                 io.to('staff-manager').to('staff-all').emit('refund-processed', { requestId, approved });
-                const msg = `❌ <b>REFUND DENIED</b> — Table ${request.tableNumber}\n` +
-                    `💰 ${formatPrice(request.amount)}`;
-                await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+                if (telegramConfig.refund) {
+                    const msg = `❌ <b>REFUND DENIED</b> — Table ${request.tableNumber}\n` +
+                        `💰 ${formatPrice(request.amount)}`;
+                    await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+                }
             }
+            logAudit('REFUND_PROCESSED', 'staff', 'staff', 'refund-request', requestId, {
+                approved,
+                amount: request.amount
+            }, socket.handshake.address);
             console.log(`Refund ${requestId} ${approved ? 'approved' : 'denied'}`);
         }
     });
@@ -468,17 +781,49 @@ io.on('connection', (socket) => {
                 `💰 ${formatPrice(order.total)}\n` +
                 `🆔 ${order.id.slice(-8)}` +
                 (reason ? `\n📝 ${reason}` : '');
-            await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+            await sendTelegramMessage(MANAGER_CHAT_ID, msg, telegramConfig.orderStatus);
+            logAudit('ORDER_CANCELLED', 'staff', 'staff', 'order', orderId, {
+                reason,
+                tableNumber: order.tableNumber
+            }, socket.handshake.address);
             console.log(`Order ${orderId} cancelled. Reason: ${reason || 'No reason provided'}`);
         }
     });
-    // End table session (table turnover)
+    // End table session (table turnover) - generates final bill
     socket.on('end-session', async ({ tableNumber, finalBill }) => {
         const session = activeTables.get(tableNumber);
         if (session) {
             session.isActive = false;
             session.endTime = new Date();
             session.totalSpent = finalBill;
+            // Generate final receipt for the session
+            const sessionOrders = Array.from(orders.values())
+                .filter(o => o.tableNumber === tableNumber && o.status !== 'cancelled' && o.status !== 'refunded');
+            if (sessionOrders.length > 0) {
+                const finalReceipt = {
+                    id: `final-${generateId()}`,
+                    orderId: `session-${session.id}`,
+                    tableNumber,
+                    guestName: session.guests.map(g => g.guestName).join(', '),
+                    items: sessionOrders.flatMap(o => o.items.map(item => ({
+                        id: item.id,
+                        name: item.name,
+                        quantity: item.quantity,
+                        price: item.price,
+                        total: item.price * item.quantity
+                    }))),
+                    subtotal: finalBill,
+                    total: finalBill,
+                    createdAt: new Date(),
+                    expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000),
+                    status: 'pending'
+                };
+                receipts.set(finalReceipt.id, finalReceipt);
+                io.to('staff-manager').to('staff-all').emit('session-receipt', {
+                    tableNumber,
+                    receipt: finalReceipt
+                });
+            }
             io.to('staff-manager').to('staff-all').emit('session-ended', {
                 tableNumber,
                 sessionId: session.id,
@@ -487,17 +832,52 @@ io.on('connection', (socket) => {
                 totalOrders: session.totalOrders,
                 totalSpent: finalBill
             });
-            const msg = `🧹 <b>SESSION ENDED</b> — Table ${tableNumber}\n` +
-                `👥 ${session.guests.length} guests\n` +
-                `📦 ${session.totalOrders} orders\n` +
-                `💰 ${formatPrice(finalBill)}`;
-            await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+            if (telegramConfig.session) {
+                const msg = `🧹 <b>SESSION ENDED</b> — Table ${tableNumber}\n` +
+                    `👥 ${session.guests.length} guests\n` +
+                    `📦 ${session.totalOrders} orders\n` +
+                    `💰 ${formatPrice(finalBill)}`;
+                await sendTelegramMessage(MANAGER_CHAT_ID, msg);
+            }
             activeTables.delete(tableNumber);
             io.to(`table-${tableNumber}`).emit('session-ended-client', {
                 sessionId: session.id
             });
+            logAudit('SESSION_ENDED', 'staff', 'staff', 'session', session.id, {
+                tableNumber,
+                finalBill,
+                guestCount: session.guests.length
+            }, socket.handshake.address);
             console.log(`Session ended for Table ${tableNumber}. Total spent: ${formatPrice(finalBill)}`);
         }
+    });
+    // Generate receipt request
+    socket.on('generate-receipt', ({ orderId }) => {
+        const order = orders.get(orderId);
+        if (order) {
+            const receipt = generateReceipt(order);
+            socket.emit('receipt-generated', receipt);
+        }
+    });
+    // Update inventory
+    socket.on('update-inventory', (update) => {
+        inventoryStatus.set(update.itemId, {
+            isAvailable: update.isAvailable,
+            stockQuantity: update.stockQuantity ?? null
+        });
+        logAudit('INVENTORY_UPDATE', update.updatedBy, 'staff', 'inventory', undefined, {
+            itemId: update.itemId,
+            isAvailable: update.isAvailable
+        });
+        io.emit('inventory-update', Object.fromEntries(inventoryStatus));
+        console.log(`Inventory updated: Item ${update.itemId} - Available: ${update.isAvailable}`);
+    });
+    // Update telegram config
+    socket.on('update-telegram-config', (config) => {
+        telegramConfig = { ...telegramConfig, ...config };
+        logAudit('TELEGRAM_CONFIG_UPDATE', 'staff', 'staff', 'telegram-config', undefined, config);
+        io.to('staff-manager').emit('telegram-config', telegramConfig);
+        console.log('Telegram config updated:', telegramConfig);
     });
     // Disconnect
     socket.on('disconnect', () => {
@@ -518,6 +898,10 @@ io.on('connection', (socket) => {
                         remainingGuests: session.guests.length
                     });
                 }
+                logAudit('GUEST_DISCONNECTED', guest.guestName, 'staff', 'table', session.id, {
+                    tableNumber: tableNum,
+                    remainingGuests: session.guests.length
+                });
                 break;
             }
         }
@@ -529,5 +913,7 @@ httpServer.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📱 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
     console.log(`🤖 Telegram Bot: ${TELEGRAM_BOT_TOKEN ? 'Enabled' : 'Disabled'}`);
+    console.log(`🔒 Rate Limiting: Enabled (${RATE_LIMIT_MAX} req/min)`);
+    console.log(`📋 Audit Logging: Enabled`);
 });
 //# sourceMappingURL=index.js.map

@@ -1,10 +1,12 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { MenuItem, ZoneType } from '@/types';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { MenuItem, ZoneType, InventoryUpdate, TelegramNotificationConfig, Receipt } from '@/types';
 import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS, ZONE_PRICES } from '@/data/menu';
 import { ZONES } from '@/data/locations';
 import { formatPrice } from '@/utils/format';
+import { useSocket } from '@/context/SocketContext';
+import { useSettings } from '@/context/SettingsContext';
 
-type Tab = 'menu' | 'zone-prices' | 'gallery' | 'settings';
+type Tab = 'menu' | 'zone-prices' | 'inventory' | 'receipts' | 'telegram' | 'settings';
 
 const CATEGORY_IMAGES: Record<string, string> = {
   cocktails: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&auto=format&fit=crop&q=80',
@@ -22,34 +24,43 @@ const CATEGORY_IMAGES: Record<string, string> = {
 };
 
 export const AdminPanel: React.FC = () => {
+  const { inventoryStatus, telegramConfig, updateInventory, updateTelegramConfig } = useSocket();
+  const { settings, updateSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<Tab>('menu');
   const [menuItems, setMenuItems] = useState<MenuItem[]>(MENU_ITEMS);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [localTelegramConfig, setLocalTelegramConfig] = useState<TelegramNotificationConfig>({
+    newOrder: true,
+    orderStatus: true,
+    payment: true,
+    refund: true,
+    accessRequest: true,
+    chat: true,
+    session: true
+  });
   
   // Zone prices state
   const [zonePrices, setZonePrices] = useState(ZONE_PRICES);
   const [selectedZoneForPricing, setSelectedZoneForPricing] = useState<ZoneType>('lounge');
 
-  // Gallery state
-  const [galleryImages, setGalleryImages] = useState<string[]>([
-    'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&auto=format&fit=crop&q=80',
-  ]);
+  // Load receipts
+  useEffect(() => {
+    fetch('/api/receipts')
+      .then(res => res.json())
+      .then(data => setReceipts(data))
+      .catch(console.error);
+  }, []);
 
-  // Club settings
-  const [clubSettings, setClubSettings] = useState({
-    name: 'D CUBE\'S PLACE',
-    tagline: 'Open Bar · Lounge · Nightlife',
-    heroImage: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200&auto=format&fit=crop&q=80',
-    address: 'Victoria Island, Lagos, Nigeria',
-    phone: '+234 800 000 0000',
-    email: 'info@dcubesplace.com',
-  });
+  // Sync telegram config
+  useEffect(() => {
+    if (telegramConfig) {
+      setLocalTelegramConfig(telegramConfig);
+    }
+  }, [telegramConfig]);
 
   const filteredItems = menuItems.filter(item => {
     const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
@@ -96,11 +107,25 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleAddGalleryImage = (url: string) => {
-    setGalleryImages(prev => [...prev, url]);
+    // Gallery functionality
   };
 
   const handleRemoveGalleryImage = (index: number) => {
-    setGalleryImages(prev => prev.filter((_, i) => i !== index));
+    // Gallery functionality
+  };
+
+  const handleToggleInventory = (itemId: number, isAvailable: boolean) => {
+    const update: InventoryUpdate = {
+      itemId,
+      isAvailable,
+      updatedBy: 'admin',
+      updatedAt: new Date()
+    };
+    updateInventory(update);
+  };
+
+  const handleSaveTelegramConfig = () => {
+    updateTelegramConfig(localTelegramConfig);
   };
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -148,14 +173,34 @@ export const AdminPanel: React.FC = () => {
             Zone Prices
           </button>
           <button
-            onClick={() => setActiveTab('gallery')}
+            onClick={() => setActiveTab('inventory')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all mb-2
-                       ${activeTab === 'gallery' 
+                       ${activeTab === 'inventory' 
                          ? 'bg-gold/10 text-gold border border-gold/20' 
                          : 'text-cream/50 hover:text-cream hover:bg-white/5'}`}
           >
-            <span className="text-lg">🖼️</span>
-            Gallery
+            <span className="text-lg">📦</span>
+            Inventory
+          </button>
+          <button
+            onClick={() => setActiveTab('receipts')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all mb-2
+                       ${activeTab === 'receipts' 
+                         ? 'bg-gold/10 text-gold border border-gold/20' 
+                         : 'text-cream/50 hover:text-cream hover:bg-white/5'}`}
+          >
+            <span className="text-lg">🧾</span>
+            Receipts
+          </button>
+          <button
+            onClick={() => setActiveTab('telegram')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all mb-2
+                       ${activeTab === 'telegram' 
+                         ? 'bg-gold/10 text-gold border border-gold/20' 
+                         : 'text-cream/50 hover:text-cream hover:bg-white/5'}`}
+          >
+            <span className="text-lg">📱</span>
+            Telegram
           </button>
           <button
             onClick={() => setActiveTab('settings')}
@@ -165,7 +210,7 @@ export const AdminPanel: React.FC = () => {
                          : 'text-cream/50 hover:text-cream hover:bg-white/5'}`}
           >
             <span className="text-lg">⚙️</span>
-            Club Settings
+            App Settings
           </button>
         </div>
 
@@ -306,99 +351,31 @@ export const AdminPanel: React.FC = () => {
           />
         )}
 
-        {activeTab === 'gallery' && (
-          <GalleryManager 
-            images={galleryImages}
-            onAddImage={handleAddGalleryImage}
-            onRemoveImage={handleRemoveGalleryImage}
-            onUpdateImage={(index, url) => {
-              const newImages = [...galleryImages];
-              newImages[index] = url;
-              setGalleryImages(newImages);
-            }}
+        {activeTab === 'inventory' && (
+          <InventoryManager 
+            menuItems={menuItems}
+            inventoryStatus={inventoryStatus}
+            onToggle={handleToggleInventory}
+          />
+        )}
+
+        {activeTab === 'receipts' && (
+          <ReceiptsManager receipts={receipts} />
+        )}
+
+        {activeTab === 'telegram' && (
+          <TelegramConfig 
+            config={localTelegramConfig}
+            onChange={setLocalTelegramConfig}
+            onSave={handleSaveTelegramConfig}
           />
         )}
 
         {activeTab === 'settings' && (
-          <div>
-            {/* Header */}
-            <div className="mb-8">
-              <h2 className="font-serif text-3xl text-white">Club Settings</h2>
-              <p className="text-cream/40 mt-1">Configure your club's branding and information</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Basic Info */}
-              <div className="luxury-card rounded-2xl p-6">
-                <h3 className="font-serif text-xl text-white mb-6">Basic Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-xs text-cream/40 uppercase tracking-wider mb-2 block">Club Name</label>
-                    <input
-                      type="text"
-                      value={clubSettings.name}
-                      onChange={(e) => setClubSettings({ ...clubSettings, name: e.target.value })}
-                      className="w-full input-luxury"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-cream/40 uppercase tracking-wider mb-2 block">Tagline</label>
-                    <input
-                      type="text"
-                      value={clubSettings.tagline}
-                      onChange={(e) => setClubSettings({ ...clubSettings, tagline: e.target.value })}
-                      className="w-full input-luxury"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-cream/40 uppercase tracking-wider mb-2 block">Address</label>
-                    <input
-                      type="text"
-                      value={clubSettings.address}
-                      onChange={(e) => setClubSettings({ ...clubSettings, address: e.target.value })}
-                      className="w-full input-luxury"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-cream/40 uppercase tracking-wider mb-2 block">Phone</label>
-                      <input
-                        type="text"
-                        value={clubSettings.phone}
-                        onChange={(e) => setClubSettings({ ...clubSettings, phone: e.target.value })}
-                        className="w-full input-luxury"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-cream/40 uppercase tracking-wider mb-2 block">Email</label>
-                      <input
-                        type="email"
-                        value={clubSettings.email}
-                        onChange={(e) => setClubSettings({ ...clubSettings, email: e.target.value })}
-                        className="w-full input-luxury"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Hero Image */}
-              <div className="luxury-card rounded-2xl p-6">
-                <h3 className="font-serif text-xl text-white mb-6">Hero Image</h3>
-                <ImageUpload
-                  currentImage={clubSettings.heroImage}
-                  onImageChange={(image) => setClubSettings({ ...clubSettings, heroImage: image })}
-                />
-              </div>
-            </div>
-
-            {/* Save Button */}
-            <div className="mt-8 flex justify-end">
-              <button className="btn-luxury px-8 py-4 rounded-xl text-xs">
-                💾 Save Settings
-              </button>
-            </div>
-          </div>
+          <AppSettingsManager 
+            settings={settings}
+            updateSettings={updateSettings}
+          />
         )}
       </div>
 
@@ -1052,6 +1029,427 @@ const EditItemModal: React.FC<EditItemModalProps> = ({ item, onSave, onClose }) 
             >
               💾 Save Item
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// INVENTORY MANAGER COMPONENT
+// ============================================
+
+interface InventoryManagerProps {
+  menuItems: MenuItem[];
+  inventoryStatus: Record<number, { isAvailable: boolean; stockQuantity: number | null }>;
+  onToggle: (itemId: number, isAvailable: boolean) => void;
+}
+
+const InventoryManager: React.FC<InventoryManagerProps> = ({ menuItems, inventoryStatus, onToggle }) => {
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlyUnavailable, setShowOnlyUnavailable] = useState(false);
+
+  const filteredItems = menuItems.filter(item => {
+    const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const itemStatus = inventoryStatus[item.id];
+    const isAvailable = itemStatus?.isAvailable !== false;
+    const matchesAvailability = !showOnlyUnavailable || !isAvailable;
+    return matchesCategory && matchesSearch && matchesAvailability;
+  });
+
+  const availableCount = menuItems.filter(item => {
+    const status = inventoryStatus[item.id];
+    return status?.isAvailable !== false;
+  }).length;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="font-serif text-3xl text-white">Inventory Management</h2>
+          <p className="text-cream/40 mt-1">Toggle item availability - unavailable items show as "Out of Stock" to customers</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-xl text-green-400 text-sm">
+            ✓ {availableCount} Available
+          </span>
+          <span className="px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
+            ✕ {menuItems.length - availableCount} Unavailable
+          </span>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-4 mb-6">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search items..."
+            className="w-full input-luxury pr-10"
+          />
+        </div>
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="input-luxury min-w-[200px]"
+        >
+          <option value="all">All Categories</option>
+          {Object.entries(CATEGORY_NAMES).filter(([key]) => key !== 'all').map(([key, name]) => (
+            <option key={key} value={key}>{name}</option>
+          ))}
+        </select>
+        <label className="flex items-center gap-2 px-4 bg-dark-2 rounded-xl border border-gold/20 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showOnlyUnavailable}
+            onChange={(e) => setShowOnlyUnavailable(e.target.checked)}
+            className="w-4 h-4 rounded border-gold/30 bg-dark-2 text-gold"
+          />
+          <span className="text-sm text-cream/70">Out of Stock only</span>
+        </label>
+      </div>
+
+      {/* Items Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {filteredItems.map(item => {
+          const status = inventoryStatus[item.id];
+          const isAvailable = status?.isAvailable !== false;
+          
+          return (
+            <div key={item.id} className={`luxury-card rounded-xl p-4 ${!isAvailable ? 'border-red-500/30 bg-red-500/5' : ''}`}>
+              <div className="flex items-start gap-3">
+                <img 
+                  src={item.image || CATEGORY_IMAGES[item.category]} 
+                  alt={item.name}
+                  className="w-12 h-12 rounded-lg object-cover"
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-white truncate">{item.name}</h3>
+                  <p className="text-xs text-cream/40">{CATEGORY_NAMES[item.category]}</p>
+                  <p className="text-sm text-gold">{formatPrice(item.price)}</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 flex items-center justify-between">
+                <span className={`text-sm ${isAvailable ? 'text-green-400' : 'text-red-400'}`}>
+                  {isAvailable ? '✓ Available' : '✕ Out of Stock'}
+                </span>
+                <button
+                  onClick={() => onToggle(item.id, !isAvailable)}
+                  className={`relative w-14 h-7 rounded-full transition-colors ${
+                    isAvailable ? 'bg-green-500' : 'bg-red-500'
+                  }`}
+                >
+                  <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${
+                    isAvailable ? 'right-1' : 'right-8'
+                  }`} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// RECEIPTS MANAGER COMPONENT
+// ============================================
+
+interface ReceiptsManagerProps {
+  receipts: Receipt[];
+}
+
+const ReceiptsManager: React.FC<ReceiptsManagerProps> = ({ receipts: initialReceipts }) => {
+  const [receipts, setReceipts] = useState(initialReceipts);
+
+  useEffect(() => {
+    setReceipts(initialReceipts);
+  }, [initialReceipts]);
+
+  const openReceipt = (receiptId: string) => {
+    window.open(`/api/receipts/${receiptId}/html`, '_blank');
+  };
+
+  const getTimeRemaining = (expiresAt: Date | string) => {
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    if (diff <= 0) return 'Expired';
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${mins}m remaining`;
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="font-serif text-3xl text-white">Receipts</h2>
+          <p className="text-cream/40 mt-1">Digital receipts - expire after 2 hours. Customers should save a screenshot.</p>
+        </div>
+      </div>
+
+      {receipts.length === 0 ? (
+        <div className="luxury-card rounded-2xl p-12 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gold/10 flex items-center justify-center">
+            <span className="text-3xl">🧾</span>
+          </div>
+          <h3 className="font-serif text-xl text-white mb-2">No Active Receipts</h3>
+          <p className="text-cream/40">Receipts are generated when staff creates them from orders. They expire after 2 hours.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {receipts.map(receipt => (
+            <div key={receipt.id} className="luxury-card rounded-xl p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-medium text-white">Table {receipt.tableNumber}</h3>
+                  <p className="text-xs text-cream/40">{receipt.guestName}</p>
+                </div>
+                <span className="px-2 py-1 bg-gold/10 text-gold text-xs rounded-lg">
+                  #{receipt.id.slice(-8).toUpperCase()}
+                </span>
+              </div>
+              
+              <div className="space-y-1 mb-3">
+                {receipt.items.slice(0, 3).map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-sm">
+                    <span className="text-cream/70">{item.quantity}× {item.name}</span>
+                    <span className="text-cream/40">{formatPrice(item.total)}</span>
+                  </div>
+                ))}
+                {receipt.items.length > 3 && (
+                  <p className="text-xs text-cream/30">+{receipt.items.length - 3} more items</p>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center py-2 border-t border-gold/10">
+                <span className="text-cream/70">Total</span>
+                <span className="text-lg font-bold text-gold">{formatPrice(receipt.total)}</span>
+              </div>
+
+              <div className="flex items-center justify-between mt-3">
+                <span className="text-xs text-cream/40">{getTimeRemaining(receipt.expiresAt)}</span>
+                <button
+                  onClick={() => openReceipt(receipt.id)}
+                  className="px-4 py-2 bg-gold/10 border border-gold/30 rounded-lg text-gold text-sm hover:bg-gold/20 transition-all"
+                >
+                  📄 View Receipt
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================
+// TELEGRAM CONFIG COMPONENT
+// ============================================
+
+interface TelegramConfigProps {
+  config: TelegramNotificationConfig;
+  onChange: (config: TelegramNotificationConfig) => void;
+  onSave: () => void;
+}
+
+const TelegramConfig: React.FC<TelegramConfigProps> = ({ config, onChange, onSave }) => {
+  const toggleOptions: { key: keyof TelegramNotificationConfig; label: string; icon: string }[] = [
+    { key: 'newOrder', label: 'New Orders', icon: '🍾' },
+    { key: 'orderStatus', label: 'Order Status Updates', icon: '📝' },
+    { key: 'payment', label: 'Payment Updates', icon: '💳' },
+    { key: 'refund', label: 'Refund Requests', icon: '🔄' },
+    { key: 'accessRequest', label: 'Access Requests', icon: '🛎️' },
+    { key: 'chat', label: 'Chat Messages', icon: '💬' },
+    { key: 'session', label: 'Session Events', icon: '👥' },
+  ];
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="font-serif text-3xl text-white">Telegram Notifications</h2>
+          <p className="text-cream/40 mt-1">Configure which events send notifications to Telegram</p>
+        </div>
+      </div>
+
+      <div className="luxury-card rounded-2xl p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {toggleOptions.map(({ key, label, icon }) => (
+            <div key={key} className="flex items-center justify-between p-4 bg-dark-2 rounded-xl">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">{icon}</span>
+                <span className="text-cream/70">{label}</span>
+              </div>
+              <button
+                onClick={() => onChange({ ...config, [key]: !config[key] })}
+                className={`relative w-14 h-7 rounded-full transition-colors ${
+                  config[key] ? 'bg-green-500' : 'bg-dark-4'
+                }`}
+              >
+                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${
+                  config[key] ? 'right-1' : 'right-8'
+                }`} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onSave}
+            className="btn-luxury px-8 py-3 rounded-xl text-xs"
+          >
+            💾 Save Configuration
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// APP SETTINGS MANAGER COMPONENT
+// ============================================
+
+interface AppSettingsManagerProps {
+  settings: { darkMode: boolean; soundEnabled: boolean; orderSoundEnabled: boolean; chatSoundEnabled: boolean };
+  updateSettings: (updates: Partial<AppSettingsManagerProps['settings']>) => void;
+}
+
+const AppSettingsManager: React.FC<AppSettingsManagerProps> = ({ settings, updateSettings }) => {
+  return (
+    <div>
+      <div className="mb-8">
+        <h2 className="font-serif text-3xl text-white">App Settings</h2>
+        <p className="text-cream/40 mt-1">Configure display and notification preferences</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Theme Settings */}
+        <div className="luxury-card rounded-2xl p-6">
+          <h3 className="font-serif text-xl text-white mb-6">Appearance</h3>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-dark-2 rounded-xl">
+              <div>
+                <span className="text-cream/70">Dark Mode</span>
+                <p className="text-xs text-cream/40 mt-1">Use dark theme throughout the app</p>
+              </div>
+              <button
+                onClick={() => updateSettings({ darkMode: !settings.darkMode })}
+                className={`relative w-14 h-7 rounded-full transition-colors ${
+                  settings.darkMode ? 'bg-gold' : 'bg-dark-4'
+                }`}
+              >
+                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${
+                  settings.darkMode ? 'right-1' : 'right-8'
+                }`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Sound Settings */}
+        <div className="luxury-card rounded-2xl p-6">
+          <h3 className="font-serif text-xl text-white mb-6">Sound Notifications</h3>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-dark-2 rounded-xl">
+              <div>
+                <span className="text-cream/70">Enable Sounds</span>
+                <p className="text-xs text-cream/40 mt-1">Play sounds for notifications</p>
+              </div>
+              <button
+                onClick={() => updateSettings({ soundEnabled: !settings.soundEnabled })}
+                className={`relative w-14 h-7 rounded-full transition-colors ${
+                  settings.soundEnabled ? 'bg-green-500' : 'bg-dark-4'
+                }`}
+              >
+                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${
+                  settings.soundEnabled ? 'right-1' : 'right-8'
+                }`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-dark-2 rounded-xl">
+              <div>
+                <span className="text-cream/70">Order Sounds</span>
+                <p className="text-xs text-cream/40 mt-1">Play sound for new orders</p>
+              </div>
+              <button
+                onClick={() => updateSettings({ orderSoundEnabled: !settings.orderSoundEnabled })}
+                className={`relative w-14 h-7 rounded-full transition-colors ${
+                  settings.orderSoundEnabled ? 'bg-green-500' : 'bg-dark-4'
+                }`}
+              >
+                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${
+                  settings.orderSoundEnabled ? 'right-1' : 'right-8'
+                }`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-dark-2 rounded-xl">
+              <div>
+                <span className="text-cream/70">Chat Sounds</span>
+                <p className="text-xs text-cream/40 mt-1">Play sound for new messages</p>
+              </div>
+              <button
+                onClick={() => updateSettings({ chatSoundEnabled: !settings.chatSoundEnabled })}
+                className={`relative w-14 h-7 rounded-full transition-colors ${
+                  settings.chatSoundEnabled ? 'bg-green-500' : 'bg-dark-4'
+                }`}
+              >
+                <div className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-all ${
+                  settings.chatSoundEnabled ? 'right-1' : 'right-8'
+                }`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Keyboard Shortcuts */}
+        <div className="luxury-card rounded-2xl p-6 lg:col-span-2">
+          <h3 className="font-serif text-xl text-white mb-6">Keyboard Shortcuts</h3>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-3 bg-dark-2 rounded-lg text-center">
+              <kbd className="px-2 py-1 bg-dark-4 rounded text-gold text-sm">1-5</kbd>
+              <p className="text-xs text-cream/40 mt-2">Quick status update</p>
+            </div>
+            <div className="p-3 bg-dark-2 rounded-lg text-center">
+              <kbd className="px-2 py-1 bg-dark-4 rounded text-gold text-sm">P</kbd>
+              <p className="text-xs text-cream/40 mt-2">Mark as Paid</p>
+            </div>
+            <div className="p-3 bg-dark-2 rounded-lg text-center">
+              <kbd className="px-2 py-1 bg-dark-4 rounded text-gold text-sm">R</kbd>
+              <p className="text-xs text-cream/40 mt-2">Generate Receipt</p>
+            </div>
+            <div className="p-3 bg-dark-2 rounded-lg text-center">
+              <kbd className="px-2 py-1 bg-dark-4 rounded text-gold text-sm">?</kbd>
+              <p className="text-xs text-cream/40 mt-2">Show shortcuts</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Order Notes Templates */}
+        <div className="luxury-card rounded-2xl p-6 lg:col-span-2">
+          <h3 className="font-serif text-xl text-white mb-6">Quick Order Notes</h3>
+          <p className="text-cream/40 text-sm mb-4">Pre-defined notes staff can quickly add to orders</p>
+          
+          <div className="flex flex-wrap gap-2">
+            {['No Ice', 'Extra Ice', 'No Lemon', 'Extra Lemon', 'Less Sweet', 'Extra Cold', 'Room Temperature', 'With Water'].map(note => (
+              <span key={note} className="px-4 py-2 bg-dark-2 border border-gold/20 rounded-full text-sm text-cream/70 hover:border-gold/40 hover:text-gold transition-all cursor-pointer">
+                {note}
+              </span>
+            ))}
           </div>
         </div>
       </div>

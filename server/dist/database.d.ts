@@ -68,10 +68,26 @@ declare class Database {
     getActiveSessions(): Promise<TableSession[]>;
     saveRefundRequest(request: RefundRequest): Promise<void>;
     getRefundRequests(): Promise<RefundRequest[]>;
-    cleanupOldData(): Promise<{
+    cleanupOldData(retentionHours?: number): Promise<{
         deletedOrders: number;
         deletedMessages: number;
         deletedRequests: number;
+    }>;
+    exportBackup(): Promise<{
+        orders: Order[];
+        accessRequests: AccessRequest[];
+        messages: ChatMessage[];
+        sessions: TableSession[];
+        refundRequests: RefundRequest[];
+        exportedAt: string;
+    }>;
+    getStorageStats(): Promise<{
+        ordersCount: number;
+        messagesCount: number;
+        requestsCount: number;
+        sessionsCount: number;
+        oldestRecord: string | null;
+        estimatedSizeKB: number;
     }>;
     loadAllData(): Promise<{
         orders: Map<string, Order>;

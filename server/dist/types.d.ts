@@ -13,6 +13,10 @@ export interface MenuItem {
     availableIn?: ZoneType[];
     /** Whether this item requires food service capability */
     requiresFoodService?: boolean;
+    /** Whether this item is currently available/in stock */
+    isAvailable?: boolean;
+    /** Stock quantity (null = unlimited) */
+    stockQuantity?: number | null;
 }
 export interface CartItem extends MenuItem {
     quantity: number;
@@ -115,6 +119,64 @@ export interface AnalyticsData {
         name: string;
         quantity: number;
     }[]>;
+}
+export interface Receipt {
+    id: string;
+    orderId: string;
+    tableNumber: number;
+    guestName: string;
+    items: ReceiptItem[];
+    subtotal: number;
+    serviceCharge?: number;
+    total: number;
+    createdAt: Date;
+    expiresAt: Date;
+    status: 'pending' | 'sent' | 'paid' | 'expired';
+    pdfUrl?: string;
+}
+export interface ReceiptItem {
+    id: number;
+    name: string;
+    quantity: number;
+    price: number;
+    total: number;
+}
+export interface AuditLog {
+    id: string;
+    timestamp: Date;
+    action: string;
+    actor: string;
+    actorType: 'staff' | 'system';
+    resource: string;
+    resourceId?: string;
+    details: Record<string, any>;
+    ipAddress?: string;
+    userAgent?: string;
+}
+export interface InventoryUpdate {
+    itemId: number;
+    isAvailable: boolean;
+    stockQuantity?: number | null;
+    updatedBy: string;
+    updatedAt: Date;
+    reason?: string;
+}
+export interface TelegramNotificationConfig {
+    newOrder: boolean;
+    orderStatus: boolean;
+    payment: boolean;
+    refund: boolean;
+    accessRequest: boolean;
+    chat: boolean;
+    session: boolean;
+}
+export interface StaffSession {
+    id: string;
+    role: 'manager' | 'kitchen' | 'bar';
+    pin: string;
+    createdAt: Date;
+    expiresAt: Date;
+    ipAddress?: string;
 }
 /** Types of service zones in the venue - NO VIP */
 export type ZoneType = 'open-bar' | 'lounge' | 'nightclub' | 'poolside';

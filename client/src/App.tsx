@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { SocketProvider } from '@/context/SocketContext';
 import { CartProvider } from '@/context/CartContext';
 import { TableProvider } from '@/context/TableContext';
+import { SettingsProvider } from '@/context/SettingsContext';
 import { StaffAuth } from '@/components/StaffAuth';
 import { ScrollRestoration } from '@/components/ScrollRestoration';
 import { CustomerPage } from '@/pages/CustomerPage';
@@ -14,40 +15,42 @@ import { AdminPanel } from '@/pages/AdminPanel';
 
 const App: FC = () => {
   return (
-    <SocketProvider>
-      <CartProvider>
-        <TableProvider>
-          <Router>
-            <ScrollRestoration />
-            <Routes>
-              <Route path="/" element={<CustomerPage />} />
-              <Route path="/order" element={<CustomerPage />} />
-              <Route path="/manager" element={
-                <StaffAuth role="manager">
-                  <ManagerDashboard />
-                </StaffAuth>
-              } />
-              <Route path="/kitchen" element={
-                <StaffAuth role="kitchen">
-                  <KitchenDashboard />
-                </StaffAuth>
-              } />
-              <Route path="/bar" element={
-                <StaffAuth role="bar">
-                  <BarDashboard />
-                </StaffAuth>
-              } />
-              <Route path="/admin" element={
-                <StaffAuth role="manager">
-                  <AdminPanel />
-                </StaffAuth>
-              } />
-              <Route path="/qr" element={<QRGenerator />} />
-            </Routes>
-          </Router>
-        </TableProvider>
-      </CartProvider>
-    </SocketProvider>
+    <SettingsProvider>
+      <SocketProvider>
+        <CartProvider>
+          <TableProvider>
+            <Router>
+              <ScrollRestoration />
+              <Routes>
+                <Route path="/" element={<CustomerPage />} />
+                <Route path="/order" element={<CustomerPage />} />
+                <Route path="/manager" element={
+                  <StaffAuth role="manager">
+                    <ManagerDashboard />
+                  </StaffAuth>
+                } />
+                <Route path="/kitchen" element={
+                  <StaffAuth role="kitchen">
+                    <KitchenDashboard />
+                  </StaffAuth>
+                } />
+                <Route path="/bar" element={
+                  <StaffAuth role="bar">
+                    <BarDashboard />
+                  </StaffAuth>
+                } />
+                <Route path="/admin" element={
+                  <StaffAuth role="manager">
+                    <AdminPanel />
+                  </StaffAuth>
+                } />
+                <Route path="/qr" element={<QRGenerator />} />
+              </Routes>
+            </Router>
+          </TableProvider>
+        </CartProvider>
+      </SocketProvider>
+    </SettingsProvider>
   );
 };
 

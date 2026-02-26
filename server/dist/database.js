@@ -254,13 +254,13 @@ class Database {
             amount: row.amount
         }));
     }
-    // AUTO-DELETE: Remove data older than 24 hours
-    async cleanupOldData() {
+    // AUTO-DELETE: Remove data older than specified hours (configurable)
+    async cleanupOldData(retentionHours = 24) {
         if (!this.useSupabase || !this.supabase) {
             return { deletedOrders: 0, deletedMessages: 0, deletedRequests: 0 };
         }
-        const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        // Delete old orders (keep completed orders for 24h)
+        const cutoffTime = new Date(Date.now() - retentionHours * 60 * 60 * 1000).toISOString();
+        // Delete old orders (keep completed orders for the retention period)
         const { count: orderCount } = await this.supabase
             .from('orders')
             .delete({ count: 'exact' })
@@ -276,16 +276,94 @@ class Database {
             .from('access_requests')
             .delete({ count: 'exact' })
             .lt('timestamp', cutoffTime);
-        // Delete old refund requests
+        // Delete old refund requests (keep approved/denied for retention period)
         await this.supabase
             .from('refund_requests')
             .delete()
             .lt('timestamp', cutoffTime);
-        console.log(`🧹 Cleanup: Deleted ${orderCount || 0} orders, ${messageCount || 0} messages, ${requestCount || 0} requests`);
+        // Delete old inactive sessions
+        await this.supabase
+            .from('table_sessions')
+            .delete()
+            .eq('is_active', false)
+            .lt('start_time', cutoffTime);
+        console.log(`🧹 Cleanup: Deleted ${orderCount || 0} orders, ${messageCount || 0} messages, ${requestCount || 0} requests (Retention: ${retentionHours}h)`);
         return {
             deletedOrders: orderCount || 0,
             deletedMessages: messageCount || 0,
             deletedRequests: requestCount || 0
+        };
+    }
+    // BACKUP: Export all data for backup
+    async exportBackup() {
+        if (!this.useSupabase || !this.supabase) {
+            return {
+                orders: [],
+                accessRequests: [],
+                messages: [],
+                sessions: [],
+                refundRequests: [],
+                exportedAt: new Date().toISOString()
+            };
+        }
+        const orders = await this.getOrders();
+        const accessRequests = await this.getAccessRequests();
+        const messages = await this.getMessages();
+        const sessions = await this.getActiveSessions();
+        const refundRequests = await this.getRefundRequests();
+        console.log(`📦 Backup exported: ${orders.length} orders, ${accessRequests.length} requests, ${messages.length} messages`);
+        return {
+            orders,
+            accessRequests,
+            messages,
+            sessions,
+            refundRequests,
+            exportedAt: new Date().toISOString()
+        };
+    }
+    // STORAGE STATS: Get database storage information
+    async getStorageStats() {
+        if (!this.useSupabase || !this.supabase) {
+            return {
+                ordersCount: 0,
+                messagesCount: 0,
+                requestsCount: 0,
+                sessionsCount: 0,
+                oldestRecord: null,
+                estimatedSizeKB: 0
+            };
+        }
+        const { count: ordersCount } = await this.supabase
+            .from('orders')
+            .select('*', { count: 'exact', head: true });
+        const { count: messagesCount } = await this.supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true });
+        const { count: requestsCount } = await this.supabase
+            .from('access_requests')
+            .select('*', { count: 'exact', head: true });
+        const { count: sessionsCount } = await this.supabase
+            .from('table_sessions')
+            .select('*', { count: 'exact', head: true });
+        // Get oldest record
+        const { data: oldestOrder } = await this.supabase
+            .from('orders')
+            .select('timestamp')
+            .order('timestamp', { ascending: true })
+            .limit(1)
+            .single();
+        // Rough estimate: ~2KB per order, ~500 bytes per message, ~300 bytes per request
+        const estimatedSizeKB = Math.round((ordersCount || 0) * 2 +
+            (messagesCount || 0) * 0.5 +
+            (requestsCount || 0) * 0.3 +
+            (sessionsCount || 0) * 0.5);
+        return {
+            ordersCount: ordersCount || 0,
+            messagesCount: messagesCount || 0,
+            requestsCount: requestsCount || 0,
+            sessionsCount: sessionsCount || 0,
+            oldestRecord: oldestOrder?.timestamp || null,
+            estimatedSizeKB
         };
     }
     // Load initial data from Supabase into memory
