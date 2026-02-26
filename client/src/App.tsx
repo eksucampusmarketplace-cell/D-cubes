@@ -4,6 +4,7 @@ import { SocketProvider } from '@/context/SocketContext';
 import { CartProvider } from '@/context/CartContext';
 import { TableProvider } from '@/context/TableContext';
 import { StaffAuth } from '@/components/StaffAuth';
+import { ScrollRestoration } from '@/components/ScrollRestoration';
 import { CustomerPage } from '@/pages/CustomerPage';
 import { ManagerDashboard } from '@/pages/ManagerDashboard';
 import { KitchenDashboard } from '@/pages/KitchenDashboard';
@@ -17,6 +18,7 @@ const App: FC = () => {
       <CartProvider>
         <TableProvider>
           <Router>
+            <ScrollRestoration />
             <Routes>
               <Route path="/" element={<CustomerPage />} />
               <Route path="/order" element={<CustomerPage />} />
