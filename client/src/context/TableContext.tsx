@@ -195,6 +195,31 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [tableNumber, isCheckedIn, joinTable]);
 
+  // Reload messages from server for current table when checked in
+  useEffect(() => {
+    if (!tableNumber || !isCheckedIn) return;
+
+    const fetchTableMessages = async () => {
+      try {
+        const res = await fetch(`/api/messages/${tableNumber}`);
+        if (res.ok) {
+          const data: ChatMessage[] = await res.json();
+          if (data.length > 0) {
+            setMessages(prev => {
+              const existingIds = new Set(prev.map(m => m.id));
+              const newMessages = data.filter(m => !existingIds.has(m.id));
+              return newMessages.length > 0 ? [...prev, ...newMessages] : prev;
+            });
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    fetchTableMessages();
+  }, [tableNumber, isCheckedIn]);
+
   // Socket event listeners
   useEffect(() => {
     if (!socket) return;
@@ -217,14 +242,21 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSessionId(data.sessionId);
     };
 
+    const handleSessionEnded = () => {
+      setIsCheckedIn(false);
+      clearPersistedSession();
+    };
+
     socket.on('order-status-update', handleOrderUpdate);
     socket.on('new-message', handleNewMessage);
     socket.on('check-in-success', handleCheckInSuccess);
+    socket.on('session-ended-client', handleSessionEnded);
 
     return () => {
       socket.off('order-status-update', handleOrderUpdate);
       socket.off('new-message', handleNewMessage);
       socket.off('check-in-success', handleCheckInSuccess);
+      socket.off('session-ended-client', handleSessionEnded);
     };
   }, [socket, tableNumber]);
 
@@ -328,11 +360,12 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const availableCategories = React.useMemo(() => {
     if (!zone) return [];
     
+    const allDrinkCategories = ['brandy', 'spirits', 'tequila', 'liquor', 'cocktails', 'wine', 'sparkling-wine', 'beer', 'nonalc', 'mixers', 'energy-drinks', 'shisha', 'food'];
     const zoneCategoryMap: Record<ZoneType, string[]> = {
-      'open-bar': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
-      'lounge': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
-      'nightclub': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food'],
-      'poolside': ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha', 'food']
+      'open-bar': allDrinkCategories,
+      'lounge': allDrinkCategories,
+      'nightclub': allDrinkCategories,
+      'poolside': allDrinkCategories
     };
     
     return zoneCategoryMap[zone] || zoneCategoryMap['lounge'];

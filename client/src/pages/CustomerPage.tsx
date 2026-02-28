@@ -21,10 +21,13 @@ const ALL_CATEGORIES = [
   'spirits',
   'tequila',
   'liquor',
-  'mixers',
-  'energy-drinks',
+  'cocktails',
   'wine',
   'sparkling-wine',
+  'beer',
+  'nonalc',
+  'mixers',
+  'energy-drinks',
   'shisha',
   'food'
 ] as const;

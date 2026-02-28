@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSocket } from '@/context/SocketContext';
 import { Order, OrderStatus, ChatMessage, ZoneType } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, generateMessageId } from '@/utils/format';
 import { ZONES } from '@/data/locations';
+
+const BAR_CATEGORIES = ['cocktails', 'spirits', 'wine', 'nonalc', 'brandy', 'tequila', 'sparkling-wine', 'liquor', 'mixers', 'energy-drinks', 'beer', 'shisha'];
 
 // Zone-specific bar dashboard
 export const BarDashboard: React.FC = () => {
@@ -13,23 +15,86 @@ export const BarDashboard: React.FC = () => {
   const [replyMessage, setReplyMessage] = useState('');
   const [unreadTables, setUnreadTables] = useState<Set<number>>(new Set());
   const [activeZone, setActiveZone] = useState<ZoneType>('lounge');
+  const [newOrderAlert, setNewOrderAlert] = useState(false);
+  const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const playAlertTone = useCallback(() => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioContextRef.current;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(784, ctx.currentTime);
+      oscillator.frequency.setValueAtTime(523, ctx.currentTime + 0.15);
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.4);
+    } catch {
+      // Web Audio not available
+    }
+  }, []);
+
+  // Load existing bar orders on mount (recovery from refresh)
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const [ordersRes, messagesRes] = await Promise.all([
+          fetch('/api/orders'),
+          fetch('/api/messages'),
+        ]);
+
+        if (ordersRes.ok) {
+          const data: Order[] = await ordersRes.json();
+          const barOrdersData = data
+            .map(o => ({ ...o, items: o.items.filter(i => BAR_CATEGORIES.includes(i.category)) }))
+            .filter(o => o.items.length > 0);
+          setBarOrders(barOrdersData.reverse());
+        }
+
+        if (messagesRes.ok) {
+          const data: ChatMessage[] = await messagesRes.json();
+          setMessages(data);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    fetchInitialData();
+  }, []);
 
   useEffect(() => {
     joinStaff('bar');
   }, [joinStaff]);
 
   useEffect(() => {
+    return () => {
+      if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!socket) return;
 
     socket.on('new-order', (order: Order) => {
-      // Filter orders by zone - check if order has zone info or infer from table
-      // For now, show all drink orders to bar staff
-      const barItems = order.items.filter(item => 
-        ['brandy', 'spirits', 'tequila', 'liquor', 'mixers', 'energy-drinks', 'wine', 'sparkling-wine', 'shisha'].includes(item.category)
-      );
+      const barItems = order.items.filter(item => BAR_CATEGORIES.includes(item.category));
       if (barItems.length > 0) {
         const barOrder = { ...order, items: barItems };
-        setBarOrders(prev => [barOrder, ...prev]);
+        setBarOrders(prev => {
+          if (prev.some(o => o.id === order.id)) return prev;
+          return [barOrder, ...prev];
+        });
+        setNewOrderAlert(true);
+        playAlertTone();
+        if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
+        alertTimeoutRef.current = setTimeout(() => setNewOrderAlert(false), 5000);
       }
     });
 
@@ -116,8 +181,25 @@ export const BarDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark-4">
+      {/* New Order Alert Banner */}
+      {newOrderAlert && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-3 flex items-center justify-between shadow-lg animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🍸</span>
+            <span className="font-semibold tracking-wide text-sm">NEW BAR ORDER</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNewOrderAlert(false)}
+            className="text-white/80 hover:text-white text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header */}
-      <header className="bg-dark-2 border-b border-gold/10 sticky top-0 z-50">
+      <header className={`bg-dark-2 border-b border-gold/10 sticky z-50 ${newOrderAlert ? 'top-10' : 'top-0'}`}>
         <div className="px-4 lg:px-8 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">

@@ -48,14 +48,18 @@ export const QRGenerator: React.FC = () => {
 
   const displayItems = useMemo((): DisplayItem[] => {
     if (mode === 'legacy') {
-      return Array.from({ length: endTable - startTable + 1 }, (_, i) => ({
-        id: `T-${String(startTable + i).padStart(3, '0')}`,
-        number: startTable + i,
-        name: `Table ${startTable + i}`,
-        zone: 'lounge' as ZoneType,
-        zoneIcon: ZONES['lounge'].icon,
-        url: `${baseUrl}?table=${startTable + i}`
-      }));
+      return Array.from({ length: endTable - startTable + 1 }, (_, i) => {
+        const tableNum = startTable + i;
+        const locationId = `T-${String(tableNum).padStart(3, '0')}`;
+        return {
+          id: locationId,
+          number: tableNum,
+          name: `Table ${tableNum}`,
+          zone: 'lounge' as ZoneType,
+          zoneIcon: ZONES['lounge'].icon,
+          url: `${baseUrl}?location=${locationId}&zone=lounge`
+        };
+      });
     }
     
     // Location mode

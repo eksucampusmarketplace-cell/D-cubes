@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSocket } from '@/context/SocketContext';
 import { Order, OrderStatus, ChatMessage } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, generateMessageId } from '@/utils/format';
@@ -10,20 +10,86 @@ export const KitchenDashboard: React.FC = () => {
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [unreadTables, setUnreadTables] = useState<Set<number>>(new Set());
+  const [newOrderAlert, setNewOrderAlert] = useState(false);
+  const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const playAlertTone = useCallback(() => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioContextRef.current;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(660, ctx.currentTime);
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.4);
+    } catch {
+      // Web Audio not available
+    }
+  }, []);
+
+  // Load existing food orders on mount (recovery from refresh)
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const [ordersRes, messagesRes] = await Promise.all([
+          fetch('/api/orders'),
+          fetch('/api/messages'),
+        ]);
+
+        if (ordersRes.ok) {
+          const data: Order[] = await ordersRes.json();
+          const kitchenOrders = data
+            .map(o => ({ ...o, items: o.items.filter(i => i.category === 'food') }))
+            .filter(o => o.items.length > 0);
+          setFoodOrders(kitchenOrders.reverse());
+        }
+
+        if (messagesRes.ok) {
+          const data: ChatMessage[] = await messagesRes.json();
+          setMessages(data);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    fetchInitialData();
+  }, []);
 
   useEffect(() => {
     joinStaff('kitchen');
   }, [joinStaff]);
 
   useEffect(() => {
+    return () => {
+      if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!socket) return;
 
     socket.on('new-order', (order: Order) => {
-      // Only add food items
       const foodItems = order.items.filter(item => item.category === 'food');
       if (foodItems.length > 0) {
         const foodOrder = { ...order, items: foodItems };
-        setFoodOrders(prev => [foodOrder, ...prev]);
+        setFoodOrders(prev => {
+          if (prev.some(o => o.id === order.id)) return prev;
+          return [foodOrder, ...prev];
+        });
+        setNewOrderAlert(true);
+        playAlertTone();
+        if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
+        alertTimeoutRef.current = setTimeout(() => setNewOrderAlert(false), 5000);
       }
     });
 
@@ -106,8 +172,25 @@ export const KitchenDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark">
+      {/* New Order Alert Banner */}
+      {newOrderAlert && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-orange-600 to-orange-500 text-white px-6 py-3 flex items-center justify-between shadow-lg animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">👨‍🍳</span>
+            <span className="font-semibold tracking-wide text-sm">NEW FOOD ORDER</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNewOrderAlert(false)}
+            className="text-white/80 hover:text-white text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header */}
-      <div className="sticky top-0 bg-dark/95 backdrop-blur border-b border-gold/20 px-4 lg:px-8 py-4 lg:py-6 z-20">
+      <div className={`sticky bg-dark/95 backdrop-blur border-b border-gold/20 px-4 lg:px-8 py-4 lg:py-6 z-20 ${newOrderAlert ? 'top-10' : 'top-0'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 lg:gap-4">
             <h1 className="font-display text-xl lg:text-3xl tracking-[0.2em] lg:tracking-[0.25em] text-gold">D CUBE'S PLACE</h1>
