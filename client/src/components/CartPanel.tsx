@@ -81,7 +81,9 @@ export const CartPanel: React.FC<CartPanelProps> = ({ isOpen, onClose }) => {
   }, [clearCart]);
 
   const foodItems = items.filter(item => item.category === 'food');
-  const drinkItems = items.filter(item => ['cocktails', 'spirits', 'wine', 'nonalc'].includes(item.category));
+  const drinkItems = items.filter(item =>
+    ['cocktails', 'spirits', 'wine', 'nonalc', 'brandy', 'tequila', 'sparkling-wine', 'liquor', 'mixers', 'energy-drinks', 'beer'].includes(item.category)
+  );
   const shishaItems = items.filter(item => item.category === 'shisha');
 
   return (

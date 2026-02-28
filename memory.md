@@ -171,6 +171,31 @@ STAFF_KITCHEN_PIN=1111
 STAFF_BAR_PIN=2222
 ```
 
+## Alert/Notification System (Staff Dashboards)
+All three staff dashboards (Manager, Kitchen, Bar) now have:
+- `newOrderAlert` state + 5-second auto-dismiss banner at top of page
+- Web Audio API tone using oscillator (no external audio files needed)
+- `playAlertTone()` using `AudioContext` ref to avoid recreation
+- Alert banner is color-coded: Manager=red, Kitchen=orange, Bar=blue
+
+## Dashboard Data Recovery on Refresh
+All staff dashboards fetch initial data on mount via REST APIs:
+- Manager: orders, access-requests, refund-requests, sessions, messages
+- Kitchen: orders (food items only), messages
+- Bar: orders (bar items only), messages
+
+Customer TableContext fetches messages for the current table on check-in (tableNumber + isCheckedIn dependency).
+
+## Session End Handling (Customer Side)
+`TableContext` now listens to `session-ended-client` and calls `setIsCheckedIn(false)` + `clearPersistedSession()` so the customer's UI properly resets when staff ends their session.
+
+## Manager Dashboard
+- Sidebar navigation buttons are now fully functional with `activeView` state ('orders' | 'tables' | 'messages')
+- Stats cards are clickable and navigate to the relevant view
+- "Tonight's Revenue" stat shows real order count instead of hardcoded "18% vs last Friday"
+- Chat tab has a table selector showing all tables with conversation history
+- Duplicate order guard: `if (prev.some(o => o.id === order.id)) return prev` on new-order
+
 ## Common Issues & Solutions
 
 ### TypeScript errors about unused variables
@@ -252,13 +277,32 @@ STAFF_BAR_PIN=2222
 - `telegram-config` - Telegram notification settings
 - `receipt-generated` - Receipt created
 
+## Bar/Drink Category List (canonical - must stay in sync across all files)
+```
+['cocktails', 'spirits', 'wine', 'nonalc', 'brandy', 'tequila', 'sparkling-wine', 'liquor', 'mixers', 'energy-drinks', 'beer', 'shisha']
+```
+Files that use this list:
+- `server/src/index.ts` - new-order routing to staff-bar, order-status-update routing
+- `client/src/pages/BarDashboard.tsx` - BAR_CATEGORIES constant
+- `client/src/components/CartPanel.tsx` - drinkItems filter for routing preview
+- `client/src/context/TableContext.tsx` - allDrinkCategories in zoneCategoryMap
+
 ## API Endpoints
 
 ### Core
 - `GET /api/health` - Health check
-- `GET /api/qr/:tableNumber` - Generate QR code
+- `GET /api/qr/:tableNumber?zone=lounge` - Generate QR code (zone param optional, defaults to lounge)
 - `GET /api/analytics` - Sales analytics
 - `GET /api/table/:tableNumber` - Table session info
+
+### Dashboard Recovery (new)
+- `GET /api/orders` - Get active (non-completed) orders
+- `GET /api/orders/all` - Get all orders including completed
+- `GET /api/sessions` - Get active table sessions
+- `GET /api/access-requests` - Get pending access requests
+- `GET /api/refund-requests` - Get pending refund requests
+- `GET /api/messages` - Get all chat messages
+- `GET /api/messages/:tableNumber` - Get messages for a table
 
 ### Inventory
 - `GET /api/inventory` - Get inventory status

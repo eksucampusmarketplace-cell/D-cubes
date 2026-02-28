@@ -363,8 +363,10 @@ app.get('/api/health', (req, res) => {
 app.get('/api/qr/:tableNumber', async (req, res) => {
   try {
     const tableNumber = parseInt(req.params.tableNumber);
+    const zone = (req.query.zone as string) || 'lounge';
     const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    const url = `${baseUrl}/order?table=${tableNumber}`;
+    const locationId = `T-${String(tableNumber).padStart(3, '0')}`;
+    const url = `${baseUrl}/order?location=${locationId}&zone=${zone}`;
 
     const qrCodeDataUrl = await QRCode.toDataURL(url, {
       width: 400,
@@ -377,6 +379,7 @@ app.get('/api/qr/:tableNumber', async (req, res) => {
 
     res.json({
       tableNumber,
+      zone,
       url,
       qrCode: qrCodeDataUrl
     });
@@ -448,6 +451,60 @@ app.get('/api/analytics', (req, res) => {
     .slice(0, 20);
 
   res.json(analytics);
+});
+
+// Get all current orders (for dashboard recovery on refresh)
+app.get('/api/orders', (req, res) => {
+  const orderList = Array.from(orders.values())
+    .filter(o => !['delivered', 'cancelled', 'refunded'].includes(o.status))
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  res.json(orderList);
+});
+
+// Get all orders including completed (for full history)
+app.get('/api/orders/all', (req, res) => {
+  const orderList = Array.from(orders.values())
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  res.json(orderList);
+});
+
+// Get active table sessions (for dashboard recovery)
+app.get('/api/sessions', (req, res) => {
+  const sessions = Array.from(activeTables.values());
+  res.json(sessions);
+});
+
+// Get pending access requests (for dashboard recovery)
+app.get('/api/access-requests', (req, res) => {
+  const requests = Array.from(accessRequests.values())
+    .filter(r => r.status === 'pending')
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  res.json(requests);
+});
+
+// Get pending refund requests (for dashboard recovery)
+app.get('/api/refund-requests', (req, res) => {
+  const requests = Array.from(refundRequests.values())
+    .filter(r => r.status === 'pending')
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  res.json(requests);
+});
+
+// Get chat messages for a table
+app.get('/api/messages/:tableNumber', (req, res) => {
+  const tableNumber = parseInt(req.params.tableNumber);
+  const tableMessages = messages.get(`table-${tableNumber}`) || [];
+  res.json(tableMessages);
+});
+
+// Get all chat messages (for manager view)
+app.get('/api/messages', (req, res) => {
+  const allMessages: any[] = [];
+  messages.forEach((msgs) => {
+    allMessages.push(...msgs);
+  });
+  allMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  res.json(allMessages);
 });
 
 // Get table session info
@@ -648,7 +705,7 @@ io.on('connection', (socket) => {
 
     const foodItems = order.items.filter(item => item.category === 'food');
     const drinkItems = order.items.filter(item =>
-      ['cocktails', 'spirits', 'wine', 'nonalc', 'brandy', 'tequila', 'sparkling-wine', 'liquor'].includes(item.category)
+      ['cocktails', 'spirits', 'wine', 'nonalc', 'brandy', 'tequila', 'sparkling-wine', 'liquor', 'mixers', 'energy-drinks', 'beer'].includes(item.category)
     );
     const shishaItems = order.items.filter(item => item.category === 'shisha');
 
@@ -726,7 +783,7 @@ io.on('connection', (socket) => {
           io.to('staff-kitchen').emit('order-status-update', { orderId, status });
         }
         const drinkItems = order.items.filter(item => 
-          ['cocktails', 'spirits', 'wine', 'nonalc', 'shisha', 'brandy', 'tequila', 'sparkling-wine', 'liquor'].includes(item.category)
+          ['cocktails', 'spirits', 'wine', 'nonalc', 'shisha', 'brandy', 'tequila', 'sparkling-wine', 'liquor', 'mixers', 'energy-drinks', 'beer'].includes(item.category)
         );
         if (drinkItems.length > 0) {
           io.to('staff-bar').emit('order-status-update', { orderId, status });
