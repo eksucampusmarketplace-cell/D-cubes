@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { CartItem, MenuItem } from '@/types';
 
 interface CartContextType {
@@ -15,9 +15,50 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const CART_STORAGE_KEY = 'dcubes_cart';
+const CART_EXPIRY_KEY = 'dcubes_cart_expiry';
+const CART_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+function loadCartFromStorage(): CartItem[] {
+  try {
+    const expiry = localStorage.getItem(CART_EXPIRY_KEY);
+    if (expiry) {
+      const expiryTime = parseInt(expiry, 10);
+      if (Date.now() > expiryTime) {
+        localStorage.removeItem(CART_STORAGE_KEY);
+        localStorage.removeItem(CART_EXPIRY_KEY);
+        return [];
+      }
+    }
+    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCartToStorage(items: CartItem[]) {
+  try {
+    if (items.length === 0) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(CART_EXPIRY_KEY);
+    } else {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem(CART_EXPIRY_KEY, String(Date.now() + CART_TTL_MS));
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => loadCartFromStorage());
   const [isOpen, setIsOpen] = useState(false);
+
+  // Persist cart to localStorage whenever it changes
+  useEffect(() => {
+    saveCartToStorage(items);
+  }, [items]);
 
   const addItem = useCallback((item: MenuItem) => {
     setItems(prev => {
