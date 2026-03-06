@@ -78,6 +78,16 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       window.dispatchEvent(new CustomEvent('receipt-generated', { detail: receipt }));
     });
 
+    // Listen for order errors
+    newSocket.on('order-error', (error: { error: string; message: string }) => {
+      window.dispatchEvent(new CustomEvent('order-error', { detail: error }));
+    });
+
+    // Listen for check-in errors
+    newSocket.on('check-in-error', (error: { error: string; message: string }) => {
+      window.dispatchEvent(new CustomEvent('check-in-error', { detail: error }));
+    });
+
     setSocket(newSocket);
 
     return () => {

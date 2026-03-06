@@ -242,6 +242,12 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setSessionId(data.sessionId);
     };
 
+    const handleCheckInError = (error: { error: string; message: string }) => {
+      setIsCheckedIn(false);
+      clearPersistedSession();
+      alert(error.message || 'Check-in failed. Please ask staff for assistance.');
+    };
+
     const handleSessionEnded = () => {
       setIsCheckedIn(false);
       clearPersistedSession();
@@ -250,12 +256,14 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     socket.on('order-status-update', handleOrderUpdate);
     socket.on('new-message', handleNewMessage);
     socket.on('check-in-success', handleCheckInSuccess);
+    socket.on('check-in-error', handleCheckInError);
     socket.on('session-ended-client', handleSessionEnded);
 
     return () => {
       socket.off('order-status-update', handleOrderUpdate);
       socket.off('new-message', handleNewMessage);
       socket.off('check-in-success', handleCheckInSuccess);
+      socket.off('check-in-error', handleCheckInError);
       socket.off('session-ended-client', handleSessionEnded);
     };
   }, [socket, tableNumber]);
