@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import QRCode from 'qrcode';
@@ -13,11 +14,56 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+// ============================================
+// SECURITY HEADERS (Helmet.js)
+// ============================================
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'", process.env.CLIENT_URL || "http://localhost:3000"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow images from external sources
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  referrerPolicy: {
+    policy: "strict-origin-when-cross-origin"
+  },
+  noSniff: true,
+  xssFilter: true,
+  permittedCrossDomainPolicies: false
+}));
+
+// Additional security headers for API
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  next();
+});
+
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.CLIENT_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  // Heartbeat configuration
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ['websocket', 'polling']
 });
 
 // ============================================
@@ -357,13 +403,79 @@ const generateReceiptHTML = (receipt: Receipt): string => {
 // API ROUTES
 // ============================================
 
-app.get('/api/health', (req, res) => {
-  res.json({
+// ============================================
+// ENHANCED HEALTH CHECK
+// ============================================
+
+app.get('/api/health', async (req, res) => {
+  const health = {
     status: 'ok',
     timestamp: new Date().toISOString(),
-    telegramEnabled: Boolean(TELEGRAM_BOT_TOKEN),
-    databaseConnected: db.isConnected()
-  });
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || '1.0.0',
+    services: {
+      telegram: {
+        enabled: Boolean(TELEGRAM_BOT_TOKEN),
+        configured: Boolean(TELEGRAM_BOT_TOKEN && TELEGRAM_BOT_TOKEN !== 'your_bot_token_here')
+      },
+      database: {
+        connected: db.isConnected(),
+        type: db.isConnected() ? 'supabase' : 'in-memory'
+      },
+      webSocket: {
+        connections: io.engine.clientsCount,
+        staffOnline: staffOnlineStatus?.size || 0
+      }
+    },
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+      unit: 'MB'
+    }
+  };
+
+  // Return 503 if critical services are down
+  const isHealthy = health.services.database.connected;
+  
+  res.status(isHealthy ? 200 : 503).json(health);
+});
+
+// Detailed health check for monitoring
+app.get('/api/health/detailed', async (req, res) => {
+  const detailed = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    services: {
+      telegram: {
+        enabled: Boolean(TELEGRAM_BOT_TOKEN),
+        botToken: TELEGRAM_BOT_TOKEN ? 'configured' : 'missing',
+        kitchenChat: KITCHEN_CHAT_ID ? 'configured' : 'missing',
+        barChat: BAR_CHAT_ID ? 'configured' : 'missing',
+        managerChat: MANAGER_CHAT_ID ? 'configured' : 'missing'
+      },
+      database: {
+        connected: db.isConnected(),
+        stats: db.isConnected() ? await db.getStorageStats() : null
+      },
+      webSocket: {
+        totalConnections: io.engine.clientsCount,
+        staffOnline: Array.from(staffOnlineStatus?.values() || []).map(s => ({
+          role: s.role,
+          joinedAt: s.joinedAt
+        })),
+        activeTables: activeTables?.size || 0
+      }
+    },
+    metrics: {
+      totalOrders: orders?.size || 0,
+      pendingOrders: Array.from(orders?.values() || []).filter(o => o.status === 'pending').length,
+      activeSessions: activeTables?.size || 0,
+      pendingAccessRequests: Array.from(accessRequests?.values() || []).filter(r => r.status === 'pending').length
+    }
+  };
+
+  res.json(detailed);
 });
 
 // Generate QR code for a table
