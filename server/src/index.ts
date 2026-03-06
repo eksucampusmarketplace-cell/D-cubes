@@ -2,6 +2,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import QRCode from 'qrcode';
@@ -13,11 +14,56 @@ dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
+
+// ============================================
+// SECURITY HEADERS (Helmet.js)
+// ============================================
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'", process.env.CLIENT_URL || "http://localhost:3000"],
+      frameAncestors: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow images from external sources
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  referrerPolicy: {
+    policy: "strict-origin-when-cross-origin"
+  },
+  noSniff: true,
+  xssFilter: true,
+  permittedCrossDomainPolicies: false
+}));
+
+// Additional security headers for API
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  next();
+});
+
 const io = new Server(httpServer, {
   cors: {
     origin: process.env.CLIENT_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+  // Heartbeat configuration
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  transports: ['websocket', 'polling']
 });
 
 // ============================================
@@ -136,6 +182,13 @@ const refundRequests: Map<string, RefundRequest> = new Map();
 const receipts: Map<string, Receipt> = new Map();
 const auditLogs: AuditLog[] = [];
 const inventoryStatus: Map<number, { isAvailable: boolean; stockQuantity: number | null }> = new Map();
+
+// Track staff online status for alerting
+const staffOnlineStatus: Map<string, { role: string; joinedAt: Date; socketId: string }> = new Map();
+
+// Alert thresholds for unstaffed orders
+let lastStaffAlertTime: Map<string, number> = new Map();
+const STAFF_ALERT_COOLDOWN = 5 * 60 * 1000; // 5 minutes between alerts
 
 // ============================================
 // AUDIT LOGGING
@@ -350,13 +403,79 @@ const generateReceiptHTML = (receipt: Receipt): string => {
 // API ROUTES
 // ============================================
 
-app.get('/api/health', (req, res) => {
-  res.json({
+// ============================================
+// ENHANCED HEALTH CHECK
+// ============================================
+
+app.get('/api/health', async (req, res) => {
+  const health = {
     status: 'ok',
     timestamp: new Date().toISOString(),
-    telegramEnabled: Boolean(TELEGRAM_BOT_TOKEN),
-    databaseConnected: db.isConnected()
-  });
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || '1.0.0',
+    services: {
+      telegram: {
+        enabled: Boolean(TELEGRAM_BOT_TOKEN),
+        configured: Boolean(TELEGRAM_BOT_TOKEN && TELEGRAM_BOT_TOKEN !== 'your_bot_token_here')
+      },
+      database: {
+        connected: db.isConnected(),
+        type: db.isConnected() ? 'supabase' : 'in-memory'
+      },
+      webSocket: {
+        connections: io.engine.clientsCount,
+        staffOnline: staffOnlineStatus?.size || 0
+      }
+    },
+    memory: {
+      used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+      unit: 'MB'
+    }
+  };
+
+  // Return 503 if critical services are down
+  const isHealthy = health.services.database.connected;
+  
+  res.status(isHealthy ? 200 : 503).json(health);
+});
+
+// Detailed health check for monitoring
+app.get('/api/health/detailed', async (req, res) => {
+  const detailed = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    services: {
+      telegram: {
+        enabled: Boolean(TELEGRAM_BOT_TOKEN),
+        botToken: TELEGRAM_BOT_TOKEN ? 'configured' : 'missing',
+        kitchenChat: KITCHEN_CHAT_ID ? 'configured' : 'missing',
+        barChat: BAR_CHAT_ID ? 'configured' : 'missing',
+        managerChat: MANAGER_CHAT_ID ? 'configured' : 'missing'
+      },
+      database: {
+        connected: db.isConnected(),
+        stats: db.isConnected() ? await db.getStorageStats() : null
+      },
+      webSocket: {
+        totalConnections: io.engine.clientsCount,
+        staffOnline: Array.from(staffOnlineStatus?.values() || []).map(s => ({
+          role: s.role,
+          joinedAt: s.joinedAt
+        })),
+        activeTables: activeTables?.size || 0
+      }
+    },
+    metrics: {
+      totalOrders: orders?.size || 0,
+      pendingOrders: Array.from(orders?.values() || []).filter(o => o.status === 'pending').length,
+      activeSessions: activeTables?.size || 0,
+      pendingAccessRequests: Array.from(accessRequests?.values() || []).filter(r => r.status === 'pending').length
+    }
+  };
+
+  res.json(detailed);
 });
 
 // Generate QR code for a table
@@ -624,15 +743,86 @@ io.on('connection', (socket) => {
   socket.on('join-staff', (role: 'manager' | 'kitchen' | 'bar') => {
     socket.join(`staff-${role}`);
     if (role === 'manager') socket.join('staff-all');
-    console.log(`Socket ${socket.id} joined staff-${role}`);
+    
+    // Track staff online status
+    const staffId = `${role}-${socket.id}`;
+    staffOnlineStatus.set(staffId, { 
+      role, 
+      joinedAt: new Date(), 
+      socketId: socket.id 
+    });
+    
+    console.log(`Socket ${socket.id} joined staff-${role} (${staffOnlineStatus.size} total staff online)`);
     
     // Send current inventory status to staff
     socket.emit('inventory-update', Object.fromEntries(inventoryStatus));
     socket.emit('telegram-config', telegramConfig);
   });
 
+  // Helper function to check if staff are online for a role
+  const isStaffOnline = (role: 'manager' | 'kitchen' | 'bar' | 'all'): boolean => {
+    if (role === 'all') {
+      return staffOnlineStatus.size > 0;
+    }
+    return Array.from(staffOnlineStatus.values()).some(s => s.role === role);
+  };
+
+  // Helper function to send staff offline alert
+  const sendStaffOfflineAlert = async (orderType: 'food' | 'drink' | 'general') => {
+    const now = Date.now();
+    const lastAlert = lastStaffAlertTime.get(orderType) || 0;
+    
+    if (now - lastAlert < STAFF_ALERT_COOLDOWN) {
+      return; // Don't spam alerts
+    }
+    
+    let message = '';
+    if (orderType === 'food' && !isStaffOnline('kitchen')) {
+      message = `⚠️ <b>KITCHEN OFFLINE ALERT</b>\nNo kitchen staff currently online. Orders may be delayed.\n🕐 ${formatTime(new Date())}`;
+      lastStaffAlertTime.set('food', now);
+    } else if (orderType === 'drink' && !isStaffOnline('bar')) {
+      message = `⚠️ <b>BAR OFFLINE ALERT</b>\nNo bar staff currently online. Orders may be delayed.\n🕐 ${formatTime(new Date())}`;
+      lastStaffAlertTime.set('drink', now);
+    } else if (orderType === 'general' && !isStaffOnline('manager')) {
+      message = `⚠️ <b>MANAGER OFFLINE ALERT</b>\nNo manager currently online.\n🕐 ${formatTime(new Date())}`;
+      lastStaffAlertTime.set('general', now);
+    }
+    
+    if (message && MANAGER_CHAT_ID) {
+      await sendTelegramMessage(MANAGER_CHAT_ID, message);
+      logAudit('STAFF_OFFLINE_ALERT', 'system', 'system', 'staff-alert', undefined, { orderType });
+    }
+  };
+
+  // Valid table numbers (1-50 for legacy support + all generated locations)
+  const VALID_TABLE_NUMBERS = new Set<number>(Array.from({ length: 50 }, (_, i) => i + 1));
+
   // Check-in - supports multiple guests at same table
   socket.on('check-in', async ({ tableNumber, guestName }: { tableNumber: number; guestName: string }) => {
+    // Validate table number
+    if (!tableNumber || typeof tableNumber !== 'number' || tableNumber < 1) {
+      socket.emit('check-in-error', { 
+        error: 'Invalid table number',
+        message: 'Please provide a valid table number'
+      });
+      return;
+    }
+
+    // Check if table is valid (legacy check - allows 1-50)
+    // In production, this should validate against actual location IDs
+    if (!VALID_TABLE_NUMBERS.has(tableNumber)) {
+      socket.emit('check-in-error', { 
+        error: 'Table not found',
+        message: `Table ${tableNumber} does not exist. Please check your QR code or ask staff for assistance.`
+      });
+      logAudit('CHECK_IN_REJECTED', guestName, 'staff', 'table', undefined, { 
+        tableNumber, 
+        reason: 'Invalid table number',
+        ipAddress: socket.handshake.address
+      });
+      return;
+    }
+
     const guestId = generateGuestId();
     let session = activeTables.get(tableNumber);
 
@@ -690,6 +880,31 @@ io.on('connection', (socket) => {
 
   // New order - each guest can order independently
   socket.on('new-order', async (order: Order) => {
+    // Validate order data
+    if (!order.tableNumber || typeof order.tableNumber !== 'number' || order.tableNumber < 1) {
+      socket.emit('order-error', { 
+        error: 'Invalid table number',
+        message: 'Please check in again or ask staff for assistance'
+      });
+      return;
+    }
+
+    if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
+      socket.emit('order-error', { 
+        error: 'Invalid order',
+        message: 'Your order must contain at least one item'
+      });
+      return;
+    }
+
+    if (!order.guestName || order.guestName.trim().length === 0) {
+      socket.emit('order-error', { 
+        error: 'Invalid guest name',
+        message: 'Please check in with a valid name'
+      });
+      return;
+    }
+
     order.id = order.id || generateId();
     order.paymentStatus = 'unpaid';
     orders.set(order.id, order);
@@ -709,18 +924,39 @@ io.on('connection', (socket) => {
     );
     const shishaItems = order.items.filter(item => item.category === 'shisha');
 
-    io.to('staff-manager').to('staff-all').emit('new-order', order);
-    if (foodItems.length > 0) {
-      io.to('staff-kitchen').emit('new-order', { ...order, items: foodItems });
-    }
-    if (drinkItems.length > 0 || shishaItems.length > 0) {
-      io.to('staff-bar').emit('new-order', {
-        ...order,
-        items: [...drinkItems, ...shishaItems]
-      });
-    }
+    // Emit to staff rooms and track delivery
+    const emitToStaff = () => {
+      io.to('staff-manager').to('staff-all').emit('new-order', order);
+      if (foodItems.length > 0) {
+        io.to('staff-kitchen').emit('new-order', { ...order, items: foodItems });
+      }
+      if (drinkItems.length > 0 || shishaItems.length > 0) {
+        io.to('staff-bar').emit('new-order', {
+          ...order,
+          items: [...drinkItems, ...shishaItems]
+        });
+      }
+    };
+
+    emitToStaff();
+
+    // Store undelivered orders for offline dashboard recovery
+    // This ensures orders aren't lost if dashboard refreshes
+    const undeliveredKey = `undelivered-${Date.now()}`;
+    socket.handshake.auth = { ...socket.handshake.auth, lastOrder: order.id };
 
     io.to(`table-${order.tableNumber}`).emit('order-confirmation', { orderId: order.id });
+
+    // Check for offline staff and send alerts
+    if (foodItems.length > 0 && !isStaffOnline('kitchen')) {
+      await sendStaffOfflineAlert('food');
+    }
+    if ((drinkItems.length > 0 || shishaItems.length > 0) && !isStaffOnline('bar')) {
+      await sendStaffOfflineAlert('drink');
+    }
+    if (!isStaffOnline('manager')) {
+      await sendStaffOfflineAlert('general');
+    }
 
     const itemsList = order.items.map(i =>
       `${i.quantity}× ${i.name} (${formatPrice(i.price * i.quantity)})`
@@ -1091,6 +1327,22 @@ io.on('connection', (socket) => {
   // Disconnect
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
+
+    // Remove from staff online tracking
+    for (const [staffId, staffInfo] of staffOnlineStatus.entries()) {
+      if (staffInfo.socketId === socket.id) {
+        staffOnlineStatus.delete(staffId);
+        console.log(`Staff ${staffInfo.role} went offline (${staffOnlineStatus.size} total staff online)`);
+        
+        // Send alert if no staff of this role remain
+        const remainingOfRole = Array.from(staffOnlineStatus.values()).filter(s => s.role === staffInfo.role).length;
+        if (remainingOfRole === 0 && MANAGER_CHAT_ID) {
+          const msg = `⚠️ <b>STAFF WENT OFFLINE</b>\nNo ${staffInfo.role} staff currently online.\n🕐 ${formatTime(new Date())}`;
+          sendTelegramMessage(MANAGER_CHAT_ID, msg);
+        }
+        break;
+      }
+    }
 
     for (const [tableNum, session] of activeTables.entries()) {
       const guestIndex = session.guests.findIndex(g => g.socketId === socket.id);

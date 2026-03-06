@@ -50,16 +50,56 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return origin;
     })();
 
-    const newSocket = io(socketUrl);
+    // Configure socket with reconnection logic
+    const newSocket = io(socketUrl, {
+      transports: ['websocket', 'polling'], // Fallback to polling if websocket fails
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
+      timeout: 20000,
+      withCredentials: true
+    });
 
+    // Connection event handlers
     newSocket.on('connect', () => {
       console.log('Connected to server');
       setIsConnected(true);
+      
+      // Rejoin previous rooms if reconnecting
+      const lastTable = sessionStorage.getItem('last_table');
+      if (lastTable) {
+        newSocket.emit('join-table', parseInt(lastTable, 10));
+      }
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from server');
+    newSocket.on('disconnect', (reason) => {
+      console.log('Disconnected from server:', reason);
       setIsConnected(false);
+    });
+
+    // Reconnection events
+    newSocket.io.on('reconnect_attempt', (attempt) => {
+      console.log(`Reconnection attempt ${attempt}`);
+    });
+
+    newSocket.io.on('reconnect', (attempt) => {
+      console.log(`Reconnected after ${attempt} attempts`);
+      setIsConnected(true);
+    });
+
+    newSocket.io.on('reconnect_error', (error) => {
+      console.error('Reconnection error:', error);
+    });
+
+    newSocket.io.on('reconnect_failed', () => {
+      console.error('Failed to reconnect after all attempts');
+    });
+
+    // Ping/pong for connection health
+    newSocket.on('ping', () => {
+      console.debug('Ping received from server');
     });
 
     // Listen for inventory updates
@@ -76,6 +116,16 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     newSocket.on('receipt-generated', (receipt: Receipt) => {
       // Emit custom event for components to listen
       window.dispatchEvent(new CustomEvent('receipt-generated', { detail: receipt }));
+    });
+
+    // Listen for order errors
+    newSocket.on('order-error', (error: { error: string; message: string }) => {
+      window.dispatchEvent(new CustomEvent('order-error', { detail: error }));
+    });
+
+    // Listen for check-in errors
+    newSocket.on('check-in-error', (error: { error: string; message: string }) => {
+      window.dispatchEvent(new CustomEvent('check-in-error', { detail: error }));
     });
 
     setSocket(newSocket);

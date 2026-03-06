@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTable } from '@/context/TableContext';
 import { useCart } from '@/context/CartContext';
+import { useSocket } from '@/context/SocketContext';
 import { CheckInScreen } from '@/components/CheckInScreen';
 import { ZoneSelectionScreen } from '@/components/ZoneSelectionScreen';
 import { MenuItemCard } from '@/components/MenuItemCard';
@@ -50,11 +51,13 @@ export const CustomerPage: React.FC = () => {
     setLocationFromZone
   } = useTable();
   const { itemCount, total, isOpen: cartOpen, setIsOpen: setCartOpen } = useCart();
+  const { isConnected } = useSocket();
   const [hasCheckedIn, setHasCheckedIn] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category>('all');
   const [chatOpen, setChatOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showZoneSelection, setShowZoneSelection] = useState(false);
+  const [showConnectionAlert, setShowConnectionAlert] = useState(false);
 
   // Check if we need to show zone selection (no QR params)
   useEffect(() => {
@@ -85,6 +88,15 @@ export const CustomerPage: React.FC = () => {
       setHasCheckedIn(true);
     }
   }, [isCheckedIn]);
+
+  // Show connection alert when disconnected
+  useEffect(() => {
+    if (!isConnected) {
+      setShowConnectionAlert(true);
+    } else {
+      setShowConnectionAlert(false);
+    }
+  }, [isConnected]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -172,6 +184,27 @@ export const CustomerPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black">
+      {/* Connection Status Alert */}
+      {showConnectionAlert && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-gradient-to-r from-amber-600 to-orange-500 text-white px-4 py-3 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="font-medium text-sm">Connection lost. Some features may be unavailable.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowConnectionAlert(false)}
+            className="text-white/80 hover:text-white"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Hero Section with Zone-Specific Ambiance */}
       <div className="relative h-[40vh] min-h-[350px] overflow-hidden">
         {/* Background Image with Nightlife Filter */}
