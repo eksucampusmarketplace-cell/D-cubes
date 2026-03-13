@@ -70,6 +70,13 @@ export const KitchenDashboard: React.FC = () => {
   }, [joinStaff]);
 
   useEffect(() => {
+    if (!socket) return;
+    const handleReconnect = () => joinStaff('kitchen');
+    socket.on('connect', handleReconnect);
+    return () => { socket.off('connect', handleReconnect); };
+  }, [socket, joinStaff]);
+
+  useEffect(() => {
     return () => {
       if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
     };

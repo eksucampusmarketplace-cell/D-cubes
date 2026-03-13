@@ -75,6 +75,13 @@ export const BarDashboard: React.FC = () => {
   }, [joinStaff]);
 
   useEffect(() => {
+    if (!socket) return;
+    const handleReconnect = () => joinStaff('bar');
+    socket.on('connect', handleReconnect);
+    return () => { socket.off('connect', handleReconnect); };
+  }, [socket, joinStaff]);
+
+  useEffect(() => {
     return () => {
       if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
     };

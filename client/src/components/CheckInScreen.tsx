@@ -131,7 +131,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
           {/* Tagline */}
           <p className="text-[13px] tracking-[0.3em] uppercase text-gold font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
-            Open bar, Lounge, Nightlife
+            Open bar, Lounge, Club
           </p>
         </div>
 
@@ -158,7 +158,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
                 
                 {/* Label */}
                 <span className="text-[10px] tracking-[0.3em] uppercase text-white font-medium mt-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                  {location?.type === 'bar-stool' ? 'Bar Stool' : 
+                  {location?.type === 'bar-stool' ? 'Open Bar' : 
                    location?.type === 'lounge-seat' ? 'Lounge Seat' :
                    location?.type === 'poolside-cabana' ? 'Cabana' :
                    location?.type === 'standing-table' ? 'Standing Table' :
