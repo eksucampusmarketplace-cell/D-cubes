@@ -31,7 +31,7 @@ export const ZONES: Record<ZoneType, ZoneConfig> = {
   },
   'nightclub': {
     id: 'nightclub',
-    name: 'Nightclub',
+    name: 'Club',
     description: 'High energy area with drinks, bottle service, and dining',
     icon: '🎵',
     defaultMenus: ['nightclub', 'drinks-only'],
@@ -61,7 +61,7 @@ export const MENU_TYPE_NAMES: Record<MenuType, string> = {
   'drinks-only': 'Drinks Only',
   'bar': 'Bar Menu',
   'lounge': 'Lounge Menu',
-  'nightclub': 'Nightclub Menu',
+  'nightclub': 'Club Menu',
   'food': 'Food Menu'
 };
 
@@ -82,7 +82,7 @@ export function generateLocations(): Location[] {
     locations.push({
       id: `BAR-${String(i).padStart(2, '0')}`,
       number: i,
-      name: `Bar Stool ${i}`,
+      name: `Open Bar ${i}`,
       type: 'bar-stool',
       zone: 'open-bar',
       availableMenus: ['bar', 'drinks-only'],
@@ -137,12 +137,12 @@ export function generateLocations(): Location[] {
     });
   }
 
-  // Nightclub Floor Tables (NF-01 to NF-10)
+  // Club Floor Tables (NF-01 to NF-10)
   for (let i = 1; i <= 10; i++) {
     locations.push({
       id: `NF-${String(i).padStart(2, '0')}`,
       number: i,
-      name: `Nightclub Floor ${i}`,
+      name: `Club Floor ${i}`,
       type: 'table',
       zone: 'nightclub',
       availableMenus: ['nightclub', 'drinks-only'],

@@ -351,9 +351,9 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setLocation({
         id: newLocationId,
         number: num,
-        name: `${selectedZone === 'open-bar' ? (locType === 'bar-stool' ? 'Bar Stool' : 'Standing Table') : 
+        name: `${selectedZone === 'open-bar' ? (locType === 'bar-stool' ? 'Open Bar' : 'Standing Table') : 
                selectedZone === 'poolside' ? 'Poolside Cabana' :
-               selectedZone === 'nightclub' ? 'Nightclub Floor' :
+               selectedZone === 'nightclub' ? 'Club Floor' :
                locType === 'lounge-seat' ? 'Lounge Sofa' : 'Table'} ${num}`,
         type: locType,
         zone: selectedZone,

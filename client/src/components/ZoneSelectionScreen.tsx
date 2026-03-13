@@ -129,7 +129,7 @@ export const ZoneSelectionScreen: React.FC<ZoneSelectionScreenProps> = ({ onSele
           
           <p className="text-[13px] tracking-[0.3em] uppercase text-gold font-medium drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
              style={{ textShadow: '0 1px 2px rgba(0,0,0,0.9)' }}>
-            Open bar, Lounge, Nightlife
+            Open bar, Lounge, Club
           </p>
         </div>
 

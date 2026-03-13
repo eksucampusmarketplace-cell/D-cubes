@@ -72,8 +72,9 @@ export const ManagerDashboard: React.FC = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [ordersRes, accessRes, refundRes, sessionsRes, messagesRes] = await Promise.all([
+        const [ordersRes, allOrdersRes, accessRes, refundRes, sessionsRes, messagesRes] = await Promise.all([
           fetch('/api/orders'),
+          fetch('/api/orders/all'),
           fetch('/api/access-requests'),
           fetch('/api/refund-requests'),
           fetch('/api/sessions'),
@@ -86,6 +87,13 @@ export const ManagerDashboard: React.FC = () => {
           const unpaid = data.filter(o => o.paymentStatus === 'unpaid' && o.status !== 'cancelled').length;
           const pending = data.filter(o => o.status === 'pending').length;
           setStats(prev => ({ ...prev, newOrders: pending, unpaidOrders: unpaid }));
+        }
+
+        if (allOrdersRes.ok) {
+          const allData: Order[] = await allOrdersRes.json();
+          const revenue = allData.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + o.total, 0);
+          const delivered = allData.filter(o => o.status === 'delivered').length;
+          setStats(prev => ({ ...prev, revenue, delivered }));
         }
 
         if (accessRes.ok) {
@@ -102,10 +110,7 @@ export const ManagerDashboard: React.FC = () => {
           const data: TableSession[] = await sessionsRes.json();
           setStats(prev => ({ ...prev, activeTables: data.length }));
           data.forEach(session => {
-            updateTableStatus(session.tableNumber, {
-              isActive: true,
-              guestName: undefined
-            });
+            updateTableStatus(session.tableNumber, { isActive: true });
           });
         }
 
@@ -128,16 +133,25 @@ export const ManagerDashboard: React.FC = () => {
 
   useEffect(() => {
     if (!socket) return;
+    const handleReconnect = () => joinStaff('manager');
+    socket.on('connect', handleReconnect);
+    return () => { socket.off('connect', handleReconnect); };
+  }, [socket, joinStaff]);
+
+  useEffect(() => {
+    if (!socket) return;
 
     socket.on('new-order', (order: Order) => {
       setOrders(prev => {
         if (prev.some(o => o.id === order.id)) return prev;
         return [order, ...prev];
       });
-      setStats(prev => ({ ...prev, newOrders: prev.newOrders + 1 }));
-      if (order.paymentStatus === 'unpaid') {
-        setStats(prev => ({ ...prev, unpaidOrders: prev.unpaidOrders + 1 }));
-      }
+      setStats(prev => ({
+        ...prev,
+        newOrders: prev.newOrders + 1,
+        revenue: prev.revenue + order.total,
+        unpaidOrders: order.paymentStatus === 'unpaid' ? prev.unpaidOrders + 1 : prev.unpaidOrders
+      }));
       updateTableStatus(order.tableNumber, { hasPendingOrder: true });
       addTelegramMessage(`🍾 NEW ORDER — Table ${order.tableNumber}\n👤 ${order.guestName}\n💰 ${formatPrice(order.total)}`);
       triggerNewOrderAlert();
