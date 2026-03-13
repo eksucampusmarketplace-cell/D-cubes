@@ -69,22 +69,7 @@ ENV PORT=5000
 # Security: Don't run as root
 # Health check with proper timeout
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD node -e "
-    const http = require('http');
-    const options = {
-      hostname: 'localhost',
-      port: 5000,
-      path: '/api/health',
-      method: 'GET',
-      timeout: 3000
-    };
-    const req = http.request(options, (res) => {
-      process.exit(res.statusCode === 200 ? 0 : 1);
-    });
-    req.on('error', () => process.exit(1));
-    req.on('timeout', () => { req.destroy(); process.exit(1); });
-    req.end();
-  "
+  CMD node -e "const http=require('http');const o={hostname:'localhost',port:5000,path:'/api/health',method:'GET',timeout:3000};const r=http.request(o,(res)=>{process.exit(res.statusCode===200?0:1)});r.on('error',()=>process.exit(1));r.on('timeout',()=>{r.destroy();process.exit(1)});r.end()"
 
 # Use dumb-init to handle signals properly (PID 1 problem)
 ENTRYPOINT ["dumb-init", "--"]
