@@ -82,6 +82,9 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
     if (error) setError('');
   }, [error]);
 
+  // Check for existing auth on mount
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  
   useEffect(() => {
     const storedAuth = localStorage.getItem(`dcubes_auth_${role}`);
     if (storedAuth) {
@@ -95,15 +98,50 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
         localStorage.removeItem(`dcubes_auth_${role}`);
       }
     }
+    setHasCheckedAuth(true);
   }, [role]);
 
-  if (!isConnected) {
+  // Show loading spinner only while checking auth and not authenticated yet
+  if (!hasCheckedAuth) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">
         <div className="text-center">
           <div className="w-14 h-14 border-4 border-gold/20 border-t-gold rounded-full animate-spin mx-auto mb-5" />
-          <p className="text-cream/50 text-sm">Connecting to server...</p>
+          <p className="text-cream/50 text-sm">Loading...</p>
         </div>
+      </div>
+    );
+  }
+
+  // If authenticated but socket not connected yet, show the dashboard with a connection indicator
+  if (authenticated && !isConnected) {
+    return (
+      <div className="relative">
+        {/* Connection status banner */}
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-600/90 text-white px-4 py-2 flex items-center justify-center">
+          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+          <span className="text-sm">Reconnecting to server...</span>
+        </div>
+        {/* Authenticated Header */}
+        <div className="fixed top-10 right-0 z-50 m-4 flex items-center gap-3 bg-dark-2/90 backdrop-blur border border-gold/20 rounded-full px-4 py-2
+                      shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+          <span className="text-[10px] text-cream/50">Authenticated as</span>
+          <span className={`text-xs font-semibold capitalize px-2 py-1 rounded-full bg-gradient-to-r ${ROLE_COLORS[role]} text-gold`}>
+            {ROLE_ICONS[role]} {role}
+          </span>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="ml-1 w-7 h-7 rounded-full bg-gold/10 hover:bg-red-500/20 flex items-center justify-center text-cream/50 hover:text-red-400 transition-all"
+            title="Logout"
+            aria-label="Logout"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        {children}
       </div>
     );
   }
