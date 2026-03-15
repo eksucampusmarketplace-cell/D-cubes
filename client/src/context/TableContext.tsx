@@ -287,8 +287,9 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     setGuestName(name);
     // Don't set isCheckedIn until server confirms
-    socketCheckIn(targetTable, name);
-  }, [tableNumber, socketCheckIn]);
+    // Pass locationId if available to avoid table number collisions
+    socketCheckIn(targetTable, name, locationId || undefined);
+  }, [tableNumber, socketCheckIn, locationId]);
 
   // Set zone for exploring mode (no table selected)
   const setExploreZone = useCallback((selectedZone: ZoneType) => {

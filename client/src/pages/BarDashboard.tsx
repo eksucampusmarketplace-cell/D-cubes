@@ -163,6 +163,10 @@ const BarDashboardContent: React.FC = () => {
     updateOrderStatus(orderId, 'delivered');
   };
 
+  const handleMarkConfirmed = (orderId: string) => {
+    updateOrderStatus(orderId, 'confirmed');
+  };
+
   const tableOptions = useMemo(() => {
     const tables = new Set<number>();
     barOrders.forEach(order => tables.add(order.tableNumber));
@@ -382,6 +386,14 @@ const BarDashboardContent: React.FC = () => {
                         {/* Action Buttons */}
                         <div className="flex gap-2">
                           {order.status === 'pending' && (
+                            <button
+                              onClick={() => handleMarkConfirmed(order.id)}
+                              className="flex-1 py-3 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-all text-sm font-medium"
+                            >
+                              ✓ Confirm
+                            </button>
+                          )}
+                          {(order.status === 'pending' || order.status === 'confirmed') && (
                             <button
                               onClick={() => handleMarkPreparing(order.id)}
                               className="flex-1 py-3 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-all text-sm font-medium"

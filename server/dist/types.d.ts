@@ -24,6 +24,7 @@ export interface CartItem extends MenuItem {
 export interface Order {
     id: string;
     tableNumber: number;
+    locationId?: string;
     guestName: string;
     guestId: string;
     sessionId: string;
@@ -67,6 +68,7 @@ export interface Table {
 export interface TableSession {
     id: string;
     tableNumber: number;
+    locationId?: string;
     startTime: Date;
     endTime?: Date;
     isActive: boolean;

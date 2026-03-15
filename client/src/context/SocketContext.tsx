@@ -14,7 +14,7 @@ interface SocketContextType {
   isConnected: boolean;
   inventoryStatus: InventoryStatus;
   telegramConfig: TelegramNotificationConfig | null;
-  checkIn: (tableNumber: number, guestName: string) => void;
+  checkIn: (tableNumber: number, guestName: string, locationId?: string) => void;
   sendOrder: (order: Order) => void;
   sendAccessRequest: (request: AccessRequest) => void;
   sendMessage: (message: ChatMessage) => void;
@@ -142,8 +142,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
-  const checkIn = useCallback((tableNumber: number, guestName: string) => {
-    socket?.emit('check-in', { tableNumber, guestName });
+  const checkIn = useCallback((tableNumber: number, guestName: string, locationId?: string) => {
+    socket?.emit('check-in', { tableNumber, guestName, locationId });
   }, [socket]);
 
   const sendOrder = useCallback((order: Order) => {
@@ -192,8 +192,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket?.emit('cancel-order', { orderId, reason });
   }, [socket]);
 
-  const endSession = useCallback((tableNumber: number, finalBill: number) => {
-    socket?.emit('end-session', { tableNumber, finalBill });
+  const endSession = useCallback((tableNumber: number, finalBill: number, locationId?: string) => {
+    socket?.emit('end-session', { tableNumber, finalBill, locationId });
   }, [socket]);
 
   const updateInventory = useCallback((update: InventoryUpdate) => {

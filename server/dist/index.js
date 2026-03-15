@@ -111,10 +111,48 @@ const ipWhitelist = (req, res, next) => {
     }
     next();
 };
-app.use((0, cors_1.default)({ origin: process.env.CLIENT_URL || "http://localhost:3000", credentials: true }));
+// ============================================
+// CORS SETUP - Restrict to client URL only
+// ============================================
+const corsOptions = {
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
 app.use(rateLimiter);
 app.use(ipWhitelist);
+// Staff authentication middleware
+const staffAuthMiddleware = (req, res, next) => {
+    // Skip auth for health check and auth endpoints
+    if (req.path.startsWith('/api/health') ||
+        req.path.startsWith('/api/auth/') ||
+        req.path.startsWith('/api/qr/')) {
+        return next();
+    }
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized: No token provided' });
+    }
+    const token = authHeader.substring(7);
+    const [role, timestamp] = token.split('-');
+    // Validate role
+    const validRoles = ['manager', 'kitchen', 'bar'];
+    if (!validRoles.includes(role)) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    }
+    // Check token not expired (24 hours)
+    const tokenTime = parseInt(timestamp);
+    if (isNaN(tokenTime) || Date.now() - tokenTime > 24 * 60 * 60 * 1000) {
+        return res.status(401).json({ error: 'Unauthorized: Token expired' });
+    }
+    // Attach role to request for downstream handlers
+    req.staffRole = role;
+    next();
+};
+app.use(staffAuthMiddleware);
 // Serve static files from client in production
 if (process.env.NODE_ENV === 'production') {
     app.use(express_1.default.static(path_1.default.join(__dirname, '../../client/dist')));
@@ -164,6 +202,7 @@ let telegramConfig = {
 const orders = new Map();
 const accessRequests = new Map();
 const messages = new Map();
+// Session key is a string: either locationId (e.g., "T-001", "BAR-01") or legacy "table-{number}"
 const activeTables = new Map();
 const refundRequests = new Map();
 const receipts = new Map();
@@ -208,7 +247,7 @@ async function initializeDatabase() {
         data.orders.forEach((order, id) => orders.set(id, order));
         data.accessRequests.forEach((req, id) => accessRequests.set(id, req));
         data.messages.forEach((msgs, key) => messages.set(key, msgs));
-        data.activeTables.forEach((session, tableNum) => activeTables.set(tableNum, session));
+        data.activeTables.forEach((session, tableNum) => activeTables.set(String(tableNum), session));
         data.refundRequests.forEach((req, id) => refundRequests.set(id, req));
         // Schedule automatic cleanup every hour
         setInterval(async () => {
@@ -599,7 +638,7 @@ app.get('/api/messages', (req, res) => {
 // Get table session info
 app.get('/api/table/:tableNumber', (req, res) => {
     const tableNumber = parseInt(req.params.tableNumber);
-    const session = activeTables.get(tableNumber);
+    const session = activeTables.get(String(tableNumber));
     res.json({
         tableNumber,
         hasActiveSession: !!session,
@@ -805,8 +844,9 @@ io.on('connection', (socket) => {
             logAudit('STAFF_OFFLINE_ALERT', 'system', 'system', 'staff-alert', undefined, { orderType });
         }
     };
-    // Check-in - supports multiple guests at same table
-    socket.on('check-in', async ({ tableNumber, guestName }) => {
+    // Check-in - supports multiple guests at same table/location
+    // Uses locationId as primary key to avoid table number collisions across zones
+    socket.on('check-in', async ({ tableNumber, guestName, locationId }) => {
         // Validate guest name (server-side validation)
         if (!guestName || guestName.trim().length === 0) {
             socket.emit('check-in-error', {
@@ -822,41 +862,44 @@ io.on('connection', (socket) => {
             });
             return;
         }
-        // Validate table number
-        if (!tableNumber || typeof tableNumber !== 'number' || tableNumber < 1) {
+        // Determine the unique session key - prefer locationId, fall back to tableNumber
+        const sessionKey = locationId || (tableNumber ? `table-${tableNumber}` : null);
+        if (!sessionKey) {
             socket.emit('check-in-error', {
-                error: 'Invalid table number',
-                message: 'Please provide a valid table number'
+                error: 'Invalid location',
+                message: 'Please provide a valid table number or location ID'
             });
             return;
         }
-        // Check if table is valid (legacy check - allows 1-50)
-        // In production, this should validate against actual location IDs
-        if (!VALID_TABLE_NUMBERS.has(tableNumber)) {
-            socket.emit('check-in-error', {
-                error: 'Table not found',
-                message: `Table ${tableNumber} does not exist. Please check your QR code or ask staff for assistance.`
-            });
-            logAudit('CHECK_IN_REJECTED', guestName, 'staff', 'table', undefined, {
-                tableNumber,
-                reason: 'Invalid table number',
-                ipAddress: socket.handshake.address
-            });
-            return;
+        // If using tableNumber (legacy), validate it's in valid range
+        if (!locationId && tableNumber) {
+            if (!VALID_TABLE_NUMBERS.has(tableNumber)) {
+                socket.emit('check-in-error', {
+                    error: 'Table not found',
+                    message: `Table ${tableNumber} does not exist. Please check your QR code or ask staff for assistance.`
+                });
+                logAudit('CHECK_IN_REJECTED', guestName, 'staff', 'table', undefined, {
+                    tableNumber,
+                    reason: 'Invalid table number',
+                    ipAddress: socket.handshake.address
+                });
+                return;
+            }
         }
         const guestId = generateGuestId();
-        let session = activeTables.get(tableNumber);
+        let session = activeTables.get(sessionKey);
         if (!session || !session.isActive) {
             session = {
                 id: generateSessionId(),
-                tableNumber,
+                tableNumber: tableNumber || 0,
+                locationId: locationId || undefined,
                 startTime: new Date(),
                 isActive: true,
                 guests: [],
                 totalOrders: 0,
                 totalSpent: 0
             };
-            activeTables.set(tableNumber, session);
+            activeTables.set(sessionKey, session);
             database_1.db.saveTableSession(session).catch(err => console.error('Failed to save session to DB:', err));
         }
         const guest = {
@@ -866,29 +909,36 @@ io.on('connection', (socket) => {
             checkInTime: new Date()
         };
         session.guests.push(guest);
-        socket.join(`table-${tableNumber}`);
+        // Join both the session key room and legacy table room for compatibility
+        socket.join(`table-${sessionKey}`);
+        if (tableNumber) {
+            socket.join(`table-${tableNumber}`);
+        }
         io.to('staff-manager').to('staff-all').emit('check-in', {
-            tableNumber,
+            tableNumber: session.tableNumber,
+            locationId: session.locationId,
             guestName,
             guestId,
             sessionId: session.id,
             guestCount: session.guests.length
         });
         if (telegramConfig.session) {
+            const locationDisplay = locationId || `Table ${tableNumber}`;
             const message = session.guests.length === 1
-                ? `✅ <b>NEW SESSION</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n🕐 ${formatTime(new Date())}`
-                : `👥 <b>GUEST JOINED</b>\n🪑 Table ${tableNumber}\n👤 ${guestName}\n👥 ${session.guests.length} guests\n🕐 ${formatTime(new Date())}`;
+                ? `✅ <b>NEW SESSION</b>\n🪑 ${locationDisplay}\n👤 ${guestName}\n🕐 ${formatTime(new Date())}`
+                : `👥 <b>GUEST JOINED</b>\n🪑 ${locationDisplay}\n👤 ${guestName}\n👥 ${session.guests.length} guests\n🕐 ${formatTime(new Date())}`;
             await sendTelegramMessage(MANAGER_CHAT_ID, message);
         }
         socket.emit('check-in-success', {
-            tableNumber,
+            tableNumber: session.tableNumber,
+            locationId: session.locationId,
             guestName,
             guestId,
             sessionId: session.id,
             guestCount: session.guests.length
         });
-        logAudit('CHECK_IN', guestName, 'staff', 'table', session.id, { tableNumber, guestId }, socket.handshake.address);
-        console.log(`Check-in: Table ${tableNumber} - ${guestName} (Session: ${session.id}, Guests: ${session.guests.length})`);
+        logAudit('CHECK_IN', guestName, 'staff', 'table', session.id, { sessionKey, tableNumber, locationId, guestId }, socket.handshake.address);
+        console.log(`Check-in: ${sessionKey} - ${guestName} (Session: ${session.id}, Guests: ${session.guests.length})`);
     });
     // New order - each guest can order independently
     socket.on('new-order', async (order) => {
@@ -939,11 +989,12 @@ io.on('connection', (socket) => {
         order.paymentStatus = 'unpaid';
         orders.set(order.id, order);
         database_1.db.saveOrder(order).catch(err => console.error('Failed to save order to DB:', err));
-        const session = activeTables.get(order.tableNumber);
+        const sessionKey = order.locationId || String(order.tableNumber);
+        const session = activeTables.get(sessionKey);
         if (session) {
             session.totalOrders++;
             session.totalSpent += order.total;
-            activeTables.set(order.tableNumber, session);
+            activeTables.set(sessionKey, session);
         }
         const foodItems = order.items.filter(item => item.category === 'food');
         const drinkItems = order.items.filter(item => ['cocktails', 'spirits', 'wine', 'nonalc', 'brandy', 'tequila', 'sparkling-wine', 'liquor', 'mixers', 'energy-drinks', 'beer'].includes(item.category));
@@ -1216,13 +1267,15 @@ io.on('connection', (socket) => {
         }
     });
     // End table session (table turnover) - generates final bill
-    socket.on('end-session', async ({ tableNumber, finalBill }) => {
+    socket.on('end-session', async ({ tableNumber, locationId, finalBill }) => {
         // Authorization check - only manager can end sessions
         if (!hasStaffRole(['manager'])) {
             socket.emit('error', { message: 'Unauthorized: Manager role required' });
             return;
         }
-        const session = activeTables.get(tableNumber);
+        // Determine session key - prefer locationId, fallback to tableNumber as string
+        const sessionKey = locationId || String(tableNumber);
+        const session = activeTables.get(sessionKey);
         if (session) {
             session.isActive = false;
             session.endTime = new Date();
@@ -1252,11 +1305,13 @@ io.on('connection', (socket) => {
                 receipts.set(finalReceipt.id, finalReceipt);
                 io.to('staff-manager').to('staff-all').emit('session-receipt', {
                     tableNumber,
+                    locationId: session.locationId,
                     receipt: finalReceipt
                 });
             }
             io.to('staff-manager').to('staff-all').emit('session-ended', {
                 tableNumber,
+                locationId: session.locationId,
                 sessionId: session.id,
                 duration: Math.floor((session.endTime.getTime() - session.startTime.getTime()) / 60000),
                 guestCount: session.guests.length,
@@ -1264,22 +1319,26 @@ io.on('connection', (socket) => {
                 totalSpent: finalBill
             });
             if (telegramConfig.session) {
-                const msg = `🧹 <b>SESSION ENDED</b> — Table ${tableNumber}\n` +
+                const locationDisplay = session.locationId || `Table ${tableNumber}`;
+                const msg = `🧹 <b>SESSION ENDED</b> — ${locationDisplay}\n` +
                     `👥 ${session.guests.length} guests\n` +
                     `📦 ${session.totalOrders} orders\n` +
                     `💰 ${formatPrice(finalBill)}`;
                 await sendTelegramMessage(MANAGER_CHAT_ID, msg);
             }
-            activeTables.delete(tableNumber);
-            io.to(`table-${tableNumber}`).emit('session-ended-client', {
+            activeTables.delete(sessionKey);
+            io.to(`table-${sessionKey}`).emit('session-ended-client', {
                 sessionId: session.id
             });
             logAudit('SESSION_ENDED', 'staff', 'staff', 'session', session.id, {
+                sessionKey,
                 tableNumber,
+                locationId: session.locationId,
                 finalBill,
                 guestCount: session.guests.length
             }, socket.handshake.address);
-            console.log(`Session ended for Table ${tableNumber}. Total spent: ${formatPrice(finalBill)}`);
+            const locationDisplay = session.locationId || `Table ${tableNumber}`;
+            console.log(`Session ended for ${locationDisplay}. Total spent: ${formatPrice(finalBill)}`);
         }
     });
     // Generate receipt request
@@ -1337,33 +1396,52 @@ io.on('connection', (socket) => {
                 break;
             }
         }
-        for (const [tableNum, session] of activeTables.entries()) {
+        // Find and handle guest disconnections
+        // Need to check both locationId and tableNumber keys
+        const keysToCheck = [];
+        for (const [key, session] of activeTables.entries()) {
+            if (session.guests.some(g => g.socketId === socket.id)) {
+                keysToCheck.push(key);
+            }
+        }
+        for (const sessionKey of keysToCheck) {
+            const session = activeTables.get(sessionKey);
+            if (!session)
+                continue;
             const guestIndex = session.guests.findIndex(g => g.socketId === socket.id);
-            if (guestIndex !== -1) {
-                const guest = session.guests[guestIndex];
-                session.guests.splice(guestIndex, 1);
-                if (session.guests.length === 0) {
-                    // Clean up the session when the last guest disconnects
-                    session.isActive = false;
-                    session.endTime = new Date();
-                    activeTables.delete(tableNum);
-                    io.to('staff-manager').to('staff-all').emit('table-inactive', tableNum);
-                    console.log(`Session ended for Table ${tableNum} - last guest disconnected`);
-                }
-                else {
-                    activeTables.set(tableNum, session);
-                    io.to('staff-manager').to('staff-all').emit('guest-left', {
-                        tableNumber: tableNum,
-                        guestName: guest.guestName,
-                        remainingGuests: session.guests.length
-                    });
-                }
-                logAudit('GUEST_DISCONNECTED', guest.guestName, 'staff', 'table', session.id, {
-                    tableNumber: tableNum,
+            if (guestIndex === -1)
+                continue;
+            const guest = session.guests[guestIndex];
+            session.guests.splice(guestIndex, 1);
+            if (session.guests.length === 0) {
+                // Clean up the session when the last guest disconnects
+                session.isActive = false;
+                session.endTime = new Date();
+                activeTables.delete(sessionKey);
+                // Emit table-inactive with both identifiers
+                io.to('staff-manager').to('staff-all').emit('table-inactive', {
+                    tableNumber: session.tableNumber,
+                    locationId: session.locationId
+                });
+                const locationDisplay = session.locationId || `Table ${session.tableNumber}`;
+                console.log(`Session ended for ${locationDisplay} - last guest disconnected`);
+            }
+            else {
+                activeTables.set(sessionKey, session);
+                io.to('staff-manager').to('staff-all').emit('guest-left', {
+                    tableNumber: session.tableNumber,
+                    locationId: session.locationId,
+                    guestName: guest.guestName,
                     remainingGuests: session.guests.length
                 });
-                break;
             }
+            logAudit('GUEST_DISCONNECTED', guest.guestName, 'staff', 'table', session.id, {
+                sessionKey,
+                tableNumber: session.tableNumber,
+                locationId: session.locationId,
+                remainingGuests: session.guests.length
+            });
+            break;
         }
     });
 });
