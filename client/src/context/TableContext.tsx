@@ -156,8 +156,8 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
     
-    // Zone can be overridden via URL
-    if (zoneParam && ['open-bar', 'lounge', 'nightclub', 'vip', 'poolside'].includes(zoneParam)) {
+    // Zone can be overridden via URL (vip zone removed from system)
+    if (zoneParam && ['open-bar', 'lounge', 'nightclub', 'poolside'].includes(zoneParam)) {
       setZone(zoneParam);
     }
   }, []);

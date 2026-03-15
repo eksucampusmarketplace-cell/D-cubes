@@ -129,7 +129,7 @@ const ipWhitelist = (req: express.Request, res: express.Response, next: express.
   next();
 };
 
-app.use(cors());
+app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000", credentials: true }));
 app.use(express.json());
 app.use(rateLimiter);
 app.use(ipWhitelist);
@@ -185,6 +185,9 @@ const inventoryStatus: Map<number, { isAvailable: boolean; stockQuantity: number
 
 // Track staff online status for alerting
 const staffOnlineStatus: Map<string, { role: string; joinedAt: Date; socketId: string }> = new Map();
+
+// Valid table numbers (1-50 for legacy support) - defined at module scope for performance
+const VALID_TABLE_NUMBERS = new Set<number>(Array.from({ length: 50 }, (_, i) => i + 1));
 
 // Alert thresholds for unstaffed orders
 let lastStaffAlertTime: Map<string, number> = new Map();
@@ -298,6 +301,20 @@ const generateSessionId = (): string => {
 };
 
 // ============================================
+// HTML ESCAPE UTILITY
+// ============================================
+
+const escapeHtml = (str: string): string => {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
+// ============================================
 // RECEIPT GENERATION
 // ============================================
 
@@ -333,7 +350,7 @@ const generateReceipt = (order: Order): Receipt => {
 const generateReceiptHTML = (receipt: Receipt): string => {
   const itemsHTML = receipt.items.map(item => `
     <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #333;">${item.name}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #333;">${escapeHtml(item.name)}</td>
       <td style="padding: 8px; border-bottom: 1px solid #333; text-align: center;">${item.quantity}</td>
       <td style="padding: 8px; border-bottom: 1px solid #333; text-align: right;">₦${item.price.toLocaleString()}</td>
       <td style="padding: 8px; border-bottom: 1px solid #333; text-align: right;">₦${item.total.toLocaleString()}</td>
@@ -367,7 +384,7 @@ const generateReceiptHTML = (receipt: Receipt): string => {
           <p>Resort & Lounge</p>
         </div>
         <p><strong>Table:</strong> ${receipt.tableNumber}</p>
-        <p><strong>Guest:</strong> ${receipt.guestName}</p>
+        <p><strong>Guest:</strong> ${escapeHtml(receipt.guestName)}</p>
         <p><strong>Date:</strong> ${new Date(receipt.createdAt).toLocaleString()}</p>
         <p><strong>Receipt #:</strong> ${receipt.id.slice(-8).toUpperCase()}</p>
         
@@ -479,12 +496,18 @@ app.get('/api/health/detailed', async (req, res) => {
 });
 
 // Generate QR code for a table
-app.get('/api/qr/:tableNumber', async (req, res) => {
+app.get('/api/qr/:locationId', async (req, res) => {
   try {
-    const tableNumber = parseInt(req.params.tableNumber);
+    const locationId = req.params.locationId;
     const zone = (req.query.zone as string) || 'lounge';
     const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    const locationId = `T-${String(tableNumber).padStart(3, '0')}`;
+    
+    // Validate zone
+    const validZones = ['open-bar', 'lounge', 'nightclub', 'poolside'];
+    if (!validZones.includes(zone)) {
+      return res.status(400).json({ error: 'Invalid zone' });
+    }
+    
     const url = `${baseUrl}/order?location=${locationId}&zone=${zone}`;
 
     const qrCodeDataUrl = await QRCode.toDataURL(url, {
@@ -497,7 +520,7 @@ app.get('/api/qr/:tableNumber', async (req, res) => {
     });
 
     res.json({
-      tableNumber,
+      locationId,
       zone,
       url,
       qrCode: qrCodeDataUrl
@@ -541,14 +564,17 @@ app.get('/api/analytics', (req, res) => {
         categorySales.set(item.category, catSales);
       });
 
-      const hour = new Date(order.timestamp).getHours();
-      analytics.hourlySales[hour].orders++;
-      analytics.hourlySales[hour].revenue += order.total;
-
       const tableStats = tableSales.get(order.tableNumber) || { orders: 0, revenue: 0 };
       tableStats.orders++;
       tableStats.revenue += order.total;
       tableSales.set(order.tableNumber, tableStats);
+    }
+    
+    // Count all orders including cancelled for hourly breakdown (but without revenue for cancelled)
+    const hour = new Date(order.timestamp).getHours();
+    if (order.status !== 'cancelled') {
+      analytics.hourlySales[hour].orders++;
+      analytics.hourlySales[hour].revenue += order.total;
     }
   });
 
@@ -741,6 +767,9 @@ io.on('connection', (socket) => {
 
   // Join staff room
   socket.on('join-staff', (role: 'manager' | 'kitchen' | 'bar') => {
+    // Store role on socket for authorization checks
+    (socket as any).data = { ...(socket as any).data, role };
+    
     socket.join(`staff-${role}`);
     if (role === 'manager') socket.join('staff-all');
     
@@ -758,6 +787,14 @@ io.on('connection', (socket) => {
     socket.emit('inventory-update', Object.fromEntries(inventoryStatus));
     socket.emit('telegram-config', telegramConfig);
   });
+  
+  // Helper function to check if socket has staff role
+  const hasStaffRole = (requiredRoles: ('manager' | 'kitchen' | 'bar' | 'all')[]): boolean => {
+    const socketRole = (socket as any).data?.role;
+    if (!socketRole) return false;
+    if (requiredRoles.includes('all')) return true;
+    return requiredRoles.includes(socketRole);
+  };
 
   // Helper function to check if staff are online for a role
   const isStaffOnline = (role: 'manager' | 'kitchen' | 'bar' | 'all'): boolean => {
@@ -794,11 +831,25 @@ io.on('connection', (socket) => {
     }
   };
 
-  // Valid table numbers (1-50 for legacy support + all generated locations)
-  const VALID_TABLE_NUMBERS = new Set<number>(Array.from({ length: 50 }, (_, i) => i + 1));
-
   // Check-in - supports multiple guests at same table
   socket.on('check-in', async ({ tableNumber, guestName }: { tableNumber: number; guestName: string }) => {
+    // Validate guest name (server-side validation)
+    if (!guestName || guestName.trim().length === 0) {
+      socket.emit('check-in-error', { 
+        error: 'Invalid guest name',
+        message: 'Please provide a valid guest name'
+      });
+      return;
+    }
+    
+    if (guestName.length > 40) {
+      socket.emit('check-in-error', { 
+        error: 'Invalid guest name',
+        message: 'Guest name must be 40 characters or less'
+      });
+      return;
+    }
+    
     // Validate table number
     if (!tableNumber || typeof tableNumber !== 'number' || tableNumber < 1) {
       socket.emit('check-in-error', { 
@@ -904,8 +955,37 @@ io.on('connection', (socket) => {
       });
       return;
     }
-
+    
+    // Validate guest name length (server-side)
+    if (order.guestName.length > 40) {
+      socket.emit('order-error', { 
+        error: 'Invalid guest name',
+        message: 'Guest name must be 40 characters or less'
+      });
+      return;
+    }
+    
     order.id = order.id || generateId();
+    
+    // Check for duplicate order (same items, same table, within 30 seconds)
+    const recentDuplicate = Array.from(orders.values()).find(o => 
+      o.tableNumber === order.tableNumber &&
+      o.guestId === order.guestId &&
+      o.items.length === order.items.length &&
+      o.total === order.total &&
+      new Date().getTime() - new Date(o.timestamp).getTime() < 30000 &&
+      o.items.every((item, idx) => 
+        item.id === order.items[idx]?.id && 
+        item.quantity === order.items[idx]?.quantity
+      )
+    );
+    
+    if (recentDuplicate) {
+      console.log(`Duplicate order detected for table ${order.tableNumber}, returning existing order ${recentDuplicate.id}`);
+      socket.emit('order-confirmation', { orderId: recentDuplicate.id, duplicate: true });
+      return;
+    }
+    
     order.paymentStatus = 'unpaid';
     orders.set(order.id, order);
     
@@ -1006,6 +1086,12 @@ io.on('connection', (socket) => {
 
   // Update order status
   socket.on('update-order-status', async ({ orderId, status }: { orderId: string; status: OrderStatus }) => {
+    // Authorization check - only staff can update order status
+    if (!hasStaffRole(['manager', 'kitchen', 'bar'])) {
+      socket.emit('error', { message: 'Unauthorized: Staff role required' });
+      return;
+    }
+    
     const order = orders.get(orderId);
     if (order) {
       order.status = status;
@@ -1110,6 +1196,12 @@ io.on('connection', (socket) => {
 
   // Update payment status
   socket.on('update-payment', async ({ orderId, status }: { orderId: string; status: PaymentStatus }) => {
+    // Authorization check - only manager can update payment status
+    if (!hasStaffRole(['manager'])) {
+      socket.emit('error', { message: 'Unauthorized: Manager role required' });
+      return;
+    }
+    
     const order = orders.get(orderId);
     if (order) {
       order.paymentStatus = status;
@@ -1157,6 +1249,12 @@ io.on('connection', (socket) => {
 
   // Process refund
   socket.on('process-refund', async ({ requestId, approved }: { requestId: string; approved: boolean }) => {
+    // Authorization check - only manager can process refunds
+    if (!hasStaffRole(['manager'])) {
+      socket.emit('error', { message: 'Unauthorized: Manager role required' });
+      return;
+    }
+    
     const request = refundRequests.get(requestId);
     if (request) {
       request.status = approved ? 'approved' : 'denied';
@@ -1199,6 +1297,12 @@ io.on('connection', (socket) => {
 
   // Cancel order
   socket.on('cancel-order', async ({ orderId, reason }: { orderId: string; reason?: string }) => {
+    // Authorization check - only staff can cancel orders
+    if (!hasStaffRole(['manager', 'kitchen', 'bar'])) {
+      socket.emit('error', { message: 'Unauthorized: Staff role required' });
+      return;
+    }
+    
     const order = orders.get(orderId);
     if (order && order.status === 'pending') {
       order.status = 'cancelled';
@@ -1222,6 +1326,12 @@ io.on('connection', (socket) => {
 
   // End table session (table turnover) - generates final bill
   socket.on('end-session', async ({ tableNumber, finalBill }: { tableNumber: number; finalBill: number }) => {
+    // Authorization check - only manager can end sessions
+    if (!hasStaffRole(['manager'])) {
+      socket.emit('error', { message: 'Unauthorized: Manager role required' });
+      return;
+    }
+    
     const session = activeTables.get(tableNumber);
     if (session) {
       session.isActive = false;
@@ -1302,6 +1412,12 @@ io.on('connection', (socket) => {
 
   // Update inventory
   socket.on('update-inventory', (update: InventoryUpdate) => {
+    // Authorization check - only staff can update inventory
+    if (!hasStaffRole(['manager', 'kitchen', 'bar'])) {
+      socket.emit('error', { message: 'Unauthorized: Staff role required' });
+      return;
+    }
+    
     inventoryStatus.set(update.itemId, {
       isAvailable: update.isAvailable,
       stockQuantity: update.stockQuantity ?? null
@@ -1318,6 +1434,12 @@ io.on('connection', (socket) => {
 
   // Update telegram config
   socket.on('update-telegram-config', (config: Partial<TelegramNotificationConfig>) => {
+    // Authorization check - only manager can update telegram config
+    if (!hasStaffRole(['manager'])) {
+      socket.emit('error', { message: 'Unauthorized: Manager role required' });
+      return;
+    }
+    
     telegramConfig = { ...telegramConfig, ...config };
     logAudit('TELEGRAM_CONFIG_UPDATE', 'staff', 'staff', 'telegram-config', undefined, config);
     io.to('staff-manager').emit('telegram-config', telegramConfig);
@@ -1349,11 +1471,16 @@ io.on('connection', (socket) => {
       if (guestIndex !== -1) {
         const guest = session.guests[guestIndex];
         session.guests.splice(guestIndex, 1);
-        activeTables.set(tableNum, session);
-
+        
         if (session.guests.length === 0) {
+          // Clean up the session when the last guest disconnects
+          session.isActive = false;
+          session.endTime = new Date();
+          activeTables.delete(tableNum);
           io.to('staff-manager').to('staff-all').emit('table-inactive', tableNum);
+          console.log(`Session ended for Table ${tableNum} - last guest disconnected`);
         } else {
+          activeTables.set(tableNum, session);
           io.to('staff-manager').to('staff-all').emit('guest-left', {
             tableNumber: tableNum,
             guestName: guest.guestName,

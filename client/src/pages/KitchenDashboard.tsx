@@ -38,31 +38,8 @@ export const KitchenDashboard: React.FC = () => {
 
   // Load existing food orders on mount (recovery from refresh)
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const [ordersRes, messagesRes] = await Promise.all([
-          fetch('/api/orders'),
-          fetch('/api/messages'),
-        ]);
-
-        if (ordersRes.ok) {
-          const data: Order[] = await ordersRes.json();
-          const kitchenOrders = data
-            .map(o => ({ ...o, items: o.items.filter(i => i.category === 'food') }))
-            .filter(o => o.items.length > 0);
-          setFoodOrders(kitchenOrders.reverse());
-        }
-
-        if (messagesRes.ok) {
-          const data: ChatMessage[] = await messagesRes.json();
-          setMessages(data);
-        }
-      } catch {
-        // ignore
-      }
-    };
-
     fetchInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -71,10 +48,41 @@ export const KitchenDashboard: React.FC = () => {
 
   useEffect(() => {
     if (!socket) return;
-    const handleReconnect = () => joinStaff('kitchen');
+    
+    const handleReconnect = () => {
+      joinStaff('kitchen');
+      // Re-fetch orders on reconnect to avoid missing orders sent during disconnect
+      fetchInitialData();
+    };
+    
     socket.on('connect', handleReconnect);
     return () => { socket.off('connect', handleReconnect); };
   }, [socket, joinStaff]);
+  
+  // Expose fetchInitialData for reconnection handling
+  const fetchInitialData = async () => {
+    try {
+      const [ordersRes, messagesRes] = await Promise.all([
+        fetch('/api/orders'),
+        fetch('/api/messages'),
+      ]);
+
+      if (ordersRes.ok) {
+        const data: Order[] = await ordersRes.json();
+        const kitchenOrders = data
+          .map(o => ({ ...o, items: o.items.filter(i => i.category === 'food') }))
+          .filter(o => o.items.length > 0);
+        setFoodOrders(kitchenOrders.reverse());
+      }
+
+      if (messagesRes.ok) {
+        const data: ChatMessage[] = await messagesRes.json();
+        setMessages(data);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -104,6 +112,10 @@ export const KitchenDashboard: React.FC = () => {
       setFoodOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
     });
 
+    socket.on('order-cancelled', ({ orderId }: { orderId: string; reason?: string }) => {
+      setFoodOrders(prev => prev.filter(o => o.id !== orderId));
+    });
+
     socket.on('new-message', (message: ChatMessage) => {
       setMessages(prev => prev.some(existing => existing.id === message.id) ? prev : [...prev, message]);
       if (message.sender === 'guest') {
@@ -120,6 +132,7 @@ export const KitchenDashboard: React.FC = () => {
     return () => {
       socket.off('new-order');
       socket.off('order-status-update');
+      socket.off('order-cancelled');
       socket.off('new-message');
     };
   }, [socket, selectedTable]);
