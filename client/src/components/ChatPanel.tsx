@@ -9,7 +9,7 @@ interface ChatPanelProps {
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
-  const { tableNumber, guestName, messages, setMessages } = useTable() as any;
+  const { tableNumber, guestName, messages, setMessages } = useTable();
   const { sendMessage } = useSocket();
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -37,10 +37,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
       senderName: guestName
     };
 
-    setMessages((prev: any[]) => [...prev, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     sendMessage(newMessage);
     setInput('');
-    
+
     // Simulate brief delay for UX
     setTimeout(() => setIsSending(false), 300);
   }, [input, tableNumber, guestName, sendMessage, setMessages, isSending]);
@@ -68,7 +68,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
       senderName: guestName
     };
 
-    setMessages((prev: any[]) => [...prev, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     sendMessage(newMessage);
   }, [tableNumber, guestName, sendMessage, setMessages]);
 
@@ -164,7 +164,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ isOpen, onClose }) => {
               <p className="text-sm mt-1 text-cream/35">Our staff is ready to assist you</p>
             </div>
           ) : (
-            messages.map((msg: any, index: number) => (
+            messages.map((msg, index) => (
               <div
                 key={msg.id}
                 className={`flex ${msg.sender === 'guest' ? 'justify-end' : 'justify-start'} stagger-item`}

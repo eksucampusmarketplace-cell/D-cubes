@@ -77,64 +77,64 @@ const ManagerDashboardContent: React.FC = () => {
     alertTimeoutRef.current = setTimeout(() => setNewOrderAlert(false), 5000);
   }, [playAlertTone]);
 
+  // Fetch initial data from API
+  const fetchInitialData = useCallback(async () => {
+    try {
+      const [ordersRes, allOrdersRes, accessRes, refundRes, sessionsRes, messagesRes] = await Promise.all([
+        fetch('/api/orders'),
+        fetch('/api/orders/all'),
+        fetch('/api/access-requests'),
+        fetch('/api/refund-requests'),
+        fetch('/api/sessions'),
+        fetch('/api/messages'),
+      ]);
+
+      if (ordersRes.ok) {
+        const data: Order[] = await ordersRes.json();
+        setOrders(data.reverse());
+        const unpaid = data.filter(o => o.paymentStatus === 'unpaid' && o.status !== 'cancelled').length;
+        const pending = data.filter(o => o.status === 'pending').length;
+        setStats(prev => ({ ...prev, newOrders: pending, unpaidOrders: unpaid }));
+      }
+
+      if (allOrdersRes.ok) {
+        const allData: Order[] = await allOrdersRes.json();
+        const revenue = allData.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + o.total, 0);
+        const delivered = allData.filter(o => o.status === 'delivered').length;
+        setStats(prev => ({ ...prev, revenue, delivered }));
+      }
+
+      if (accessRes.ok) {
+        const data: AccessRequest[] = await accessRes.json();
+        setAccessRequests(data);
+      }
+
+      if (refundRes.ok) {
+        const data: RefundRequest[] = await refundRes.json();
+        setRefundRequests(data);
+      }
+
+      if (sessionsRes.ok) {
+        const data: TableSession[] = await sessionsRes.json();
+        setStats(prev => ({ ...prev, activeTables: data.length }));
+        data.forEach(session => {
+          updateTableStatus(session.tableNumber, { isActive: true });
+        });
+      }
+
+      if (messagesRes.ok) {
+        const data: ChatMessage[] = await messagesRes.json();
+        setMessages(data);
+      }
+    } catch {
+      // Server not reachable, continue with empty state
+    }
+  }, []);
+
   // Load existing data on mount (recovery from refresh)
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const [ordersRes, allOrdersRes, accessRes, refundRes, sessionsRes, messagesRes] = await Promise.all([
-          fetch('/api/orders'),
-          fetch('/api/orders/all'),
-          fetch('/api/access-requests'),
-          fetch('/api/refund-requests'),
-          fetch('/api/sessions'),
-          fetch('/api/messages'),
-        ]);
-
-        if (ordersRes.ok) {
-          const data: Order[] = await ordersRes.json();
-          setOrders(data.reverse());
-          const unpaid = data.filter(o => o.paymentStatus === 'unpaid' && o.status !== 'cancelled').length;
-          const pending = data.filter(o => o.status === 'pending').length;
-          setStats(prev => ({ ...prev, newOrders: pending, unpaidOrders: unpaid }));
-        }
-
-        if (allOrdersRes.ok) {
-          const allData: Order[] = await allOrdersRes.json();
-          const revenue = allData.filter(o => o.status !== 'cancelled').reduce((sum, o) => sum + o.total, 0);
-          const delivered = allData.filter(o => o.status === 'delivered').length;
-          setStats(prev => ({ ...prev, revenue, delivered }));
-        }
-
-        if (accessRes.ok) {
-          const data: AccessRequest[] = await accessRes.json();
-          setAccessRequests(data);
-        }
-
-        if (refundRes.ok) {
-          const data: RefundRequest[] = await refundRes.json();
-          setRefundRequests(data);
-        }
-
-        if (sessionsRes.ok) {
-          const data: TableSession[] = await sessionsRes.json();
-          setStats(prev => ({ ...prev, activeTables: data.length }));
-          data.forEach(session => {
-            updateTableStatus(session.tableNumber, { isActive: true });
-          });
-        }
-
-        if (messagesRes.ok) {
-          const data: ChatMessage[] = await messagesRes.json();
-          setMessages(data);
-        }
-      } catch {
-        // Server not reachable, continue with empty state
-      }
-    };
-
     fetchInitialData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchInitialData]);
 
   useEffect(() => {
     joinStaff('manager');
@@ -142,10 +142,14 @@ const ManagerDashboardContent: React.FC = () => {
 
   useEffect(() => {
     if (!socket) return;
-    const handleReconnect = () => joinStaff('manager');
+    const handleReconnect = () => {
+      joinStaff('manager');
+      // Re-fetch data on reconnect to avoid missing orders/events during disconnect
+      fetchInitialData();
+    };
     socket.on('connect', handleReconnect);
     return () => { socket.off('connect', handleReconnect); };
-  }, [socket, joinStaff]);
+  }, [socket, joinStaff, fetchInitialData]);
 
   useEffect(() => {
     if (!socket) return;
