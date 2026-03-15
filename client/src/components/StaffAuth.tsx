@@ -4,12 +4,6 @@ import { useSocket } from '@/context/SocketContext';
 
 type StaffRole = 'manager' | 'kitchen' | 'bar';
 
-const DEFAULT_PINS: Record<StaffRole, string> = {
-  manager: '0000',
-  kitchen: '1111',
-  bar: '2222'
-};
-
 const ROLE_COLORS: Record<StaffRole, string> = {
   manager: 'from-gold/30 to-amber-600/20',
   kitchen: 'from-orange-500/30 to-red-500/20',
@@ -46,23 +40,31 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
     }
 
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 400));
 
-    let correctPin = DEFAULT_PINS[role];
-    if (role === 'manager' && import.meta.env.VITE_STAFF_MANAGER_PIN) {
-      correctPin = import.meta.env.VITE_STAFF_MANAGER_PIN;
-    } else if (role === 'kitchen' && import.meta.env.VITE_STAFF_KITCHEN_PIN) {
-      correctPin = import.meta.env.VITE_STAFF_KITCHEN_PIN;
-    } else if (role === 'bar' && import.meta.env.VITE_STAFF_BAR_PIN) {
-      correctPin = import.meta.env.VITE_STAFF_BAR_PIN;
-    }
+    try {
+      // Server-side PIN verification
+      const response = await fetch('/api/auth/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, pin })
+      });
 
-    if (pin === correctPin) {
-      setAuthenticated(true);
-      setError('');
-      localStorage.setItem(`dcubes_auth_${role}`, new Date().toISOString());
-    } else {
-      setError('Invalid PIN code');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setAuthenticated(true);
+        setError('');
+        // Store token in localStorage for API auth
+        localStorage.setItem(`dcubes_auth_${role}_token`, data.token);
+        localStorage.setItem(`dcubes_auth_${role}`, new Date().toISOString());
+      } else {
+        setError(data.error || 'Invalid PIN code');
+        setPin('');
+        setShake(true);
+        setTimeout(() => setShake(false), 400);
+      }
+    } catch (err) {
+      setError('Server error. Please try again.');
       setPin('');
       setShake(true);
       setTimeout(() => setShake(false), 400);
@@ -74,6 +76,7 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
     setAuthenticated(false);
     setPin('');
     localStorage.removeItem(`dcubes_auth_${role}`);
+    localStorage.removeItem(`dcubes_auth_${role}_token`);
   }, [role]);
 
   const handlePinChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +90,9 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
   
   useEffect(() => {
     const storedAuth = localStorage.getItem(`dcubes_auth_${role}`);
-    if (storedAuth) {
+    const storedToken = localStorage.getItem(`dcubes_auth_${role}_token`);
+    
+    if (storedAuth && storedToken) {
       const authTime = new Date(storedAuth);
       const now = new Date();
       const hoursDiff = (now.getTime() - authTime.getTime()) / (1000 * 60 * 60);
@@ -96,6 +101,7 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
         setAuthenticated(true);
       } else {
         localStorage.removeItem(`dcubes_auth_${role}`);
+        localStorage.removeItem(`dcubes_auth_${role}_token`);
       }
     }
     setHasCheckedAuth(true);

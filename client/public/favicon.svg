@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="4" fill="#0a0a0a"/>
+  <path d="M16 6L10 10L16 6L22 10L16 6M16 12L10 16L16 12L22 16L16 12M16 18L10 22L16 18L22 22L16 18M16 24L10 28L16 24L22 28L16 24" fill="#C9A84C"/>
+  <text x="16" y="24" font-family="sans-serif" font-size="12" font-weight="bold" fill="#C9A84C" text-anchor="middle">D</text>
+</svg>

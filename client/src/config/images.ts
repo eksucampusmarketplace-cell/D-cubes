@@ -45,7 +45,7 @@ export const HERO_IMAGES = {
   // Alternative backgrounds (for carousel/slideshow - coming soon)
   // You can add multiple images here for a rotating background
   gallery: [
-    'https://images.unsplash.com/photo-1514933651103-005ec06c04b?w=1200&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=1200&auto=format&fit=crop&q=80',
   ]
 };

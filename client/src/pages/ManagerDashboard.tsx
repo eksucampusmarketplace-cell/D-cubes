@@ -2,10 +2,19 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSocket } from '@/context/SocketContext';
 import { Order, AccessRequest, ChatMessage, Table, OrderStatus, RefundRequest, AnalyticsData, PaymentStatus, TableSession } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, getAccessTypeLabel, generateMessageId } from '@/utils/format';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 type ActiveView = 'orders' | 'tables' | 'messages';
 
 export const ManagerDashboard: React.FC = () => {
+  return (
+    <ErrorBoundary>
+      <ManagerDashboardContent />
+    </ErrorBoundary>
+  );
+};
+
+const ManagerDashboardContent: React.FC = () => {
   const { socket, joinStaff, updateOrderStatus, respondToAccess, updatePayment, processRefund, cancelOrder, endSession, sendMessage } = useSocket();
   const [orders, setOrders] = useState<Order[]>([]);
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);

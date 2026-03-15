@@ -240,6 +240,18 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const handleCheckInSuccess = (data: { tableNumber: number; guestName: string; guestId: string; sessionId: string }) => {
       setGuestId(data.guestId);
       setSessionId(data.sessionId);
+      setIsCheckedIn(true);
+      
+      // Add welcome message with zone info
+      const zoneDisplayName = zone ? getZoneInfo(zone).name : 'D CUBES PLACE';
+      setMessages([{
+        id: 'welcome',
+        tableNumber: data.tableNumber,
+        sender: 'staff',
+        text: `Welcome to ${zoneDisplayName}, ${data.guestName}! 👋 How can we make your visit special?`,
+        timestamp: new Date(),
+        senderName: 'Staff'
+      }]);
     };
 
     const handleCheckInError = (error: { error: string; message: string }) => {
@@ -274,20 +286,9 @@ export const TableProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!targetTable || !name.trim()) return;
     
     setGuestName(name);
-    setIsCheckedIn(true);
+    // Don't set isCheckedIn until server confirms
     socketCheckIn(targetTable, name);
-    
-    // Add welcome message with zone info
-    const zoneDisplayName = zone ? getZoneInfo(zone).name : 'D CUBES PLACE';
-    setMessages([{
-      id: 'welcome',
-      tableNumber: targetTable,
-      sender: 'staff',
-      text: `Welcome to ${zoneDisplayName}, ${name}! 👋 How can we make your visit special?`,
-      timestamp: new Date(),
-      senderName: 'Staff'
-    }]);
-  }, [tableNumber, zone, socketCheckIn]);
+  }, [tableNumber, socketCheckIn]);
 
   // Set zone for exploring mode (no table selected)
   const setExploreZone = useCallback((selectedZone: ZoneType) => {

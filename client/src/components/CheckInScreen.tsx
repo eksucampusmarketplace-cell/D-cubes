@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useTable } from '@/context/TableContext';
 import { HERO_IMAGES, NIGHTLIFE_FILTER } from '@/config/images';
 import { getZoneInfo } from '@/data/locations';
@@ -8,10 +8,18 @@ interface CheckInScreenProps {
 }
 
 export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
-  const { location, zone, zoneName, tableNumber, checkIn } = useTable();
+  const { location, zone, zoneName, tableNumber, checkIn, isCheckedIn, guestId } = useTable();
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [shake, setShake] = useState(false);
+
+  // Listen for check-in success to transition
+  useEffect(() => {
+    if (isCheckedIn && guestId) {
+      setIsLoading(false);
+      onCheckIn();
+    }
+  }, [isCheckedIn, guestId, onCheckIn]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,11 +32,9 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
     }
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800));
     checkIn(name.trim());
-    onCheckIn();
-    setIsLoading(false);
-  }, [name, checkIn, onCheckIn]);
+    // Don't call onCheckIn here - wait for server confirmation
+  }, [name, checkIn]);
 
   // Get zone info
   const zoneInfo = zone ? getZoneInfo(zone) : null;

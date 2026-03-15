@@ -6,13 +6,21 @@ class Database {
     constructor() {
         this.supabase = null;
         this.useSupabase = false;
+        this.connectionRetries = 0;
+        this.maxRetries = 3;
     }
     // Initialize Supabase connection
     initialize() {
         const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+        // Use service role key for server operations (bypasses RLS)
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
         if (supabaseUrl && supabaseKey && !supabaseUrl.includes('your-project')) {
-            this.supabase = (0, supabase_js_1.createClient)(supabaseUrl, supabaseKey);
+            this.supabase = (0, supabase_js_1.createClient)(supabaseUrl, supabaseKey, {
+                auth: {
+                    autoRefreshToken: false,
+                    persistSession: false
+                }
+            });
             this.useSupabase = true;
             console.log('✅ Supabase connected');
         }
@@ -20,6 +28,25 @@ class Database {
             console.log('⚠️ Running in-memory mode (Supabase not configured)');
             this.useSupabase = false;
         }
+    }
+    // Retry wrapper for database operations
+    async withRetry(operation) {
+        let lastError = null;
+        for (let i = 0; i <= this.maxRetries; i++) {
+            try {
+                return await operation();
+            }
+            catch (error) {
+                lastError = error;
+                this.connectionRetries++;
+                if (i < this.maxRetries) {
+                    console.warn(`Database operation failed, retrying (${i + 1}/${this.maxRetries})...`);
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+                }
+            }
+        }
+        console.error('Database operation failed after retries:', lastError);
+        return null;
     }
     isConnected() {
         return this.useSupabase && this.supabase !== null;
