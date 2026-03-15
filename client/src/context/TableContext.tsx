@@ -42,10 +42,10 @@ function clearPersistedSession() {
   }
 }
 
-interface TableContextType {
+export interface TableContextType {
   // Legacy support
   tableNumber: number | null;
-  
+
   // New location-based system
   location: Location | null;
   locationId: string | null;
@@ -54,28 +54,28 @@ interface TableContextType {
   canOrderFood: boolean;
   availableCategories: string[];
   customerSession: CustomerSession | null;
-  
+
   // Guest info
   guestName: string;
   guestId: string;
   sessionId: string;
   isCheckedIn: boolean;
-  
+
   // Exploring mode - zone selected but no table
   isExploring: boolean;
   setExploreZone: (zone: ZoneType) => void;
   setLocationFromZone: (zone: ZoneType, tableInput: string) => void;
-  
+
   // Orders & messages
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
   messages: ChatMessage[];
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
-  
+
   // Actions
   checkIn: (name: string) => void;
   currentOrderStatus: OrderStatus | null;
-  
+
   // Helper
   isCategoryAvailable: (category: string) => boolean;
 }
