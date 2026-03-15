@@ -3,11 +3,20 @@ import { useSocket } from '@/context/SocketContext';
 import { Order, OrderStatus, ChatMessage, ZoneType } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, generateMessageId } from '@/utils/format';
 import { ZONES } from '@/data/locations';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const BAR_CATEGORIES = ['cocktails', 'spirits', 'wine', 'nonalc', 'brandy', 'tequila', 'sparkling-wine', 'liquor', 'mixers', 'energy-drinks', 'beer', 'shisha'];
 
 // Zone-specific bar dashboard
 export const BarDashboard: React.FC = () => {
+  return (
+    <ErrorBoundary>
+      <BarDashboardContent />
+    </ErrorBoundary>
+  );
+};
+
+const BarDashboardContent: React.FC = () => {
   const { socket, joinStaff, updateOrderStatus, sendMessage } = useSocket();
   const [barOrders, setBarOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);

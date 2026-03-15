@@ -2,8 +2,17 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSocket } from '@/context/SocketContext';
 import { Order, OrderStatus, ChatMessage } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, generateMessageId } from '@/utils/format';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const KitchenDashboard: React.FC = () => {
+  return (
+    <ErrorBoundary>
+      <KitchenDashboardContent />
+    </ErrorBoundary>
+  );
+};
+
+const KitchenDashboardContent: React.FC = () => {
   const { socket, joinStaff, updateOrderStatus, sendMessage } = useSocket();
   const [foodOrders, setFoodOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);

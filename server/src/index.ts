@@ -1266,11 +1266,10 @@ io.on('connection', (socket) => {
     
     db.saveMessage(message).catch(err => console.error('Failed to save message to DB:', err));
 
+    // Send to the table and manager rooms only (not all kitchen/bar)
     io.to(`table-${message.tableNumber}`)
       .to('staff-manager')
       .to('staff-all')
-      .to('staff-kitchen')
-      .to('staff-bar')
       .emit('new-message', message);
 
     if (message.sender === 'guest' && telegramConfig.chat) {
