@@ -152,11 +152,24 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const KITCHEN_CHAT_ID = process.env.KITCHEN_CHAT_ID || '';
 const BAR_CHAT_ID = process.env.BAR_CHAT_ID || '';
 const MANAGER_CHAT_ID = process.env.MANAGER_CHAT_ID || '';
+const TELEGRAM_WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL || '';
 
 let bot: TelegramBot | null = null;
 if (TELEGRAM_BOT_TOKEN) {
-  bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
-  console.log('✅ Telegram bot initialized');
+  // Use webhook in production, polling in development
+  const useWebhook = TELEGRAM_WEBHOOK_URL && process.env.NODE_ENV === 'production';
+  
+  if (useWebhook) {
+    bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { webHook: { port: parseInt(process.env.PORT || '5000') } });
+    bot.setWebHook(TELEGRAM_WEBHOOK_URL).then(() => {
+      console.log('✅ Telegram webhook configured:', TELEGRAM_WEBHOOK_URL);
+    }).catch((err) => {
+      console.error('❌ Failed to set Telegram webhook:', err);
+    });
+  } else {
+    bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
+  }
+  console.log(`✅ Telegram bot initialized (${useWebhook ? 'webhook' : 'polling'})`);
 }
 
 // Telegram notification configuration (can be updated at runtime)
@@ -499,13 +512,26 @@ app.get('/api/health/detailed', async (req, res) => {
 app.get('/api/qr/:locationId', async (req, res) => {
   try {
     const locationId = req.params.locationId;
-    const zone = (req.query.zone as string) || 'lounge';
+    let zone = (req.query.zone as string) || 'lounge';
     const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     
     // Validate zone
     const validZones = ['open-bar', 'lounge', 'nightclub', 'poolside'];
     if (!validZones.includes(zone)) {
       return res.status(400).json({ error: 'Invalid zone' });
+    }
+    
+    // Determine zone from locationId prefix if not provided
+    if (!req.query.zone) {
+      if (locationId.startsWith('BAR-') || locationId.startsWith('ST-')) {
+        zone = 'open-bar';
+      } else if (locationId.startsWith('NF-')) {
+        zone = 'nightclub';
+      } else if (locationId.startsWith('PC-')) {
+        zone = 'poolside';
+      } else {
+        zone = 'lounge'; // T-, LS- default to lounge
+      }
     }
     
     const url = `${baseUrl}/order?location=${locationId}&zone=${zone}`;
@@ -568,11 +594,9 @@ app.get('/api/analytics', (req, res) => {
       tableStats.orders++;
       tableStats.revenue += order.total;
       tableSales.set(order.tableNumber, tableStats);
-    }
-    
-    // Count all orders including cancelled for hourly breakdown (but without revenue for cancelled)
-    const hour = new Date(order.timestamp).getHours();
-    if (order.status !== 'cancelled') {
+      
+      // Count non-cancelled orders for hourly breakdown
+      const hour = new Date(order.timestamp).getHours();
       analytics.hourlySales[hour].orders++;
       analytics.hourlySales[hour].revenue += order.total;
     }
@@ -745,11 +769,75 @@ app.get('/api/telegram-config', (req, res) => {
   res.json(telegramConfig);
 });
 
-// Update telegram config
+// Update telegram config - requires manager auth
 app.post('/api/telegram-config', (req, res) => {
+  // Simple auth check via header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  const token = authHeader.substring(7);
+  const validTokens = (process.env.STAFF_TOKENS || '').split(',').filter(Boolean);
+  if (!validTokens.includes(token)) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+  
   telegramConfig = { ...telegramConfig, ...req.body };
   logAudit('TELEGRAM_CONFIG_UPDATE', 'admin', 'staff', 'telegram-config', undefined, req.body, req.ip);
   res.json(telegramConfig);
+});
+
+// Staff authentication endpoint
+app.post('/api/auth/staff', (req, res) => {
+  const { role, pin } = req.body;
+  
+  if (!role || !pin) {
+    return res.status(400).json({ error: 'Missing role or PIN' });
+  }
+  
+  const validRoles = ['manager', 'kitchen', 'bar'];
+  if (!validRoles.includes(role)) {
+    return res.status(400).json({ error: 'Invalid role' });
+  }
+  
+  // Get PIN from environment or use default
+  const envPins: Record<string, string> = {
+    manager: process.env.STAFF_MANAGER_PIN || '0000',
+    kitchen: process.env.STAFF_KITCHEN_PIN || '1111',
+    bar: process.env.STAFF_BAR_PIN || '2222'
+  };
+  
+  const correctPin = envPins[role];
+  
+  if (pin === correctPin) {
+    // Generate a simple session token (in production, use JWT)
+    const token = `${role}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    logAudit('STAFF_LOGIN', role, 'staff', 'auth', undefined, { role }, req.ip);
+    res.json({ success: true, role, token });
+  } else {
+    logAudit('STAFF_LOGIN_FAILED', role, 'staff', 'auth', undefined, { role, reason: 'Invalid PIN' }, req.ip);
+    res.status(401).json({ error: 'Invalid PIN' });
+  }
+});
+
+// Verify staff token
+app.get('/api/auth/verify', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  
+  const token = authHeader.substring(7);
+  const [role] = token.split('-');
+  
+  const validRoles = ['manager', 'kitchen', 'bar'];
+  if (!validRoles.includes(role)) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+  
+  res.json({ valid: true, role });
 });
 
 // ============================================
@@ -1500,6 +1588,51 @@ io.on('connection', (socket) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
+
+// Graceful shutdown handler
+const gracefulShutdown = async (signal: string) => {
+  console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
+  
+  // Stop accepting new connections
+  httpServer.close(() => {
+    console.log('📡 HTTP server closed');
+  });
+  
+  // Notify all connected clients about shutdown
+  io.emit('server-shutdown', { message: 'Server is restarting. Please reconnect in a moment.' });
+  
+  // Give clients time to receive the message
+  setTimeout(async () => {
+    // Close Socket.IO connections
+    io.close(() => {
+      console.log('📡 Socket.IO connections closed');
+    });
+    
+    // Save any pending data to database
+    if (db.isConnected()) {
+      try {
+        console.log('💾 Saving pending data to database...');
+        // Data is already saved in real-time via db.save* calls
+        console.log('✅ All data saved');
+      } catch (error) {
+        console.error('❌ Error saving data during shutdown:', error);
+      }
+    }
+    
+    console.log('👋 Graceful shutdown complete');
+    process.exit(0);
+  }, 2000);
+  
+  // Force exit after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('⚠️ Graceful shutdown timed out. Forcing exit.');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);

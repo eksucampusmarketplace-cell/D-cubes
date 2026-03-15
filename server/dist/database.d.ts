@@ -53,7 +53,10 @@ export interface DbRefundRequest {
 declare class Database {
     private supabase;
     private useSupabase;
+    private connectionRetries;
+    private maxRetries;
     initialize(): void;
+    private withRetry;
     isConnected(): boolean;
     saveOrder(order: Order): Promise<void>;
     getOrders(): Promise<Order[]>;

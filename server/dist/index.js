@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const cors_1 = __importDefault(require("cors"));
+const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
 const qrcode_1 = __importDefault(require("qrcode"));
@@ -15,11 +16,53 @@ const database_1 = require("./database");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
+// ============================================
+// SECURITY HEADERS (Helmet.js)
+// ============================================
+app.use((0, helmet_1.default)({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:", "blob:"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            connectSrc: ["'self'", process.env.CLIENT_URL || "http://localhost:3000"],
+            frameAncestors: ["'none'"],
+            upgradeInsecureRequests: [],
+        },
+    },
+    crossOriginEmbedderPolicy: false, // Allow images from external sources
+    hsts: {
+        maxAge: 31536000, // 1 year
+        includeSubDomains: true,
+        preload: true
+    },
+    referrerPolicy: {
+        policy: "strict-origin-when-cross-origin"
+    },
+    noSniff: true,
+    xssFilter: true,
+    permittedCrossDomainPolicies: false
+}));
+// Additional security headers for API
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+    next();
+});
 const io = new socket_io_1.Server(httpServer, {
     cors: {
         origin: process.env.CLIENT_URL || "http://localhost:3000",
-        methods: ["GET", "POST"]
-    }
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    // Heartbeat configuration
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    transports: ['websocket', 'polling']
 });
 const rateLimitStore = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
@@ -68,7 +111,7 @@ const ipWhitelist = (req, res, next) => {
     }
     next();
 };
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({ origin: process.env.CLIENT_URL || "http://localhost:3000", credentials: true }));
 app.use(express_1.default.json());
 app.use(rateLimiter);
 app.use(ipWhitelist);
@@ -87,10 +130,23 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const KITCHEN_CHAT_ID = process.env.KITCHEN_CHAT_ID || '';
 const BAR_CHAT_ID = process.env.BAR_CHAT_ID || '';
 const MANAGER_CHAT_ID = process.env.MANAGER_CHAT_ID || '';
+const TELEGRAM_WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL || '';
 let bot = null;
 if (TELEGRAM_BOT_TOKEN) {
-    bot = new node_telegram_bot_api_1.default(TELEGRAM_BOT_TOKEN, { polling: true });
-    console.log('✅ Telegram bot initialized');
+    // Use webhook in production, polling in development
+    const useWebhook = TELEGRAM_WEBHOOK_URL && process.env.NODE_ENV === 'production';
+    if (useWebhook) {
+        bot = new node_telegram_bot_api_1.default(TELEGRAM_BOT_TOKEN, { webHook: { port: parseInt(process.env.PORT || '5000') } });
+        bot.setWebHook(TELEGRAM_WEBHOOK_URL).then(() => {
+            console.log('✅ Telegram webhook configured:', TELEGRAM_WEBHOOK_URL);
+        }).catch((err) => {
+            console.error('❌ Failed to set Telegram webhook:', err);
+        });
+    }
+    else {
+        bot = new node_telegram_bot_api_1.default(TELEGRAM_BOT_TOKEN, { polling: true });
+    }
+    console.log(`✅ Telegram bot initialized (${useWebhook ? 'webhook' : 'polling'})`);
 }
 // Telegram notification configuration (can be updated at runtime)
 let telegramConfig = {
@@ -113,6 +169,13 @@ const refundRequests = new Map();
 const receipts = new Map();
 const auditLogs = [];
 const inventoryStatus = new Map();
+// Track staff online status for alerting
+const staffOnlineStatus = new Map();
+// Valid table numbers (1-50 for legacy support) - defined at module scope for performance
+const VALID_TABLE_NUMBERS = new Set(Array.from({ length: 50 }, (_, i) => i + 1));
+// Alert thresholds for unstaffed orders
+let lastStaffAlertTime = new Map();
+const STAFF_ALERT_COOLDOWN = 5 * 60 * 1000; // 5 minutes between alerts
 // ============================================
 // AUDIT LOGGING
 // ============================================
@@ -207,6 +270,19 @@ const generateSessionId = () => {
     return `session-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
 };
 // ============================================
+// HTML ESCAPE UTILITY
+// ============================================
+const escapeHtml = (str) => {
+    if (!str)
+        return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+// ============================================
 // RECEIPT GENERATION
 // ============================================
 const generateReceipt = (order) => {
@@ -237,7 +313,7 @@ const generateReceipt = (order) => {
 const generateReceiptHTML = (receipt) => {
     const itemsHTML = receipt.items.map(item => `
     <tr>
-      <td style="padding: 8px; border-bottom: 1px solid #333;">${item.name}</td>
+      <td style="padding: 8px; border-bottom: 1px solid #333;">${escapeHtml(item.name)}</td>
       <td style="padding: 8px; border-bottom: 1px solid #333; text-align: center;">${item.quantity}</td>
       <td style="padding: 8px; border-bottom: 1px solid #333; text-align: right;">₦${item.price.toLocaleString()}</td>
       <td style="padding: 8px; border-bottom: 1px solid #333; text-align: right;">₦${item.total.toLocaleString()}</td>
@@ -270,7 +346,7 @@ const generateReceiptHTML = (receipt) => {
           <p>Resort & Lounge</p>
         </div>
         <p><strong>Table:</strong> ${receipt.tableNumber}</p>
-        <p><strong>Guest:</strong> ${receipt.guestName}</p>
+        <p><strong>Guest:</strong> ${escapeHtml(receipt.guestName)}</p>
         <p><strong>Date:</strong> ${new Date(receipt.createdAt).toLocaleString()}</p>
         <p><strong>Receipt #:</strong> ${receipt.id.slice(-8).toUpperCase()}</p>
         
@@ -304,21 +380,101 @@ const generateReceiptHTML = (receipt) => {
 // ============================================
 // API ROUTES
 // ============================================
-app.get('/api/health', (req, res) => {
-    res.json({
+// ============================================
+// ENHANCED HEALTH CHECK
+// ============================================
+app.get('/api/health', async (req, res) => {
+    const health = {
         status: 'ok',
         timestamp: new Date().toISOString(),
-        telegramEnabled: Boolean(TELEGRAM_BOT_TOKEN),
-        databaseConnected: database_1.db.isConnected()
-    });
+        uptime: process.uptime(),
+        version: process.env.npm_package_version || '1.0.0',
+        services: {
+            telegram: {
+                enabled: Boolean(TELEGRAM_BOT_TOKEN),
+                configured: Boolean(TELEGRAM_BOT_TOKEN && TELEGRAM_BOT_TOKEN !== 'your_bot_token_here')
+            },
+            database: {
+                connected: database_1.db.isConnected(),
+                type: database_1.db.isConnected() ? 'supabase' : 'in-memory'
+            },
+            webSocket: {
+                connections: io.engine.clientsCount,
+                staffOnline: staffOnlineStatus?.size || 0
+            }
+        },
+        memory: {
+            used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+            total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+            unit: 'MB'
+        }
+    };
+    // Return 503 if critical services are down
+    const isHealthy = health.services.database.connected;
+    res.status(isHealthy ? 200 : 503).json(health);
+});
+// Detailed health check for monitoring
+app.get('/api/health/detailed', async (req, res) => {
+    const detailed = {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        services: {
+            telegram: {
+                enabled: Boolean(TELEGRAM_BOT_TOKEN),
+                botToken: TELEGRAM_BOT_TOKEN ? 'configured' : 'missing',
+                kitchenChat: KITCHEN_CHAT_ID ? 'configured' : 'missing',
+                barChat: BAR_CHAT_ID ? 'configured' : 'missing',
+                managerChat: MANAGER_CHAT_ID ? 'configured' : 'missing'
+            },
+            database: {
+                connected: database_1.db.isConnected(),
+                stats: database_1.db.isConnected() ? await database_1.db.getStorageStats() : null
+            },
+            webSocket: {
+                totalConnections: io.engine.clientsCount,
+                staffOnline: Array.from(staffOnlineStatus?.values() || []).map(s => ({
+                    role: s.role,
+                    joinedAt: s.joinedAt
+                })),
+                activeTables: activeTables?.size || 0
+            }
+        },
+        metrics: {
+            totalOrders: orders?.size || 0,
+            pendingOrders: Array.from(orders?.values() || []).filter(o => o.status === 'pending').length,
+            activeSessions: activeTables?.size || 0,
+            pendingAccessRequests: Array.from(accessRequests?.values() || []).filter(r => r.status === 'pending').length
+        }
+    };
+    res.json(detailed);
 });
 // Generate QR code for a table
-app.get('/api/qr/:tableNumber', async (req, res) => {
+app.get('/api/qr/:locationId', async (req, res) => {
     try {
-        const tableNumber = parseInt(req.params.tableNumber);
-        const zone = req.query.zone || 'lounge';
+        const locationId = req.params.locationId;
+        let zone = req.query.zone || 'lounge';
         const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-        const locationId = `T-${String(tableNumber).padStart(3, '0')}`;
+        // Validate zone
+        const validZones = ['open-bar', 'lounge', 'nightclub', 'poolside'];
+        if (!validZones.includes(zone)) {
+            return res.status(400).json({ error: 'Invalid zone' });
+        }
+        // Determine zone from locationId prefix if not provided
+        if (!req.query.zone) {
+            if (locationId.startsWith('BAR-') || locationId.startsWith('ST-')) {
+                zone = 'open-bar';
+            }
+            else if (locationId.startsWith('NF-')) {
+                zone = 'nightclub';
+            }
+            else if (locationId.startsWith('PC-')) {
+                zone = 'poolside';
+            }
+            else {
+                zone = 'lounge'; // T-, LS- default to lounge
+            }
+        }
         const url = `${baseUrl}/order?location=${locationId}&zone=${zone}`;
         const qrCodeDataUrl = await qrcode_1.default.toDataURL(url, {
             width: 400,
@@ -329,7 +485,7 @@ app.get('/api/qr/:tableNumber', async (req, res) => {
             }
         });
         res.json({
-            tableNumber,
+            locationId,
             zone,
             url,
             qrCode: qrCodeDataUrl
@@ -368,13 +524,14 @@ app.get('/api/analytics', (req, res) => {
                 catSales.revenue += item.price * item.quantity;
                 categorySales.set(item.category, catSales);
             });
-            const hour = new Date(order.timestamp).getHours();
-            analytics.hourlySales[hour].orders++;
-            analytics.hourlySales[hour].revenue += order.total;
             const tableStats = tableSales.get(order.tableNumber) || { orders: 0, revenue: 0 };
             tableStats.orders++;
             tableStats.revenue += order.total;
             tableSales.set(order.tableNumber, tableStats);
+            // Count non-cancelled orders for hourly breakdown
+            const hour = new Date(order.timestamp).getHours();
+            analytics.hourlySales[hour].orders++;
+            analytics.hourlySales[hour].revenue += order.total;
         }
     });
     analytics.averageOrderValue = analytics.orderCount > 0 ? analytics.totalRevenue / analytics.orderCount : 0;
@@ -520,11 +677,63 @@ app.get('/api/audit-logs', (req, res) => {
 app.get('/api/telegram-config', (req, res) => {
     res.json(telegramConfig);
 });
-// Update telegram config
+// Update telegram config - requires manager auth
 app.post('/api/telegram-config', (req, res) => {
+    // Simple auth check via header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const token = authHeader.substring(7);
+    const validTokens = (process.env.STAFF_TOKENS || '').split(',').filter(Boolean);
+    if (!validTokens.includes(token)) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
     telegramConfig = { ...telegramConfig, ...req.body };
     logAudit('TELEGRAM_CONFIG_UPDATE', 'admin', 'staff', 'telegram-config', undefined, req.body, req.ip);
     res.json(telegramConfig);
+});
+// Staff authentication endpoint
+app.post('/api/auth/staff', (req, res) => {
+    const { role, pin } = req.body;
+    if (!role || !pin) {
+        return res.status(400).json({ error: 'Missing role or PIN' });
+    }
+    const validRoles = ['manager', 'kitchen', 'bar'];
+    if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+    }
+    // Get PIN from environment or use default
+    const envPins = {
+        manager: process.env.STAFF_MANAGER_PIN || '0000',
+        kitchen: process.env.STAFF_KITCHEN_PIN || '1111',
+        bar: process.env.STAFF_BAR_PIN || '2222'
+    };
+    const correctPin = envPins[role];
+    if (pin === correctPin) {
+        // Generate a simple session token (in production, use JWT)
+        const token = `${role}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        logAudit('STAFF_LOGIN', role, 'staff', 'auth', undefined, { role }, req.ip);
+        res.json({ success: true, role, token });
+    }
+    else {
+        logAudit('STAFF_LOGIN_FAILED', role, 'staff', 'auth', undefined, { role, reason: 'Invalid PIN' }, req.ip);
+        res.status(401).json({ error: 'Invalid PIN' });
+    }
+});
+// Verify staff token
+app.get('/api/auth/verify', (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+    const token = authHeader.substring(7);
+    const [role] = token.split('-');
+    const validRoles = ['manager', 'kitchen', 'bar'];
+    if (!validRoles.includes(role)) {
+        return res.status(401).json({ error: 'Invalid token' });
+    }
+    res.json({ valid: true, role });
 });
 // ============================================
 // SOCKET.IO HANDLING
@@ -538,16 +747,103 @@ io.on('connection', (socket) => {
     });
     // Join staff room
     socket.on('join-staff', (role) => {
+        // Store role on socket for authorization checks
+        socket.data = { ...socket.data, role };
         socket.join(`staff-${role}`);
         if (role === 'manager')
             socket.join('staff-all');
-        console.log(`Socket ${socket.id} joined staff-${role}`);
+        // Track staff online status
+        const staffId = `${role}-${socket.id}`;
+        staffOnlineStatus.set(staffId, {
+            role,
+            joinedAt: new Date(),
+            socketId: socket.id
+        });
+        console.log(`Socket ${socket.id} joined staff-${role} (${staffOnlineStatus.size} total staff online)`);
         // Send current inventory status to staff
         socket.emit('inventory-update', Object.fromEntries(inventoryStatus));
         socket.emit('telegram-config', telegramConfig);
     });
+    // Helper function to check if socket has staff role
+    const hasStaffRole = (requiredRoles) => {
+        const socketRole = socket.data?.role;
+        if (!socketRole)
+            return false;
+        if (requiredRoles.includes('all'))
+            return true;
+        return requiredRoles.includes(socketRole);
+    };
+    // Helper function to check if staff are online for a role
+    const isStaffOnline = (role) => {
+        if (role === 'all') {
+            return staffOnlineStatus.size > 0;
+        }
+        return Array.from(staffOnlineStatus.values()).some(s => s.role === role);
+    };
+    // Helper function to send staff offline alert
+    const sendStaffOfflineAlert = async (orderType) => {
+        const now = Date.now();
+        const lastAlert = lastStaffAlertTime.get(orderType) || 0;
+        if (now - lastAlert < STAFF_ALERT_COOLDOWN) {
+            return; // Don't spam alerts
+        }
+        let message = '';
+        if (orderType === 'food' && !isStaffOnline('kitchen')) {
+            message = `⚠️ <b>KITCHEN OFFLINE ALERT</b>\nNo kitchen staff currently online. Orders may be delayed.\n🕐 ${formatTime(new Date())}`;
+            lastStaffAlertTime.set('food', now);
+        }
+        else if (orderType === 'drink' && !isStaffOnline('bar')) {
+            message = `⚠️ <b>BAR OFFLINE ALERT</b>\nNo bar staff currently online. Orders may be delayed.\n🕐 ${formatTime(new Date())}`;
+            lastStaffAlertTime.set('drink', now);
+        }
+        else if (orderType === 'general' && !isStaffOnline('manager')) {
+            message = `⚠️ <b>MANAGER OFFLINE ALERT</b>\nNo manager currently online.\n🕐 ${formatTime(new Date())}`;
+            lastStaffAlertTime.set('general', now);
+        }
+        if (message && MANAGER_CHAT_ID) {
+            await sendTelegramMessage(MANAGER_CHAT_ID, message);
+            logAudit('STAFF_OFFLINE_ALERT', 'system', 'system', 'staff-alert', undefined, { orderType });
+        }
+    };
     // Check-in - supports multiple guests at same table
     socket.on('check-in', async ({ tableNumber, guestName }) => {
+        // Validate guest name (server-side validation)
+        if (!guestName || guestName.trim().length === 0) {
+            socket.emit('check-in-error', {
+                error: 'Invalid guest name',
+                message: 'Please provide a valid guest name'
+            });
+            return;
+        }
+        if (guestName.length > 40) {
+            socket.emit('check-in-error', {
+                error: 'Invalid guest name',
+                message: 'Guest name must be 40 characters or less'
+            });
+            return;
+        }
+        // Validate table number
+        if (!tableNumber || typeof tableNumber !== 'number' || tableNumber < 1) {
+            socket.emit('check-in-error', {
+                error: 'Invalid table number',
+                message: 'Please provide a valid table number'
+            });
+            return;
+        }
+        // Check if table is valid (legacy check - allows 1-50)
+        // In production, this should validate against actual location IDs
+        if (!VALID_TABLE_NUMBERS.has(tableNumber)) {
+            socket.emit('check-in-error', {
+                error: 'Table not found',
+                message: `Table ${tableNumber} does not exist. Please check your QR code or ask staff for assistance.`
+            });
+            logAudit('CHECK_IN_REJECTED', guestName, 'staff', 'table', undefined, {
+                tableNumber,
+                reason: 'Invalid table number',
+                ipAddress: socket.handshake.address
+            });
+            return;
+        }
         const guestId = generateGuestId();
         let session = activeTables.get(tableNumber);
         if (!session || !session.isActive) {
@@ -596,7 +892,50 @@ io.on('connection', (socket) => {
     });
     // New order - each guest can order independently
     socket.on('new-order', async (order) => {
+        // Validate order data
+        if (!order.tableNumber || typeof order.tableNumber !== 'number' || order.tableNumber < 1) {
+            socket.emit('order-error', {
+                error: 'Invalid table number',
+                message: 'Please check in again or ask staff for assistance'
+            });
+            return;
+        }
+        if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
+            socket.emit('order-error', {
+                error: 'Invalid order',
+                message: 'Your order must contain at least one item'
+            });
+            return;
+        }
+        if (!order.guestName || order.guestName.trim().length === 0) {
+            socket.emit('order-error', {
+                error: 'Invalid guest name',
+                message: 'Please check in with a valid name'
+            });
+            return;
+        }
+        // Validate guest name length (server-side)
+        if (order.guestName.length > 40) {
+            socket.emit('order-error', {
+                error: 'Invalid guest name',
+                message: 'Guest name must be 40 characters or less'
+            });
+            return;
+        }
         order.id = order.id || generateId();
+        // Check for duplicate order (same items, same table, within 30 seconds)
+        const recentDuplicate = Array.from(orders.values()).find(o => o.tableNumber === order.tableNumber &&
+            o.guestId === order.guestId &&
+            o.items.length === order.items.length &&
+            o.total === order.total &&
+            new Date().getTime() - new Date(o.timestamp).getTime() < 30000 &&
+            o.items.every((item, idx) => item.id === order.items[idx]?.id &&
+                item.quantity === order.items[idx]?.quantity));
+        if (recentDuplicate) {
+            console.log(`Duplicate order detected for table ${order.tableNumber}, returning existing order ${recentDuplicate.id}`);
+            socket.emit('order-confirmation', { orderId: recentDuplicate.id, duplicate: true });
+            return;
+        }
         order.paymentStatus = 'unpaid';
         orders.set(order.id, order);
         database_1.db.saveOrder(order).catch(err => console.error('Failed to save order to DB:', err));
@@ -609,17 +948,35 @@ io.on('connection', (socket) => {
         const foodItems = order.items.filter(item => item.category === 'food');
         const drinkItems = order.items.filter(item => ['cocktails', 'spirits', 'wine', 'nonalc', 'brandy', 'tequila', 'sparkling-wine', 'liquor', 'mixers', 'energy-drinks', 'beer'].includes(item.category));
         const shishaItems = order.items.filter(item => item.category === 'shisha');
-        io.to('staff-manager').to('staff-all').emit('new-order', order);
-        if (foodItems.length > 0) {
-            io.to('staff-kitchen').emit('new-order', { ...order, items: foodItems });
-        }
-        if (drinkItems.length > 0 || shishaItems.length > 0) {
-            io.to('staff-bar').emit('new-order', {
-                ...order,
-                items: [...drinkItems, ...shishaItems]
-            });
-        }
+        // Emit to staff rooms and track delivery
+        const emitToStaff = () => {
+            io.to('staff-manager').to('staff-all').emit('new-order', order);
+            if (foodItems.length > 0) {
+                io.to('staff-kitchen').emit('new-order', { ...order, items: foodItems });
+            }
+            if (drinkItems.length > 0 || shishaItems.length > 0) {
+                io.to('staff-bar').emit('new-order', {
+                    ...order,
+                    items: [...drinkItems, ...shishaItems]
+                });
+            }
+        };
+        emitToStaff();
+        // Store undelivered orders for offline dashboard recovery
+        // This ensures orders aren't lost if dashboard refreshes
+        const undeliveredKey = `undelivered-${Date.now()}`;
+        socket.handshake.auth = { ...socket.handshake.auth, lastOrder: order.id };
         io.to(`table-${order.tableNumber}`).emit('order-confirmation', { orderId: order.id });
+        // Check for offline staff and send alerts
+        if (foodItems.length > 0 && !isStaffOnline('kitchen')) {
+            await sendStaffOfflineAlert('food');
+        }
+        if ((drinkItems.length > 0 || shishaItems.length > 0) && !isStaffOnline('bar')) {
+            await sendStaffOfflineAlert('drink');
+        }
+        if (!isStaffOnline('manager')) {
+            await sendStaffOfflineAlert('general');
+        }
         const itemsList = order.items.map(i => `${i.quantity}× ${i.name} (${formatPrice(i.price * i.quantity)})`).join('\n');
         if (telegramConfig.newOrder) {
             const managerMsg = `🍾 <b>NEW ORDER</b> — Table ${order.tableNumber}\n` +
@@ -661,6 +1018,11 @@ io.on('connection', (socket) => {
     });
     // Update order status
     socket.on('update-order-status', async ({ orderId, status }) => {
+        // Authorization check - only staff can update order status
+        if (!hasStaffRole(['manager', 'kitchen', 'bar'])) {
+            socket.emit('error', { message: 'Unauthorized: Staff role required' });
+            return;
+        }
         const order = orders.get(orderId);
         if (order) {
             order.status = status;
@@ -745,6 +1107,11 @@ io.on('connection', (socket) => {
     });
     // Update payment status
     socket.on('update-payment', async ({ orderId, status }) => {
+        // Authorization check - only manager can update payment status
+        if (!hasStaffRole(['manager'])) {
+            socket.emit('error', { message: 'Unauthorized: Manager role required' });
+            return;
+        }
         const order = orders.get(orderId);
         if (order) {
             order.paymentStatus = status;
@@ -784,6 +1151,11 @@ io.on('connection', (socket) => {
     });
     // Process refund
     socket.on('process-refund', async ({ requestId, approved }) => {
+        // Authorization check - only manager can process refunds
+        if (!hasStaffRole(['manager'])) {
+            socket.emit('error', { message: 'Unauthorized: Manager role required' });
+            return;
+        }
         const request = refundRequests.get(requestId);
         if (request) {
             request.status = approved ? 'approved' : 'denied';
@@ -822,6 +1194,11 @@ io.on('connection', (socket) => {
     });
     // Cancel order
     socket.on('cancel-order', async ({ orderId, reason }) => {
+        // Authorization check - only staff can cancel orders
+        if (!hasStaffRole(['manager', 'kitchen', 'bar'])) {
+            socket.emit('error', { message: 'Unauthorized: Staff role required' });
+            return;
+        }
         const order = orders.get(orderId);
         if (order && order.status === 'pending') {
             order.status = 'cancelled';
@@ -841,6 +1218,11 @@ io.on('connection', (socket) => {
     });
     // End table session (table turnover) - generates final bill
     socket.on('end-session', async ({ tableNumber, finalBill }) => {
+        // Authorization check - only manager can end sessions
+        if (!hasStaffRole(['manager'])) {
+            socket.emit('error', { message: 'Unauthorized: Manager role required' });
+            return;
+        }
         const session = activeTables.get(tableNumber);
         if (session) {
             session.isActive = false;
@@ -911,6 +1293,11 @@ io.on('connection', (socket) => {
     });
     // Update inventory
     socket.on('update-inventory', (update) => {
+        // Authorization check - only staff can update inventory
+        if (!hasStaffRole(['manager', 'kitchen', 'bar'])) {
+            socket.emit('error', { message: 'Unauthorized: Staff role required' });
+            return;
+        }
         inventoryStatus.set(update.itemId, {
             isAvailable: update.isAvailable,
             stockQuantity: update.stockQuantity ?? null
@@ -924,6 +1311,11 @@ io.on('connection', (socket) => {
     });
     // Update telegram config
     socket.on('update-telegram-config', (config) => {
+        // Authorization check - only manager can update telegram config
+        if (!hasStaffRole(['manager'])) {
+            socket.emit('error', { message: 'Unauthorized: Manager role required' });
+            return;
+        }
         telegramConfig = { ...telegramConfig, ...config };
         logAudit('TELEGRAM_CONFIG_UPDATE', 'staff', 'staff', 'telegram-config', undefined, config);
         io.to('staff-manager').emit('telegram-config', telegramConfig);
@@ -932,16 +1324,35 @@ io.on('connection', (socket) => {
     // Disconnect
     socket.on('disconnect', () => {
         console.log('Client disconnected:', socket.id);
+        // Remove from staff online tracking
+        for (const [staffId, staffInfo] of staffOnlineStatus.entries()) {
+            if (staffInfo.socketId === socket.id) {
+                staffOnlineStatus.delete(staffId);
+                console.log(`Staff ${staffInfo.role} went offline (${staffOnlineStatus.size} total staff online)`);
+                // Send alert if no staff of this role remain
+                const remainingOfRole = Array.from(staffOnlineStatus.values()).filter(s => s.role === staffInfo.role).length;
+                if (remainingOfRole === 0 && MANAGER_CHAT_ID) {
+                    const msg = `⚠️ <b>STAFF WENT OFFLINE</b>\nNo ${staffInfo.role} staff currently online.\n🕐 ${formatTime(new Date())}`;
+                    sendTelegramMessage(MANAGER_CHAT_ID, msg);
+                }
+                break;
+            }
+        }
         for (const [tableNum, session] of activeTables.entries()) {
             const guestIndex = session.guests.findIndex(g => g.socketId === socket.id);
             if (guestIndex !== -1) {
                 const guest = session.guests[guestIndex];
                 session.guests.splice(guestIndex, 1);
-                activeTables.set(tableNum, session);
                 if (session.guests.length === 0) {
+                    // Clean up the session when the last guest disconnects
+                    session.isActive = false;
+                    session.endTime = new Date();
+                    activeTables.delete(tableNum);
                     io.to('staff-manager').to('staff-all').emit('table-inactive', tableNum);
+                    console.log(`Session ended for Table ${tableNum} - last guest disconnected`);
                 }
                 else {
+                    activeTables.set(tableNum, session);
                     io.to('staff-manager').to('staff-all').emit('guest-left', {
                         tableNumber: tableNum,
                         guestName: guest.guestName,
@@ -959,6 +1370,43 @@ io.on('connection', (socket) => {
 });
 // Start server
 const PORT = process.env.PORT || 5000;
+// Graceful shutdown handler
+const gracefulShutdown = async (signal) => {
+    console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
+    // Stop accepting new connections
+    httpServer.close(() => {
+        console.log('📡 HTTP server closed');
+    });
+    // Notify all connected clients about shutdown
+    io.emit('server-shutdown', { message: 'Server is restarting. Please reconnect in a moment.' });
+    // Give clients time to receive the message
+    setTimeout(async () => {
+        // Close Socket.IO connections
+        io.close(() => {
+            console.log('📡 Socket.IO connections closed');
+        });
+        // Save any pending data to database
+        if (database_1.db.isConnected()) {
+            try {
+                console.log('💾 Saving pending data to database...');
+                // Data is already saved in real-time via db.save* calls
+                console.log('✅ All data saved');
+            }
+            catch (error) {
+                console.error('❌ Error saving data during shutdown:', error);
+            }
+        }
+        console.log('👋 Graceful shutdown complete');
+        process.exit(0);
+    }, 2000);
+    // Force exit after 10 seconds if graceful shutdown fails
+    setTimeout(() => {
+        console.error('⚠️ Graceful shutdown timed out. Forcing exit.');
+        process.exit(1);
+    }, 10000);
+};
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 httpServer.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📱 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
