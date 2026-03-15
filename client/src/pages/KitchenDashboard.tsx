@@ -154,6 +154,10 @@ const KitchenDashboardContent: React.FC = () => {
     updateOrderStatus(orderId, 'ready');
   };
 
+  const handleMarkConfirmed = (orderId: string) => {
+    updateOrderStatus(orderId, 'confirmed');
+  };
+
   const tableOptions = useMemo(() => {
     const tables = new Set<number>();
     foodOrders.forEach(order => tables.add(order.tableNumber));
@@ -320,6 +324,15 @@ const KitchenDashboardContent: React.FC = () => {
                                    hover:bg-orange-600 transition-colors"
                       >
                         Start Cooking
+                      </button>
+                    )}
+                    {order.status === 'pending' && (
+                      <button
+                        onClick={() => handleMarkConfirmed(order.id)}
+                        className="flex-1 bg-blue-500 text-white py-3 rounded text-sm font-medium
+                                   hover:bg-blue-600 transition-colors"
+                      >
+                        Confirm
                       </button>
                     )}
                     {order.status === 'preparing' && (
