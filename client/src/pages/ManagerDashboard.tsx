@@ -213,6 +213,21 @@ export const ManagerDashboard: React.FC = () => {
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled' } : o));
     });
 
+    socket.on('session-ended', ({ tableNumber, guestCount, totalOrders, totalSpent }: 
+      { tableNumber: number; sessionId: string; duration: number; guestCount: number; totalOrders: number; totalSpent: number }) => {
+      updateTableStatus(tableNumber, { isActive: false, hasPendingOrder: false, hasUnreadMessage: false });
+      setStats(prev => ({ 
+        ...prev, 
+        activeTables: Math.max(0, prev.activeTables - 1),
+        revenue: prev.revenue + totalSpent
+      }));
+      addTelegramMessage(`🧹 SESSION ENDED — Table ${tableNumber}\n👥 ${guestCount} guests · 📦 ${totalOrders} orders · 💰 ${formatPrice(totalSpent)}`);
+    });
+
+    socket.on('session-receipt', ({ tableNumber, receipt }: { tableNumber: number; receipt: any }) => {
+      addTelegramMessage(`🧾 SESSION RECEIPT — Table ${tableNumber}\n💰 ${formatPrice(receipt.total)} · Receipt #${receipt.id.slice(-8).toUpperCase()}`);
+    });
+
     return () => {
       socket.off('new-order');
       socket.off('check-in');
@@ -224,6 +239,8 @@ export const ManagerDashboard: React.FC = () => {
       socket.off('table-inactive');
       socket.off('guest-left');
       socket.off('order-cancelled');
+      socket.off('session-ended');
+      socket.off('session-receipt');
     };
   }, [socket, selectedTable, triggerNewOrderAlert]);
 

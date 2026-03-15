@@ -197,8 +197,8 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({ onCheckIn }) => {
             {zoneInfo?.description || 'Enter your name to begin your exclusive dining experience. Our staff will be notified of your arrival.'}
           </p>
           
-          {/* Food availability notice */}
-          {zone && !['lounge', 'vip', 'poolside'].includes(zone) && (
+          {/* Food availability notice - all zones now support food */}
+          {zone === 'nightclub' && (
             <p className="text-amber-400 text-sm mt-3 flex items-center justify-center gap-2">
               <span>🍸</span>
               <span>Drinks & snacks only in this area</span>

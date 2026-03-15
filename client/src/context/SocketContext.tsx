@@ -72,6 +72,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (lastTable) {
         newSocket.emit('join-table', parseInt(lastTable, 10));
       }
+      
+      // Rejoin staff room if previously authenticated as staff
+      const lastRole = sessionStorage.getItem('staff_role');
+      if (lastRole === 'manager' || lastRole === 'kitchen' || lastRole === 'bar') {
+        console.log(`Rejoining staff room: ${lastRole}`);
+        newSocket.emit('join-staff', lastRole);
+      }
     });
 
     newSocket.on('disconnect', (reason) => {
@@ -164,6 +171,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [socket]);
 
   const joinStaff = useCallback((role: 'manager' | 'kitchen' | 'bar') => {
+    // Store staff role for reconnection handling
+    sessionStorage.setItem('staff_role', role);
     socket?.emit('join-staff', role);
   }, [socket]);
 
