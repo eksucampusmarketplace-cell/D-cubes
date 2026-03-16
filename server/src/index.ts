@@ -146,33 +146,39 @@ app.use(ipWhitelist);
 
 // Staff authentication middleware
 const staffAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // Skip auth for health check and auth endpoints
-  if (req.path.startsWith('/api/health') || 
+  // Skip auth for health check, auth endpoints, and QR code generation
+  if (req.path.startsWith('/api/health') ||
       req.path.startsWith('/api/auth/') ||
       req.path.startsWith('/api/qr/')) {
     return next();
   }
-  
+
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized: No token provided' });
   }
-  
+
   const token = authHeader.substring(7);
-  const [role, timestamp] = token.split('-');
-  
+  const parts = token.split('-');
+
+  if (parts.length < 3) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token format' });
+  }
+
+  const [role, timestamp] = parts;
+
   // Validate role
   const validRoles = ['manager', 'kitchen', 'bar'];
   if (!validRoles.includes(role)) {
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
-  
+
   // Check token not expired (24 hours)
   const tokenTime = parseInt(timestamp);
   if (isNaN(tokenTime) || Date.now() - tokenTime > 24 * 60 * 60 * 1000) {
     return res.status(401).json({ error: 'Unauthorized: Token expired' });
   }
-  
+
   // Attach role to request for downstream handlers
   (req as any).staffRole = role;
   next();
@@ -838,29 +844,29 @@ app.post('/api/telegram-config', (req, res) => {
 // Staff authentication endpoint
 app.post('/api/auth/staff', (req, res) => {
   const { role, pin } = req.body;
-  
+
   if (!role || !pin) {
     return res.status(400).json({ error: 'Missing role or PIN' });
   }
-  
+
   const validRoles = ['manager', 'kitchen', 'bar'];
   if (!validRoles.includes(role)) {
     return res.status(400).json({ error: 'Invalid role' });
   }
-  
+
   // Get PIN from environment or use default
   const envPins: Record<string, string> = {
     manager: process.env.STAFF_MANAGER_PIN || '0000',
     kitchen: process.env.STAFF_KITCHEN_PIN || '1111',
     bar: process.env.STAFF_BAR_PIN || '2222'
   };
-  
+
   const correctPin = envPins[role];
-  
+
   if (pin === correctPin) {
     // Generate a simple session token (in production, use JWT)
     const token = `${role}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+
     logAudit('STAFF_LOGIN', role, 'staff', 'auth', undefined, { role }, req.ip);
     res.json({ success: true, role, token });
   } else {
@@ -875,15 +881,21 @@ app.get('/api/auth/verify', (req, res) => {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No token provided' });
   }
-  
+
   const token = authHeader.substring(7);
-  const [role] = token.split('-');
-  
+  const parts = token.split('-');
+
+  if (parts.length < 3) {
+    return res.status(401).json({ error: 'Invalid token format' });
+  }
+
+  const [role] = parts;
+
   const validRoles = ['manager', 'kitchen', 'bar'];
   if (!validRoles.includes(role)) {
     return res.status(401).json({ error: 'Invalid token' });
   }
-  
+
   res.json({ valid: true, role });
 });
 

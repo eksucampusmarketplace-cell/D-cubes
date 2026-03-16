@@ -126,7 +126,7 @@ app.use(rateLimiter);
 app.use(ipWhitelist);
 // Staff authentication middleware
 const staffAuthMiddleware = (req, res, next) => {
-    // Skip auth for health check and auth endpoints
+    // Skip auth for health check, auth endpoints, and QR code generation
     if (req.path.startsWith('/api/health') ||
         req.path.startsWith('/api/auth/') ||
         req.path.startsWith('/api/qr/')) {
@@ -137,7 +137,11 @@ const staffAuthMiddleware = (req, res, next) => {
         return res.status(401).json({ error: 'Unauthorized: No token provided' });
     }
     const token = authHeader.substring(7);
-    const [role, timestamp] = token.split('-');
+    const parts = token.split('-');
+    if (parts.length < 3) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid token format' });
+    }
+    const [role, timestamp] = parts;
     // Validate role
     const validRoles = ['manager', 'kitchen', 'bar'];
     if (!validRoles.includes(role)) {
@@ -767,7 +771,11 @@ app.get('/api/auth/verify', (req, res) => {
         return res.status(401).json({ error: 'No token provided' });
     }
     const token = authHeader.substring(7);
-    const [role] = token.split('-');
+    const parts = token.split('-');
+    if (parts.length < 3) {
+        return res.status(401).json({ error: 'Invalid token format' });
+    }
+    const [role] = parts;
     const validRoles = ['manager', 'kitchen', 'bar'];
     if (!validRoles.includes(role)) {
         return res.status(401).json({ error: 'Invalid token' });
