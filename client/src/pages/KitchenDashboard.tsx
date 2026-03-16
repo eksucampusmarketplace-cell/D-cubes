@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSocket } from '@/context/SocketContext';
 import { Order, OrderStatus, ChatMessage } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, generateMessageId } from '@/utils/format';
+import { authenticatedFetch } from '@/utils/api';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const KitchenDashboard: React.FC = () => {
@@ -72,8 +73,8 @@ const KitchenDashboardContent: React.FC = () => {
   const fetchInitialData = async () => {
     try {
       const [ordersRes, messagesRes] = await Promise.all([
-        fetch('/api/orders'),
-        fetch('/api/messages'),
+        authenticatedFetch('/api/orders', {}, 'kitchen'),
+        authenticatedFetch('/api/messages', {}, 'kitchen'),
       ]);
 
       if (ordersRes.ok) {
