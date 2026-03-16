@@ -144,9 +144,16 @@ app.use(express.json());
 app.use(rateLimiter);
 app.use(ipWhitelist);
 
-// Staff authentication middleware
+// Staff authentication middleware — protects /api/* routes only
 const staffAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // Skip auth for public routes
+
+  // ── Step 1: let all non-API requests straight through ────────
+  // Static files, HTML pages, and client-side routes must never
+  // be blocked — the browser needs to load the app before any
+  // auth token can exist.
+  if (!req.path.startsWith('/api/')) return next();
+
+  // ── Step 2: public API routes (no token required) ─────────────
   const isPublicRoute =
     req.path.startsWith('/api/health') ||
     req.path.startsWith('/api/auth/')  ||
