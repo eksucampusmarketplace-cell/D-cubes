@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSocket } from '@/context/SocketContext';
 import { Order, AccessRequest, ChatMessage, Table, OrderStatus, RefundRequest, AnalyticsData, PaymentStatus, TableSession } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, getAccessTypeLabel, generateMessageId } from '@/utils/format';
+import { authenticatedFetch } from '@/utils/api';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 type ActiveView = 'orders' | 'tables' | 'messages';
@@ -81,12 +82,12 @@ const ManagerDashboardContent: React.FC = () => {
   const fetchInitialData = useCallback(async () => {
     try {
       const [ordersRes, allOrdersRes, accessRes, refundRes, sessionsRes, messagesRes] = await Promise.all([
-        fetch('/api/orders'),
-        fetch('/api/orders/all'),
-        fetch('/api/access-requests'),
-        fetch('/api/refund-requests'),
-        fetch('/api/sessions'),
-        fetch('/api/messages'),
+        authenticatedFetch('/api/orders', {}, 'manager'),
+        authenticatedFetch('/api/orders/all', {}, 'manager'),
+        authenticatedFetch('/api/access-requests', {}, 'manager'),
+        authenticatedFetch('/api/refund-requests', {}, 'manager'),
+        authenticatedFetch('/api/sessions', {}, 'manager'),
+        authenticatedFetch('/api/messages', {}, 'manager'),
       ]);
 
       if (ordersRes.ok) {
@@ -260,7 +261,7 @@ const ManagerDashboardContent: React.FC = () => {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const response = await fetch('/api/analytics');
+        const response = await authenticatedFetch('/api/analytics', {}, 'manager');
         if (response.ok) {
           const data = await response.json();
           setAnalytics(data);
@@ -283,7 +284,7 @@ const ManagerDashboardContent: React.FC = () => {
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        const response = await fetch('/api/health');
+        const response = await authenticatedFetch('/api/health', {}, 'manager');
         if (response.ok) {
           const data = await response.json();
           setTelegramEnabled(Boolean(data.telegramEnabled));

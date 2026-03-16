@@ -3,6 +3,7 @@ import { MenuItem, ZoneType, InventoryUpdate, TelegramNotificationConfig, Receip
 import { MENU_ITEMS, CATEGORY_NAMES, CATEGORY_ICONS, ZONE_PRICES } from '@/data/menu';
 import { ZONES } from '@/data/locations';
 import { formatPrice } from '@/utils/format';
+import { authenticatedFetch } from '@/utils/api';
 import { useSocket } from '@/context/SocketContext';
 import { useSettings } from '@/context/SettingsContext';
 
@@ -49,7 +50,7 @@ export const AdminPanel: React.FC = () => {
 
   // Load receipts
   useEffect(() => {
-    fetch('/api/receipts')
+    authenticatedFetch('/api/receipts', {}, 'manager')
       .then(res => res.json())
       .then(data => setReceipts(data))
       .catch(console.error);

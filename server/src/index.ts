@@ -26,7 +26,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", process.env.CLIENT_URL || "http://localhost:3000"],
+      connectSrc: ["'self'", "https://d-cubes.com.ng"],
       frameAncestors: ["'none'"],
       upgradeInsecureRequests: [],
     },
@@ -56,7 +56,7 @@ app.use((req, res, next) => {
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: "https://d-cubes.com.ng",
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -133,7 +133,7 @@ const ipWhitelist = (req: express.Request, res: express.Response, next: express.
 // CORS SETUP - Restrict to client URL only
 // ============================================
 const corsOptions = {
-  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  origin: "https://d-cubes.com.ng",
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -560,7 +560,7 @@ app.get('/api/qr/:locationId', async (req, res) => {
   try {
     const locationId = req.params.locationId;
     let zone = (req.query.zone as string) || 'lounge';
-    const baseUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    const baseUrl = 'https://d-cubes.com.ng';
     
     // Validate zone
     const validZones = ['open-bar', 'lounge', 'nightclub', 'poolside'];
@@ -1725,7 +1725,7 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Client URL: ${process.env.CLIENT_URL || 'http://localhost:3000'}`);
+  console.log(`📱 Client URL: https://d-cubes.com.ng`);
   console.log(`🤖 Telegram Bot: ${TELEGRAM_BOT_TOKEN ? 'Enabled' : 'Disabled'}`);
   console.log(`🔒 Rate Limiting: Enabled (${RATE_LIMIT_MAX} req/min)`);
   console.log(`📋 Audit Logging: Enabled`);

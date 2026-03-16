@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSocket } from '@/context/SocketContext';
 import { Order, OrderStatus, ChatMessage, ZoneType } from '@/types';
 import { formatPrice, formatTime, getStatusLabel, generateMessageId } from '@/utils/format';
+import { authenticatedFetch } from '@/utils/api';
 import { ZONES } from '@/data/locations';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -77,8 +78,8 @@ const BarDashboardContent: React.FC = () => {
   const fetchInitialData = async () => {
     try {
       const [ordersRes, messagesRes] = await Promise.all([
-        fetch('/api/orders'),
-        fetch('/api/messages'),
+        authenticatedFetch('/api/orders', {}, 'bar'),
+        authenticatedFetch('/api/messages', {}, 'bar'),
       ]);
 
       if (ordersRes.ok) {
