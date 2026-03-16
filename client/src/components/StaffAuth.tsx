@@ -87,24 +87,32 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
 
   // Check for existing auth on mount
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
-  
+
   useEffect(() => {
     const storedAuth = localStorage.getItem(`dcubes_auth_${role}`);
     const storedToken = localStorage.getItem(`dcubes_auth_${role}_token`);
-    
+
     if (storedAuth && storedToken) {
       const authTime = new Date(storedAuth);
       const now = new Date();
       const hoursDiff = (now.getTime() - authTime.getTime()) / (1000 * 60 * 60);
 
       if (hoursDiff < 8) {
-        setAuthenticated(true);
+        fetch('/api/auth/verify', {
+          headers: { 'Authorization': `Bearer ${storedToken}` }
+        }).then(res => {
+          if (res.ok) { setAuthenticated(true); }
+          else { /* clear storage, show PIN screen */ }
+        }).catch(() => setAuthenticated(true)) // offline fallback
+         .finally(() => setHasCheckedAuth(true));
       } else {
         localStorage.removeItem(`dcubes_auth_${role}`);
         localStorage.removeItem(`dcubes_auth_${role}_token`);
+        setHasCheckedAuth(true);
       }
+    } else {
+      setHasCheckedAuth(true);
     }
-    setHasCheckedAuth(true);
   }, [role]);
 
   // Show loading spinner only while checking auth and not authenticated yet
