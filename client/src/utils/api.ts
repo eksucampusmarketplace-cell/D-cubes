@@ -1,5 +1,12 @@
 // Utility for making authenticated API requests
 
+export class AuthError extends Error {
+  constructor(public role: string) {
+    super(`Not authenticated as ${role}`);
+    this.name = 'AuthError';
+  }
+}
+
 const getAuthToken = (role: string): string | null => {
   return localStorage.getItem(`dcubes_auth_${role}_token`);
 };
@@ -7,21 +14,14 @@ const getAuthToken = (role: string): string | null => {
 export const authenticatedFetch = async (
   endpoint: string,
   options: RequestInit = {},
-  requiredRole: 'manager' | 'kitchen' | 'bar' = 'manager'
+  role: 'manager' | 'kitchen' | 'bar' = 'manager'
 ): Promise<Response> => {
-  const token = getAuthToken(requiredRole);
-  
-  const headers: HeadersInit = {
-    ...options.headers,
-    'Content-Type': 'application/json',
-  };
-  
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  }
-  
+  const token = getAuthToken(role);
+  if (!token) throw new AuthError(role);  // <-- KEY CHANGE
   return fetch(endpoint, {
     ...options,
-    headers,
+    headers: { ...options.headers,
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}` },
   });
 };

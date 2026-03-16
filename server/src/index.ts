@@ -146,12 +146,16 @@ app.use(ipWhitelist);
 
 // Staff authentication middleware
 const staffAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // Skip auth for health check, auth endpoints, and QR code generation
-  if (req.path.startsWith('/api/health') ||
-      req.path.startsWith('/api/auth/') ||
-      req.path.startsWith('/api/qr/')) {
-    return next();
-  }
+  // Skip auth for public routes
+  const isPublicRoute =
+    req.path.startsWith('/api/health') ||
+    req.path.startsWith('/api/auth/')  ||
+    req.path.startsWith('/api/qr/')    ||
+    req.path.startsWith('/api/table/') ||
+    /^\/api\/messages\/\d+$/.test(req.path) ||
+    /^\/api\/receipts\/[^/]+(\/html)?$/.test(req.path) ||
+    req.path === '/api/inventory';
+  if (isPublicRoute) return next();
 
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -173,9 +177,9 @@ const staffAuthMiddleware = (req: express.Request, res: express.Response, next: 
     return res.status(401).json({ error: 'Unauthorized: Invalid token' });
   }
 
-  // Check token not expired (24 hours)
+  // Check token not expired (8 hours)
   const tokenTime = parseInt(timestamp);
-  if (isNaN(tokenTime) || Date.now() - tokenTime > 24 * 60 * 60 * 1000) {
+  if (isNaN(tokenTime) || Date.now() - tokenTime > 8 * 60 * 60 * 1000) {
     return res.status(401).json({ error: 'Unauthorized: Token expired' });
   }
 
