@@ -77,8 +77,8 @@ export const ZONE_CATEGORIES: Record<ZoneType, string[]> = {
 export function generateLocations(): Location[] {
   const locations: Location[] = [];
 
-  // Open Bar Stools (BAR-01 to BAR-12)
-  for (let i = 1; i <= 12; i++) {
+  // Open Bar Stools (BAR-01 to BAR-20)
+  for (let i = 1; i <= 20; i++) {
     locations.push({
       id: `BAR-${String(i).padStart(2, '0')}`,
       number: i,
@@ -137,8 +137,8 @@ export function generateLocations(): Location[] {
     });
   }
 
-  // Club Floor Tables (NF-01 to NF-10)
-  for (let i = 1; i <= 10; i++) {
+  // Club Floor Tables (NF-01 to NF-20)
+  for (let i = 1; i <= 20; i++) {
     locations.push({
       id: `NF-${String(i).padStart(2, '0')}`,
       number: i,
