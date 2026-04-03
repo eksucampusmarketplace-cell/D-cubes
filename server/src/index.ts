@@ -3,10 +3,13 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
 import QRCode from 'qrcode';
 import TelegramBot from 'node-telegram-bot-api';
+import { z } from 'zod';
+import { logger } from './logger';
 import { Order, AccessRequest, ChatMessage, OrderStatus, TableSession, TableGuest, RefundRequest, PaymentStatus, AnalyticsData, Receipt, AuditLog, InventoryUpdate, TelegramNotificationConfig } from './types';
 import { db } from './database';
 
@@ -105,6 +108,26 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+const authRateLimitStore = new Map<string, RateLimitEntry>();
+const AUTH_WINDOW = 15 * 60 * 1000; // 15 minutes
+const AUTH_MAX = 10; // 10 attempts
+
+const authLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  const entry = authRateLimitStore.get(ip);
+
+  if (!entry || now > entry.resetTime) {
+    authRateLimitStore.set(ip, { count: 1, resetTime: now + AUTH_WINDOW });
+    next();
+  } else if (entry.count < AUTH_MAX) {
+    entry.count++;
+    next();
+  } else {
+    res.status(429).json({ error: 'Too many login attempts, please try again after 15 minutes' });
+  }
+};
+
 // ============================================
 // IP WHITELIST MIDDLEWARE
 // ============================================
@@ -141,6 +164,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(cookieParser());
 app.use(rateLimiter);
 app.use(ipWhitelist);
 
@@ -165,12 +189,15 @@ const staffAuthMiddleware = (req: express.Request, res: express.Response, next: 
   if (isPublicRoute) return next();
 
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const rawToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : req.cookies?.staff_token;
+
+  if (!rawToken) {
     return res.status(401).json({ error: 'Unauthorized: No token provided' });
   }
 
-  const token = authHeader.substring(7);
-  const parts = token.split('-');
+  const parts = rawToken.split('-');
 
   if (parts.length < 3) {
     return res.status(401).json({ error: 'Unauthorized: Invalid token format' });
@@ -194,6 +221,50 @@ const staffAuthMiddleware = (req: express.Request, res: express.Response, next: 
   (req as any).staffRole = role;
   next();
 };
+
+const requireRoles = (...roles: ('manager' | 'kitchen' | 'bar')[]) =>
+  (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const role = (req as any).staffRole;
+    if (!roles.includes(role)) {
+      return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
+    }
+    next();
+  };
+
+const validate = (schema: z.ZodSchema) =>
+  (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({ error: 'Validation error', details: result.error.flatten() });
+    }
+    req.body = result.data;
+    next();
+  };
+
+const AuthSchema = z.object({
+  role: z.enum(['manager', 'kitchen', 'bar']),
+  pin: z.string().min(1).max(16),
+});
+
+const ReceiptSchema = z.object({
+  orderId: z.string(),
+});
+
+const InventorySchema = z.object({
+  itemId: z.number().int(),
+  isAvailable: z.boolean(),
+  stockQuantity: z.number().int().nullable().optional(),
+});
+
+const TelegramConfigSchema = z.object({
+  newOrder: z.boolean().optional(),
+  orderStatus: z.boolean().optional(),
+  payment: z.boolean().optional(),
+  refund: z.boolean().optional(),
+  accessRequest: z.boolean().optional(),
+  chat: z.boolean().optional(),
+  session: z.boolean().optional(),
+});
 
 app.use(staffAuthMiddleware);
 
@@ -225,14 +296,14 @@ if (TELEGRAM_BOT_TOKEN) {
   if (useWebhook) {
     bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { webHook: { port: parseInt(process.env.PORT || '5000') } });
     bot.setWebHook(TELEGRAM_WEBHOOK_URL).then(() => {
-      console.log('✅ Telegram webhook configured:', TELEGRAM_WEBHOOK_URL);
+      logger.info('✅ Telegram webhook configured:', TELEGRAM_WEBHOOK_URL);
     }).catch((err) => {
-      console.error('❌ Failed to set Telegram webhook:', err);
+      logger.error('❌ Failed to set Telegram webhook:', err);
     });
   } else {
     bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
   }
-  console.log(`✅ Telegram bot initialized (${useWebhook ? 'webhook' : 'polling'})`);
+  logger.info(`✅ Telegram bot initialized (${useWebhook ? 'webhook' : 'polling'})`);
 }
 
 // Telegram notification configuration (can be updated at runtime)
@@ -293,7 +364,7 @@ const logAudit = (action: string, actor: string, actorType: 'staff' | 'system', 
     auditLogs.shift();
   }
   
-  console.log(`📋 AUDIT: ${action} by ${actor} on ${resource}${resourceId ? ` (${resourceId})` : ''}`);
+  logger.info(`📋 AUDIT: ${action} by ${actor} on ${resource}${resourceId ? ` (${resourceId})` : ''}`);
 };
 
 // ============================================
@@ -317,7 +388,7 @@ async function initializeDatabase() {
         await db.cleanupOldData();
         logAudit('DATA_CLEANUP', 'system', 'system', 'database', undefined, { reason: 'Scheduled cleanup' });
       } catch (error) {
-        console.error('Cleanup error:', error);
+        logger.error('Cleanup error:', error);
       }
     }, 60 * 60 * 1000); // Every hour
 
@@ -332,9 +403,9 @@ async function initializeDatabase() {
       }
     }, 10 * 60 * 1000);
     
-    console.log('✅ Database initialized with persistent storage');
+    logger.info('✅ Database initialized with persistent storage');
   } else {
-    console.log('⚠️ Using in-memory storage (data will be lost on restart)');
+    logger.info('⚠️ Using in-memory storage (data will be lost on restart)');
   }
 }
 
@@ -361,7 +432,7 @@ const sendTelegramMessage = async (chatId: string, message: string, enabled: boo
   try {
     await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
   } catch (error) {
-    console.error('Failed to send Telegram message:', error);
+    logger.error('Failed to send Telegram message:', error);
   }
 };
 
@@ -535,7 +606,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Detailed health check for monitoring
-app.get('/api/health/detailed', async (req, res) => {
+app.get('/api/health/detailed', requireRoles('manager', 'kitchen', 'bar'), async (req, res) => {
   const detailed = {
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -621,7 +692,7 @@ app.get('/api/qr/:locationId', async (req, res) => {
 });
 
 // Analytics endpoint
-app.get('/api/analytics', (req, res) => {
+app.get('/api/analytics', requireRoles('manager'), (req, res) => {
   const analytics: AnalyticsData = {
     totalRevenue: 0,
     orderCount: 0,
@@ -687,7 +758,7 @@ app.get('/api/analytics', (req, res) => {
 });
 
 // Get all current orders (for dashboard recovery on refresh)
-app.get('/api/orders', (req, res) => {
+app.get('/api/orders', requireRoles('manager', 'kitchen'), (req, res) => {
   const orderList = Array.from(orders.values())
     .filter(o => !['delivered', 'cancelled', 'refunded'].includes(o.status))
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -695,20 +766,20 @@ app.get('/api/orders', (req, res) => {
 });
 
 // Get all orders including completed (for full history)
-app.get('/api/orders/all', (req, res) => {
+app.get('/api/orders/all', requireRoles('manager', 'kitchen'), (req, res) => {
   const orderList = Array.from(orders.values())
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   res.json(orderList);
 });
 
 // Get active table sessions (for dashboard recovery)
-app.get('/api/sessions', (req, res) => {
+app.get('/api/sessions', requireRoles('manager'), (req, res) => {
   const sessions = Array.from(activeTables.values());
   res.json(sessions);
 });
 
 // Get pending access requests (for dashboard recovery)
-app.get('/api/access-requests', (req, res) => {
+app.get('/api/access-requests', requireRoles('manager', 'kitchen', 'bar'), (req, res) => {
   const requests = Array.from(accessRequests.values())
     .filter(r => r.status === 'pending')
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -716,7 +787,7 @@ app.get('/api/access-requests', (req, res) => {
 });
 
 // Get pending refund requests (for dashboard recovery)
-app.get('/api/refund-requests', (req, res) => {
+app.get('/api/refund-requests', requireRoles('manager', 'kitchen', 'bar'), (req, res) => {
   const requests = Array.from(refundRequests.values())
     .filter(r => r.status === 'pending')
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -731,7 +802,7 @@ app.get('/api/messages/:tableNumber', (req, res) => {
 });
 
 // Get all chat messages (for manager view)
-app.get('/api/messages', (req, res) => {
+app.get('/api/messages', requireRoles('manager', 'kitchen', 'bar'), (req, res) => {
   const allMessages: any[] = [];
   messages.forEach((msgs) => {
     allMessages.push(...msgs);
@@ -752,7 +823,7 @@ app.get('/api/table/:tableNumber', (req, res) => {
 });
 
 // Get all receipts
-app.get('/api/receipts', (req, res) => {
+app.get('/api/receipts', requireRoles('manager'), (req, res) => {
   const receiptList = Array.from(receipts.values())
     .filter(r => new Date(r.expiresAt) > new Date())
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -786,7 +857,7 @@ app.get('/api/receipts/:id/html', (req, res) => {
 });
 
 // Create receipt for an order
-app.post('/api/receipts', (req, res) => {
+app.post('/api/receipts', requireRoles('manager'), validate(ReceiptSchema), (req, res) => {
   const { orderId } = req.body;
   const order = orders.get(orderId);
   if (!order) {
@@ -802,7 +873,7 @@ app.get('/api/inventory', (req, res) => {
 });
 
 // Update inventory status
-app.post('/api/inventory', (req, res) => {
+app.post('/api/inventory', requireRoles('manager', 'kitchen'), validate(InventorySchema), (req, res) => {
   const update: InventoryUpdate = req.body;
   inventoryStatus.set(update.itemId, {
     isAvailable: update.isAvailable,
@@ -834,26 +905,14 @@ app.get('/api/telegram-config', (req, res) => {
 });
 
 // Update telegram config - requires manager auth
-app.post('/api/telegram-config', (req, res) => {
-  // Simple auth check via header
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  
-  const token = authHeader.substring(7);
-  const validTokens = (process.env.STAFF_TOKENS || '').split(',').filter(Boolean);
-  if (!validTokens.includes(token)) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-  
+app.post('/api/telegram-config', requireRoles('manager'), validate(TelegramConfigSchema), (req, res) => {
   telegramConfig = { ...telegramConfig, ...req.body };
   logAudit('TELEGRAM_CONFIG_UPDATE', 'admin', 'staff', 'telegram-config', undefined, req.body, req.ip);
   res.json(telegramConfig);
 });
 
 // Staff authentication endpoint
-app.post('/api/auth/staff', (req, res) => {
+app.post('/api/auth/staff', authLimiter, validate(AuthSchema), (req, res) => {
   const { role, pin } = req.body;
 
   if (!role || !pin) {
@@ -878,8 +937,15 @@ app.post('/api/auth/staff', (req, res) => {
     // Generate a simple session token (in production, use JWT)
     const token = `${role}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    res.cookie('staff_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 8 * 60 * 60 * 1000, // 8 hours
+    });
+
     logAudit('STAFF_LOGIN', role, 'staff', 'auth', undefined, { role }, req.ip);
-    res.json({ success: true, role, token });
+    res.json({ success: true, role });
   } else {
     logAudit('STAFF_LOGIN_FAILED', role, 'staff', 'auth', undefined, { role, reason: 'Invalid PIN' }, req.ip);
     res.status(401).json({ error: 'Invalid PIN' });
@@ -887,14 +953,18 @@ app.post('/api/auth/staff', (req, res) => {
 });
 
 // Verify staff token
+// Check staff authentication status
 app.get('/api/auth/verify', (req, res) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const rawToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : req.cookies?.staff_token;
+
+  if (!rawToken) {
     return res.status(401).json({ error: 'No token provided' });
   }
 
-  const token = authHeader.substring(7);
-  const parts = token.split('-');
+  const parts = rawToken.split('-');
 
   if (parts.length < 3) {
     return res.status(401).json({ error: 'Invalid token format' });
@@ -907,7 +977,13 @@ app.get('/api/auth/verify', (req, res) => {
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  res.json({ valid: true, role });
+  res.json({ valid: true, role, token: rawToken });
+});
+
+// Logout endpoint
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('staff_token');
+  res.json({ success: true });
 });
 
 // ============================================
@@ -915,16 +991,33 @@ app.get('/api/auth/verify', (req, res) => {
 // ============================================
 
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+  logger.info('Client connected:', socket.id);
 
   // Join table room
   socket.on('join-table', (tableNumber: number) => {
     socket.join(`table-${tableNumber}`);
-    console.log(`Socket ${socket.id} joined table-${tableNumber}`);
+    logger.info(`Socket ${socket.id} joined table-${tableNumber}`);
   });
 
   // Join staff room
-  socket.on('join-staff', (role: 'manager' | 'kitchen' | 'bar') => {
+  socket.on('join-staff', (data: any) => {
+    // Support both old string format and new object format for transition
+    const role = typeof data === 'string' ? data : data.role;
+    const token = typeof data === 'string' ? null : data.token;
+
+    // If token is provided, verify it
+    if (token) {
+      const parts = token.split('-');
+      if (parts.length < 3 || parts[0] !== role) {
+        logger.info(`Socket ${socket.id} attempted to join staff-${role} with invalid token`);
+        return;
+      }
+    } else if (typeof data !== 'string') {
+       // If it's an object but no token, reject it
+       logger.info(`Socket ${socket.id} attempted to join staff-${role} without token`);
+       return;
+    }
+
     // Store role on socket for authorization checks
     (socket as any).data = { ...(socket as any).data, role };
     
@@ -939,7 +1032,7 @@ io.on('connection', (socket) => {
       socketId: socket.id 
     });
     
-    console.log(`Socket ${socket.id} joined staff-${role} (${staffOnlineStatus.size} total staff online)`);
+    logger.info(`Socket ${socket.id} joined staff-${role} (${staffOnlineStatus.size} total staff online)`);
     
     // Send current inventory status to staff
     socket.emit('inventory-update', Object.fromEntries(inventoryStatus));
@@ -1052,7 +1145,7 @@ io.on('connection', (socket) => {
       };
       activeTables.set(sessionKey, session);
       
-      db.saveTableSession(session).catch(err => console.error('Failed to save session to DB:', err));
+      db.saveTableSession(session).catch(err => logger.error('Failed to save session to DB:', err));
     }
 
     const guest: TableGuest = {
@@ -1096,7 +1189,7 @@ io.on('connection', (socket) => {
     });
 
     logAudit('CHECK_IN', guestName, 'staff', 'table', session.id, { sessionKey, tableNumber, locationId, guestId }, socket.handshake.address);
-    console.log(`Check-in: ${sessionKey} - ${guestName} (Session: ${session.id}, Guests: ${session.guests.length})`);
+    logger.info(`Check-in: ${sessionKey} - ${guestName} (Session: ${session.id}, Guests: ${session.guests.length})`);
   });
 
   // New order - each guest can order independently
@@ -1151,7 +1244,7 @@ io.on('connection', (socket) => {
     );
     
     if (recentDuplicate) {
-      console.log(`Duplicate order detected for table ${order.tableNumber}, returning existing order ${recentDuplicate.id}`);
+      logger.info(`Duplicate order detected for table ${order.tableNumber}, returning existing order ${recentDuplicate.id}`);
       socket.emit('order-confirmation', { orderId: recentDuplicate.id, duplicate: true });
       return;
     }
@@ -1159,7 +1252,7 @@ io.on('connection', (socket) => {
     order.paymentStatus = 'unpaid';
     orders.set(order.id, order);
     
-    db.saveOrder(order).catch(err => console.error('Failed to save order to DB:', err));
+    db.saveOrder(order).catch(err => logger.error('Failed to save order to DB:', err));
 
     const sessionKey = order.locationId || String(order.tableNumber);
     const session = activeTables.get(sessionKey);
@@ -1252,7 +1345,7 @@ io.on('connection', (socket) => {
       total: order.total, 
       items: order.items.length 
     }, socket.handshake.address);
-    console.log(`New order: ${order.id} from Table ${order.tableNumber} - Guest: ${order.guestName}`);
+    logger.info(`New order: ${order.id} from Table ${order.tableNumber} - Guest: ${order.guestName}`);
   });
 
   // Update order status
@@ -1289,14 +1382,14 @@ io.on('connection', (socket) => {
       }
       
       logAudit('ORDER_STATUS_UPDATE', 'staff', 'staff', 'order', orderId, { status }, socket.handshake.address);
-      console.log(`Order ${orderId} status updated to ${status}`);
+      logger.info(`Order ${orderId} status updated to ${status}`);
     }
   });
 
   // Access request
   socket.on('access-request', async (request: AccessRequest) => {
     accessRequests.set(request.id, request);
-    db.saveAccessRequest(request).catch(err => console.error('Failed to save access request to DB:', err));
+    db.saveAccessRequest(request).catch(err => logger.error('Failed to save access request to DB:', err));
     
     io.to('staff-manager').to('staff-all').emit('access-request', request);
     
@@ -1321,7 +1414,7 @@ io.on('connection', (socket) => {
       tableNumber: request.tableNumber, 
       type: request.type 
     }, socket.handshake.address);
-    console.log(`Access request: ${request.type} from Table ${request.tableNumber}`);
+    logger.info(`Access request: ${request.type} from Table ${request.tableNumber}`);
   });
 
   // Access response
@@ -1337,7 +1430,7 @@ io.on('connection', (socket) => {
         granted, 
         tableNumber: request.tableNumber 
       }, socket.handshake.address);
-      console.log(`Access request ${requestId} ${granted ? 'granted' : 'denied'}`);
+      logger.info(`Access request ${requestId} ${granted ? 'granted' : 'denied'}`);
     }
   });
 
@@ -1347,7 +1440,7 @@ io.on('connection', (socket) => {
     tableMessages.push(message);
     messages.set(`table-${message.tableNumber}`, tableMessages);
     
-    db.saveMessage(message).catch(err => console.error('Failed to save message to DB:', err));
+    db.saveMessage(message).catch(err => logger.error('Failed to save message to DB:', err));
 
     // Send to the table and manager rooms only (not all kitchen/bar)
     io.to(`table-${message.tableNumber}`)
@@ -1361,7 +1454,7 @@ io.on('connection', (socket) => {
       await sendTelegramMessage(MANAGER_CHAT_ID, msg);
     }
 
-    console.log(`Chat message from ${message.sender} at Table ${message.tableNumber}`);
+    logger.info(`Chat message from ${message.sender} at Table ${message.tableNumber}`);
   });
 
   // Update payment status
@@ -1390,14 +1483,14 @@ io.on('connection', (socket) => {
         paymentStatus: status, 
         tableNumber: order.tableNumber 
       }, socket.handshake.address);
-      console.log(`Order ${orderId} payment updated to ${status}`);
+      logger.info(`Order ${orderId} payment updated to ${status}`);
     }
   });
 
   // Request refund
   socket.on('request-refund', async (request: RefundRequest) => {
     refundRequests.set(request.id, request);
-    db.saveRefundRequest(request).catch(err => console.error('Failed to save refund request to DB:', err));
+    db.saveRefundRequest(request).catch(err => logger.error('Failed to save refund request to DB:', err));
 
     io.to('staff-manager').to('staff-all').emit('refund-request', request);
 
@@ -1414,7 +1507,7 @@ io.on('connection', (socket) => {
       amount: request.amount, 
       reason: request.reason 
     }, socket.handshake.address);
-    console.log(`Refund request: ${request.id} from Table ${request.tableNumber}`);
+    logger.info(`Refund request: ${request.id} from Table ${request.tableNumber}`);
   });
 
   // Process refund
@@ -1461,7 +1554,7 @@ io.on('connection', (socket) => {
         approved, 
         amount: request.amount 
       }, socket.handshake.address);
-      console.log(`Refund ${requestId} ${approved ? 'approved' : 'denied'}`);
+      logger.info(`Refund ${requestId} ${approved ? 'approved' : 'denied'}`);
     }
   });
 
@@ -1490,7 +1583,7 @@ io.on('connection', (socket) => {
         reason, 
         tableNumber: order.tableNumber 
       }, socket.handshake.address);
-      console.log(`Order ${orderId} cancelled. Reason: ${reason || 'No reason provided'}`);
+      logger.info(`Order ${orderId} cancelled. Reason: ${reason || 'No reason provided'}`);
     }
   });
 
@@ -1576,7 +1669,7 @@ io.on('connection', (socket) => {
         guestCount: session.guests.length 
       }, socket.handshake.address);
       const locationDisplay = session.locationId || `Table ${tableNumber}`;
-      console.log(`Session ended for ${locationDisplay}. Total spent: ${formatPrice(finalBill)}`);
+      logger.info(`Session ended for ${locationDisplay}. Total spent: ${formatPrice(finalBill)}`);
     }
   });
 
@@ -1608,7 +1701,7 @@ io.on('connection', (socket) => {
     });
     
     io.emit('inventory-update', Object.fromEntries(inventoryStatus));
-    console.log(`Inventory updated: Item ${update.itemId} - Available: ${update.isAvailable}`);
+    logger.info(`Inventory updated: Item ${update.itemId} - Available: ${update.isAvailable}`);
   });
 
   // Update telegram config
@@ -1622,18 +1715,18 @@ io.on('connection', (socket) => {
     telegramConfig = { ...telegramConfig, ...config };
     logAudit('TELEGRAM_CONFIG_UPDATE', 'staff', 'staff', 'telegram-config', undefined, config);
     io.to('staff-manager').emit('telegram-config', telegramConfig);
-    console.log('Telegram config updated:', telegramConfig);
+    logger.info('Telegram config updated:', telegramConfig);
   });
 
   // Disconnect
   socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
+    logger.info('Client disconnected:', socket.id);
 
     // Remove from staff online tracking
     for (const [staffId, staffInfo] of staffOnlineStatus.entries()) {
       if (staffInfo.socketId === socket.id) {
         staffOnlineStatus.delete(staffId);
-        console.log(`Staff ${staffInfo.role} went offline (${staffOnlineStatus.size} total staff online)`);
+        logger.info(`Staff ${staffInfo.role} went offline (${staffOnlineStatus.size} total staff online)`);
         
         // Send alert if no staff of this role remain
         const remainingOfRole = Array.from(staffOnlineStatus.values()).filter(s => s.role === staffInfo.role).length;
@@ -1677,7 +1770,7 @@ io.on('connection', (socket) => {
         });
         
         const locationDisplay = session.locationId || `Table ${session.tableNumber}`;
-        console.log(`Session ended for ${locationDisplay} - last guest disconnected`);
+        logger.info(`Session ended for ${locationDisplay} - last guest disconnected`);
       } else {
         activeTables.set(sessionKey, session);
         io.to('staff-manager').to('staff-all').emit('guest-left', {
@@ -1704,11 +1797,11 @@ const PORT = process.env.PORT || 5000;
 
 // Graceful shutdown handler
 const gracefulShutdown = async (signal: string) => {
-  console.log(`\n📡 Received ${signal}. Starting graceful shutdown...`);
+  logger.info(`\n📡 Received ${signal}. Starting graceful shutdown...`);
   
   // Stop accepting new connections
   httpServer.close(() => {
-    console.log('📡 HTTP server closed');
+    logger.info('📡 HTTP server closed');
   });
   
   // Notify all connected clients about shutdown
@@ -1718,27 +1811,27 @@ const gracefulShutdown = async (signal: string) => {
   setTimeout(async () => {
     // Close Socket.IO connections
     io.close(() => {
-      console.log('📡 Socket.IO connections closed');
+      logger.info('📡 Socket.IO connections closed');
     });
     
     // Save any pending data to database
     if (db.isConnected()) {
       try {
-        console.log('💾 Saving pending data to database...');
+        logger.info('💾 Saving pending data to database...');
         // Data is already saved in real-time via db.save* calls
-        console.log('✅ All data saved');
+        logger.info('✅ All data saved');
       } catch (error) {
-        console.error('❌ Error saving data during shutdown:', error);
+        logger.error('❌ Error saving data during shutdown:', error);
       }
     }
     
-    console.log('👋 Graceful shutdown complete');
+    logger.info('👋 Graceful shutdown complete');
     process.exit(0);
   }, 2000);
   
   // Force exit after 10 seconds if graceful shutdown fails
   setTimeout(() => {
-    console.error('⚠️ Graceful shutdown timed out. Forcing exit.');
+    logger.error('⚠️ Graceful shutdown timed out. Forcing exit.');
     process.exit(1);
   }, 10000);
 };
@@ -1747,9 +1840,9 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Client URL: https://d-cubes.com.ng`);
-  console.log(`🤖 Telegram Bot: ${TELEGRAM_BOT_TOKEN ? 'Enabled' : 'Disabled'}`);
-  console.log(`🔒 Rate Limiting: Enabled (${RATE_LIMIT_MAX} req/min)`);
-  console.log(`📋 Audit Logging: Enabled`);
+  logger.info(`🚀 Server running on port ${PORT}`);
+  logger.info(`📱 Client URL: https://d-cubes.com.ng`);
+  logger.info(`🤖 Telegram Bot: ${TELEGRAM_BOT_TOKEN ? 'Enabled' : 'Disabled'}`);
+  logger.info(`🔒 Rate Limiting: Enabled (${RATE_LIMIT_MAX} req/min)`);
+  logger.info(`📋 Audit Logging: Enabled`);
 });
