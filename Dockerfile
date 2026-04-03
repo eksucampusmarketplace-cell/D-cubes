@@ -9,7 +9,7 @@ WORKDIR /app/client
 
 # Copy package files
 COPY client/package*.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 
 # Copy source and build
 COPY client/ ./
@@ -23,11 +23,12 @@ WORKDIR /app/server
 
 # Copy package files
 COPY server/package*.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 
 # Copy source and build
 COPY server/ ./
 RUN npm run build
+RUN npm prune --omit=dev
 
 # ============================================
 # Stage 3: Production image
