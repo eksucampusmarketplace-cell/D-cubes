@@ -117,7 +117,7 @@ class Database {
       }
     }
     
-    logger.error('Database operation failed after retries:', lastError);
+    logger.error({ error: lastError }, 'Database operation failed after retries');
     return null;
   }
 

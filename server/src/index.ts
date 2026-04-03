@@ -296,9 +296,9 @@ if (TELEGRAM_BOT_TOKEN) {
   if (useWebhook) {
     bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { webHook: { port: parseInt(process.env.PORT || '5000') } });
     bot.setWebHook(TELEGRAM_WEBHOOK_URL).then(() => {
-      logger.info('✅ Telegram webhook configured:', TELEGRAM_WEBHOOK_URL);
+      logger.info({ webhook: TELEGRAM_WEBHOOK_URL }, 'Telegram webhook configured');
     }).catch((err) => {
-      logger.error('❌ Failed to set Telegram webhook:', err);
+      logger.error({ err }, 'Failed to set Telegram webhook');
     });
   } else {
     bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
@@ -388,7 +388,7 @@ async function initializeDatabase() {
         await db.cleanupOldData();
         logAudit('DATA_CLEANUP', 'system', 'system', 'database', undefined, { reason: 'Scheduled cleanup' });
       } catch (error) {
-        logger.error('Cleanup error:', error);
+        logger.error({ error }, 'Cleanup error');
       }
     }, 60 * 60 * 1000); // Every hour
 
@@ -432,7 +432,7 @@ const sendTelegramMessage = async (chatId: string, message: string, enabled: boo
   try {
     await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
   } catch (error) {
-    logger.error('Failed to send Telegram message:', error);
+    logger.error({ error }, 'Failed to send Telegram message');
   }
 };
 
@@ -573,19 +573,23 @@ const generateReceiptHTML = (receipt: Receipt): string => {
 // ============================================
 
 app.get('/api/health', async (req, res) => {
+  const db_status = await db.healthCheck();
+  
   const health = {
-    status: 'ok',
+    status: db_status.ok ? 'healthy' : 'degraded',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     version: process.env.npm_package_version || '1.0.0',
+    mode: db_status.mode,
+    db_latency_ms: db_status.latencyMs,
     services: {
       telegram: {
         enabled: Boolean(TELEGRAM_BOT_TOKEN),
         configured: Boolean(TELEGRAM_BOT_TOKEN && TELEGRAM_BOT_TOKEN !== 'your_bot_token_here')
       },
       database: {
-        connected: db.isConnected(),
-        type: db.isConnected() ? 'supabase' : 'in-memory'
+        connected: db_status.ok,
+        type: db_status.mode
       },
       webSocket: {
         connections: io.engine.clientsCount,
@@ -598,11 +602,8 @@ app.get('/api/health', async (req, res) => {
       unit: 'MB'
     }
   };
-
-  // Return 503 if critical services are down
-  const isHealthy = health.services.database.connected;
   
-  res.status(isHealthy ? 200 : 503).json(health);
+  res.status(db_status.ok ? 200 : 503).json(health);
 });
 
 // Detailed health check for monitoring
@@ -953,7 +954,6 @@ app.post('/api/auth/staff', authLimiter, validate(AuthSchema), (req, res) => {
 });
 
 // Verify staff token
-// Check staff authentication status
 app.get('/api/auth/verify', (req, res) => {
   const authHeader = req.headers.authorization;
   const rawToken = authHeader?.startsWith('Bearer ')
@@ -980,6 +980,36 @@ app.get('/api/auth/verify', (req, res) => {
   res.json({ valid: true, role, token: rawToken });
 });
 
+// Short-lived socket token for Socket.IO handshake
+app.get('/api/auth/socket-token', (req, res) => {
+  const authHeader = req.headers.authorization;
+  const rawToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.substring(7)
+    : req.cookies?.staff_token;
+
+  if (!rawToken) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const parts = rawToken.split('-');
+
+  if (parts.length < 3) {
+    return res.status(401).json({ error: 'Invalid token format' });
+  }
+
+  const [role] = parts;
+
+  const validRoles = ['manager', 'kitchen', 'bar'];
+  if (!validRoles.includes(role)) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+
+  // Generate a short-lived token (60 seconds) for socket handshake
+  const socketToken = `${role}-socket-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  res.json({ token: socketToken, role, expiresIn: 60 });
+});
+
 // Logout endpoint
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('staff_token');
@@ -991,12 +1021,12 @@ app.post('/api/auth/logout', (req, res) => {
 // ============================================
 
 io.on('connection', (socket) => {
-  logger.info('Client connected:', socket.id);
+  logger.info({ socketId: socket.id }, 'Client connected');
 
   // Join table room
   socket.on('join-table', (tableNumber: number) => {
     socket.join(`table-${tableNumber}`);
-    logger.info(`Socket ${socket.id} joined table-${tableNumber}`);
+    logger.info({ socketId: socket.id }, `Socket ${socket.id} joined table-${tableNumber}`);
   });
 
   // Join staff room
@@ -1009,12 +1039,12 @@ io.on('connection', (socket) => {
     if (token) {
       const parts = token.split('-');
       if (parts.length < 3 || parts[0] !== role) {
-        logger.info(`Socket ${socket.id} attempted to join staff-${role} with invalid token`);
+        logger.info({ socketId: socket.id, attemptedRole: role }, 'Socket attempted to join staff with invalid token');
         return;
       }
     } else if (typeof data !== 'string') {
        // If it's an object but no token, reject it
-       logger.info(`Socket ${socket.id} attempted to join staff-${role} without token`);
+       logger.info({ socketId: socket.id, attemptedRole: role }, 'Socket attempted to join staff without token');
        return;
     }
 
@@ -1145,7 +1175,7 @@ io.on('connection', (socket) => {
       };
       activeTables.set(sessionKey, session);
       
-      db.saveTableSession(session).catch(err => logger.error('Failed to save session to DB:', err));
+      db.saveTableSession(session).catch(err => logger.error({ err }, 'Failed to save session to DB'));
     }
 
     const guest: TableGuest = {
@@ -1252,7 +1282,7 @@ io.on('connection', (socket) => {
     order.paymentStatus = 'unpaid';
     orders.set(order.id, order);
     
-    db.saveOrder(order).catch(err => logger.error('Failed to save order to DB:', err));
+    db.saveOrder(order).catch(err => logger.error({ err }, 'Failed to save order to DB'));
 
     const sessionKey = order.locationId || String(order.tableNumber);
     const session = activeTables.get(sessionKey);
@@ -1389,7 +1419,7 @@ io.on('connection', (socket) => {
   // Access request
   socket.on('access-request', async (request: AccessRequest) => {
     accessRequests.set(request.id, request);
-    db.saveAccessRequest(request).catch(err => logger.error('Failed to save access request to DB:', err));
+    db.saveAccessRequest(request).catch(err => logger.error({ err }, 'Failed to save access request to DB'));
     
     io.to('staff-manager').to('staff-all').emit('access-request', request);
     
@@ -1440,7 +1470,7 @@ io.on('connection', (socket) => {
     tableMessages.push(message);
     messages.set(`table-${message.tableNumber}`, tableMessages);
     
-    db.saveMessage(message).catch(err => logger.error('Failed to save message to DB:', err));
+    db.saveMessage(message).catch(err => logger.error({ err }, 'Failed to save message to DB'));
 
     // Send to the table and manager rooms only (not all kitchen/bar)
     io.to(`table-${message.tableNumber}`)
@@ -1490,7 +1520,7 @@ io.on('connection', (socket) => {
   // Request refund
   socket.on('request-refund', async (request: RefundRequest) => {
     refundRequests.set(request.id, request);
-    db.saveRefundRequest(request).catch(err => logger.error('Failed to save refund request to DB:', err));
+    db.saveRefundRequest(request).catch(err => logger.error({ err }, 'Failed to save refund request to DB'));
 
     io.to('staff-manager').to('staff-all').emit('refund-request', request);
 
@@ -1715,12 +1745,12 @@ io.on('connection', (socket) => {
     telegramConfig = { ...telegramConfig, ...config };
     logAudit('TELEGRAM_CONFIG_UPDATE', 'staff', 'staff', 'telegram-config', undefined, config);
     io.to('staff-manager').emit('telegram-config', telegramConfig);
-    logger.info('Telegram config updated:', telegramConfig);
+    logger.info({ config: telegramConfig }, 'Telegram config updated');
   });
 
   // Disconnect
   socket.on('disconnect', () => {
-    logger.info('Client disconnected:', socket.id);
+    logger.info({ socketId: socket.id }, 'Client disconnected');
 
     // Remove from staff online tracking
     for (const [staffId, staffInfo] of staffOnlineStatus.entries()) {
@@ -1821,7 +1851,7 @@ const gracefulShutdown = async (signal: string) => {
         // Data is already saved in real-time via db.save* calls
         logger.info('✅ All data saved');
       } catch (error) {
-        logger.error('❌ Error saving data during shutdown:', error);
+        logger.error({ error }, 'Error saving data during shutdown');
       }
     }
     
