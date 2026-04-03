@@ -1,20 +1,45 @@
+# Dependencies
 node_modules
-npm-debug.log
+client/node_modules
+server/node_modules
+
+# Build outputs (will be generated during build)
 client/dist
 server/dist
+
+# Logs
+npm-debug.log
+*.log
+
+# Environment files
 .env.local
 .env.*.local
+.env
+
+# Git
 .git
 .gitignore
+
+# Documentation (not needed for build)
 README.md
+*.md
+
+# OS files
 .DS_Store
-*.log
-coverage
+Thumbs.db
+
+# Editor files
 .vscode
 .idea
-AUTHENTICATION.md
-FEATURES.md
-IMPLEMENTATION_SUMMARY.md
-SECURITY.md
-docker-compose.yml
 
+# Testing
+coverage
+
+# Docker files (not needed inside image)
+docker-compose.yml
+docker-compose.prod.yml
+
+# Temporary/cache files
+*.tmp
+*.temp
+.cache/
