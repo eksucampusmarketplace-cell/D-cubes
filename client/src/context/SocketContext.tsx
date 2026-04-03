@@ -163,10 +163,21 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     socket?.emit('join-table', tableNumber);
   }, [socket]);
 
-  const joinStaff = useCallback((role: 'manager' | 'kitchen' | 'bar') => {
-    // Store staff role for reconnection handling
-    sessionStorage.setItem('staff_role', role);
-    socket?.emit('join-staff', role);
+  const joinStaff = useCallback(async (role: 'manager' | 'kitchen' | 'bar') => {
+    // Fetch a short-lived socket token from verify endpoint (using our session cookie)
+    try {
+      const response = await fetch('/api/auth/verify');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.valid && data.token) {
+          // Store staff role for reconnection handling
+          sessionStorage.setItem('staff_role', role);
+          socket?.emit('join-staff', { role, token: data.token });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to get socket token:', err);
+    }
   }, [socket]);
 
   const updatePayment = useCallback((orderId: string, status: PaymentStatus) => {

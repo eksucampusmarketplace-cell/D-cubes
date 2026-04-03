@@ -54,9 +54,8 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
       if (response.ok && data.success) {
         setAuthenticated(true);
         setError('');
-        // Store token in localStorage for API auth
-        localStorage.setItem(`dcubes_auth_${role}_token`, data.token);
-        localStorage.setItem(`dcubes_auth_${role}`, new Date().toISOString());
+        // Store only role in sessionStorage for session recovery
+        sessionStorage.setItem(`dcubes_staff_role`, role);
       } else {
         setError(data.error || 'Invalid PIN code');
         setPin('');
@@ -72,12 +71,16 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
     setIsSubmitting(false);
   }, [pin, role]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      // Ignore error during logout
+    }
     setAuthenticated(false);
     setPin('');
-    localStorage.removeItem(`dcubes_auth_${role}`);
-    localStorage.removeItem(`dcubes_auth_${role}_token`);
-  }, [role]);
+    sessionStorage.removeItem(`dcubes_staff_role`);
+  }, []);
 
   const handlePinChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '').slice(0, 4);
@@ -89,27 +92,19 @@ export const StaffAuth: React.FC<StaffAuthProps> = ({ role, children }) => {
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   useEffect(() => {
-    const storedAuth = localStorage.getItem(`dcubes_auth_${role}`);
-    const storedToken = localStorage.getItem(`dcubes_auth_${role}_token`);
+    const storedRole = sessionStorage.getItem(`dcubes_staff_role`);
 
-    if (storedAuth && storedToken) {
-      const authTime = new Date(storedAuth);
-      const now = new Date();
-      const hoursDiff = (now.getTime() - authTime.getTime()) / (1000 * 60 * 60);
-
-      if (hoursDiff < 8) {
-        fetch('/api/auth/verify', {
-          headers: { 'Authorization': `Bearer ${storedToken}` }
-        }).then(res => {
-          if (res.ok) { setAuthenticated(true); }
-          else { /* clear storage, show PIN screen */ }
-        }).catch(() => setAuthenticated(true)) // offline fallback
-         .finally(() => setHasCheckedAuth(true));
-      } else {
-        localStorage.removeItem(`dcubes_auth_${role}`);
-        localStorage.removeItem(`dcubes_auth_${role}_token`);
-        setHasCheckedAuth(true);
-      }
+    if (storedRole === role) {
+      fetch('/api/auth/verify')
+        .then(res => {
+          if (res.ok) {
+            setAuthenticated(true);
+          } else {
+            sessionStorage.removeItem(`dcubes_staff_role`);
+          }
+        })
+        .catch(() => setAuthenticated(true)) // offline fallback
+        .finally(() => setHasCheckedAuth(true));
     } else {
       setHasCheckedAuth(true);
     }

@@ -7,21 +7,16 @@ export class AuthError extends Error {
   }
 }
 
-const getAuthToken = (role: string): string | null => {
-  return localStorage.getItem(`dcubes_auth_${role}_token`);
-};
-
 export const authenticatedFetch = async (
   endpoint: string,
   options: RequestInit = {},
-  role: 'manager' | 'kitchen' | 'bar' = 'manager'
+  _role: 'manager' | 'kitchen' | 'bar' = 'manager'
 ): Promise<Response> => {
-  const token = getAuthToken(role);
-  if (!token) throw new AuthError(role);  // <-- KEY CHANGE
   return fetch(endpoint, {
     ...options,
-    headers: { ...options.headers,
+    headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}` },
+      ...options.headers,
+    },
   });
 };

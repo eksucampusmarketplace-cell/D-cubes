@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { logger } from './logger';
 import { Order, AccessRequest, ChatMessage, TableSession, RefundRequest } from './types';
 
 // Database types matching Supabase tables
@@ -78,10 +79,23 @@ class Database {
         }
       });
       this.useSupabase = true;
-      console.log('✅ Supabase connected');
+      logger.info('✅ Supabase connected');
     } else {
-      console.log('⚠️ Running in-memory mode (Supabase not configured)');
+      logger.info('⚠️ Running in-memory mode (Supabase not configured)');
       this.useSupabase = false;
+    }
+  }
+
+  async healthCheck(): Promise<{ ok: boolean; mode: 'supabase' | 'memory'; latencyMs?: number }> {
+    if (!this.useSupabase || !this.supabase) {
+      return { ok: false, mode: 'memory' };
+    }
+    const start = Date.now();
+    try {
+      const { error } = await this.supabase.from('orders').select('id').limit(1);
+      return { ok: !error, mode: 'supabase', latencyMs: Date.now() - start };
+    } catch {
+      return { ok: false, mode: 'supabase', latencyMs: Date.now() - start };
     }
   }
 
@@ -97,13 +111,13 @@ class Database {
         this.connectionRetries++;
         
         if (i < this.maxRetries) {
-          console.warn(`Database operation failed, retrying (${i + 1}/${this.maxRetries})...`);
+          logger.warn(`Database operation failed, retrying (${i + 1}/${this.maxRetries})...`);
           await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
         }
       }
     }
     
-    console.error('Database operation failed after retries:', lastError);
+    logger.error('Database operation failed after retries:', lastError);
     return null;
   }
 
@@ -407,7 +421,7 @@ class Database {
       .eq('is_active', false)
       .lt('start_time', cutoffTime);
 
-    console.log(`🧹 Cleanup: Deleted ${orderCount || 0} orders, ${messageCount || 0} messages, ${requestCount || 0} requests (Retention: ${retentionHours}h)`);
+    logger.info(`🧹 Cleanup: Deleted ${orderCount || 0} orders, ${messageCount || 0} messages, ${requestCount || 0} requests (Retention: ${retentionHours}h)`);
 
     return {
       deletedOrders: orderCount || 0,
@@ -442,7 +456,7 @@ class Database {
     const sessions = await this.getActiveSessions();
     const refundRequests = await this.getRefundRequests();
 
-    console.log(`📦 Backup exported: ${orders.length} orders, ${accessRequests.length} requests, ${messages.length} messages`);
+    logger.info(`📦 Backup exported: ${orders.length} orders, ${accessRequests.length} requests, ${messages.length} messages`);
 
     return {
       orders,
@@ -559,7 +573,7 @@ class Database {
     const refundData = await this.getRefundRequests();
     refundData.forEach(req => refundRequests.set(req.id, req));
 
-    console.log(`📊 Loaded from Supabase: ${orders.size} orders, ${accessRequests.size} requests, ${messagesData.length} messages`);
+    logger.info(`📊 Loaded from Supabase: ${orders.size} orders, ${accessRequests.size} requests, ${messagesData.length} messages`);
 
     return { orders, accessRequests, messages, activeTables, refundRequests };
   }
