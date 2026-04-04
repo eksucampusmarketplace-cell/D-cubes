@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import { LOCATIONS, ZONES, getLocationsByZone } from '@/data/locations';
 import type { ZoneType } from '@/types';
 
@@ -24,9 +24,7 @@ export const QRGenerator: React.FC = () => {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   
   // Export settings
-  const [qrSize, setQrSize] = useState(120);
   const [showZoneBadge, setShowZoneBadge] = useState(true);
-  const [paperSize, setPaperSize] = useState<'a4' | 'letter'>('a4');
   
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +102,67 @@ export const QRGenerator: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const downloadPNG = (item: DisplayItem) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // 300 DPI dimensions: 3.37" x 2.125"
+    const width = 1011; // 3.37 * 300
+    const height = 638; // 2.125 * 300
+    canvas.width = width;
+    canvas.height = height;
+
+    // White background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, width, height);
+
+    // Get the QR code canvas
+    const qrCanvas = document.getElementById(`qr-canvas-${item.id}`) as HTMLCanvasElement;
+    if (qrCanvas) {
+      // Draw QR code
+      const qrSizeOnCard = 380; 
+      const x = (width - qrSizeOnCard) / 2;
+      const y = 60;
+      ctx.drawImage(qrCanvas, x, y, qrSizeOnCard, qrSizeOnCard);
+    }
+
+    // Text settings
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = 'center';
+    
+    // Location Name
+    ctx.font = 'bold 54px "Cormorant Garamond", serif';
+    ctx.fillText(item.name.toUpperCase(), width / 2, 510);
+
+    // Zone
+    ctx.font = '28px "DM Sans", sans-serif'; 
+    ctx.fillStyle = '#444444';
+    ctx.fillText(`${item.zoneIcon} ${ZONES[item.zone].name}`, width / 2, 560);
+
+    // Footer
+    ctx.font = '20px "DM Sans", sans-serif';
+    ctx.fillStyle = '#999999';
+    ctx.fillText("D CUBE'S PLACE", width / 2, 600);
+
+    // Download
+    const link = document.createElement('a');
+    link.download = `qr-${item.id}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  const downloadAllPNG = async () => {
+    if (!confirm(`Are you sure you want to download ${displayItems.length} individual PNG files? Your browser may prompt you for permission.`)) {
+      return;
+    }
+    for (const item of displayItems) {
+      downloadPNG(item);
+      // Wait a bit between downloads to not overwhelm the browser
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  };
+
   const toggleLocationSelection = (locationId: string) => {
     setSelectedLocations(prev => 
       prev.includes(locationId)
@@ -120,14 +179,6 @@ export const QRGenerator: React.FC = () => {
     setSelectedLocations([]);
   };
 
-  // Get columns per row based on paper size
-  const getGridClasses = () => {
-    if (paperSize === 'a4') {
-      return 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6';
-    }
-    return 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5';
-  };
-
   return (
     <div className="min-h-screen bg-dark p-4 lg:p-8">
       {/* Header */}
@@ -137,12 +188,18 @@ export const QRGenerator: React.FC = () => {
           <h2 className="font-serif text-xl lg:text-2xl text-white mt-2">QR Code Generator</h2>
           <p className="text-cream/50 text-sm mt-1">Generate location-based QR codes for each zone</p>
         </div>
-        <div className="flex gap-3 no-print">
+        <div className="flex flex-wrap gap-3 no-print">
           <button
             onClick={handleExportCSV}
             className="px-4 lg:px-6 py-2 lg:py-3 rounded text-sm font-medium bg-dark-2 text-cream border border-gold/20 hover:border-gold/40 transition-colors"
           >
             📥 Export CSV
+          </button>
+          <button
+            onClick={downloadAllPNG}
+            className="px-4 lg:px-6 py-2 lg:py-3 rounded text-sm font-medium bg-dark-2 text-gold border border-gold/40 hover:bg-gold/10 transition-colors"
+          >
+            🖼️ Download All PNG
           </button>
           <button
             onClick={handlePrint}
@@ -311,33 +368,14 @@ export const QRGenerator: React.FC = () => {
           </div>
         )}
 
-        {/* Print Settings */}
+        {/* Export Settings */}
         <div className="mt-6 pt-6 border-t border-gold/10">
-          <h4 className="text-sm text-white mb-4">Print Settings</h4>
+          <h4 className="text-sm text-white mb-4">Export Settings</h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">QR Code Size</label>
-              <select
-                value={qrSize}
-                onChange={(e) => setQrSize(Number(e.target.value))}
-                className="w-full bg-dark-3 border border-gold/20 rounded px-4 py-2 text-cream text-sm focus:border-gold focus:outline-none"
-              >
-                <option value={80}>Small (80px)</option>
-                <option value={100}>Medium (100px)</option>
-                <option value={120}>Large (120px)</option>
-                <option value={150}>Extra Large (150px)</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">Paper Size</label>
-              <select
-                value={paperSize}
-                onChange={(e) => setPaperSize(e.target.value as 'a4' | 'letter')}
-                className="w-full bg-dark-3 border border-gold/20 rounded px-4 py-2 text-cream text-sm focus:border-gold focus:outline-none"
-              >
-                <option value="a4">A4</option>
-                <option value="letter">Letter</option>
-              </select>
+            <div className="sm:col-span-2">
+              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">Individual Card Size</label>
+              <p className="text-gold text-sm font-medium">Standard 3.37&quot; x 2.125&quot; (PNG &amp; Print)</p>
+              <p className="text-cream/40 text-xs mt-1">Formatted for CorelDraw, card printers, and individual PNG export.</p>
             </div>
             <div>
               <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">Options</label>
@@ -368,39 +406,59 @@ export const QRGenerator: React.FC = () => {
       </div>
 
       {/* QR Codes Grid */}
-      <div ref={printRef} className={`grid ${getGridClasses()} gap-4`}>
+      <div ref={printRef} className="flex flex-wrap justify-center gap-6 print-container">
         {displayItems.map((item) => (
           <div 
             key={item.id} 
-            className="bg-white p-4 rounded-lg flex flex-col items-center print:break-inside-avoid shadow-lg"
+            className="qr-card bg-white rounded-md flex flex-col items-center print:break-inside-avoid shadow-xl relative group border border-gray-100"
+            style={{ 
+              width: '3.37in', 
+              height: '2.125in', 
+              minWidth: '3.37in', 
+              minHeight: '2.125in',
+              padding: '0.2in'
+            }}
           >
-            <div className="mb-2">
-              <QRCodeSVG
-                value={item.url}
-                size={qrSize}
-                level="H"
-                includeMargin={false}
-                bgColor="#ffffff"
-                fgColor="#000000"
-              />
+            {/* Download Button (Overlay) */}
+            <button
+              onClick={() => downloadPNG(item)}
+              className="absolute top-2 right-2 bg-gold/90 text-dark p-1.5 rounded shadow-md opacity-0 group-hover:opacity-100 transition-opacity no-print z-10"
+              title="Download PNG"
+            >
+              <span className="text-xs font-bold uppercase tracking-tighter">PNG</span>
+            </button>
+
+            <div className="flex-1 flex flex-col items-center justify-center w-full">
+              <div className="mb-2">
+                <QRCodeCanvas
+                  id={`qr-canvas-${item.id}`}
+                  value={item.url}
+                  size={512}
+                  level="H"
+                  includeMargin={false}
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                  style={{ width: '1.2in', height: '1.2in' }}
+                />
+              </div>
+              
+              {/* Location Name */}
+              <p className="text-dark font-display text-base lg:text-lg tracking-wider text-center leading-tight font-bold">
+                {item.name.toUpperCase()}
+              </p>
+              
+              {/* Zone Badge */}
+              {showZoneBadge && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-sm">{item.zoneIcon}</span>
+                  <span className="text-dark/60 text-[9px] uppercase tracking-wider font-medium">
+                    {ZONES[item.zone].name}
+                  </span>
+                </div>
+              )}
             </div>
             
-            {/* Location Name */}
-            <p className="text-dark font-display text-lg tracking-wider text-center leading-tight">
-              {item.name.toUpperCase()}
-            </p>
-            
-            {/* Zone Badge */}
-            {showZoneBadge && (
-              <div className="flex items-center gap-1 mt-1">
-                <span className="text-sm">{item.zoneIcon}</span>
-                <span className="text-dark/60 text-[10px]">
-                  {ZONES[item.zone].name}
-                </span>
-              </div>
-            )}
-            
-            <p className="text-dark/40 text-[8px] mt-2">D CUBE&apos;S PLACE</p>
+            <p className="text-dark/30 text-[7px] mt-1 uppercase tracking-[0.2em] font-medium">D CUBE&apos;S PLACE</p>
           </div>
         ))}
       </div>
@@ -424,10 +482,24 @@ export const QRGenerator: React.FC = () => {
           }
           body {
             background: white !important;
+            margin: 0;
+            padding: 0;
           }
           @page {
-            margin: 10mm;
-            size: ${paperSize};
+            margin: 0;
+            size: 3.37in 2.125in;
+          }
+          .print-container {
+            display: block !important;
+            gap: 0 !important;
+          }
+          .qr-card {
+            box-shadow: none !important;
+            border: none !important;
+            page-break-after: always;
+            break-after: page;
+            margin: 0 !important;
+            background: white !important;
           }
         }
       `}</style>
