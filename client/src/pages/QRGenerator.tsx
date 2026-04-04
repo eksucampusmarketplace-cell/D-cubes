@@ -26,6 +26,11 @@ export const QRGenerator: React.FC = () => {
   // Export settings
   const [showZoneBadge, setShowZoneBadge] = useState(true);
   
+  // Size settings for PNG export
+  const [exportSize, setExportSize] = useState<'small' | 'medium' | 'large' | 'custom'>('medium');
+  const [customWidth, setCustomWidth] = useState(1011);
+  const [customHeight, setCustomHeight] = useState(638);
+  
   const printRef = useRef<HTMLDivElement>(null);
 
   // Get locations based on selection
@@ -102,64 +107,115 @@ export const QRGenerator: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const downloadPNG = (item: DisplayItem) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // 300 DPI dimensions: 3.37" x 2.125"
-    const width = 1011; // 3.37 * 300
-    const height = 638; // 2.125 * 300
-    canvas.width = width;
-    canvas.height = height;
-
-    // White background
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, width, height);
-
-    // Get the QR code canvas
-    const qrCanvas = document.getElementById(`qr-canvas-${item.id}`) as HTMLCanvasElement;
-    if (qrCanvas) {
-      // Draw QR code
-      const qrSizeOnCard = 380; 
-      const x = (width - qrSizeOnCard) / 2;
-      const y = 60;
-      ctx.drawImage(qrCanvas, x, y, qrSizeOnCard, qrSizeOnCard);
+  const getExportDimensions = () => {
+    switch (exportSize) {
+      case 'small':
+        return { width: 500, height: 316, qrSize: 180, nameSize: 24, zoneSize: 14, footerSize: 10, nameY: 250, zoneY: 280, footerY: 300 };
+      case 'medium':
+        return { width: 1011, height: 638, qrSize: 380, nameSize: 54, zoneSize: 28, footerSize: 20, nameY: 510, zoneY: 560, footerY: 600 };
+      case 'large':
+        return { width: 1500, height: 945, qrSize: 560, nameSize: 80, zoneSize: 42, footerSize: 30, nameY: 760, zoneY: 830, footerY: 885 };
+      case 'custom':
+        return { width: customWidth, height: customHeight, qrSize: Math.min(customWidth * 0.38, customHeight * 0.6), nameSize: Math.floor(customHeight * 0.085), zoneSize: Math.floor(customHeight * 0.044), footerSize: Math.floor(customHeight * 0.031), nameY: Math.floor(customHeight * 0.8), zoneY: Math.floor(customHeight * 0.877), footerY: Math.floor(customHeight * 0.94) };
+      default:
+        return { width: 1011, height: 638, qrSize: 380, nameSize: 54, zoneSize: 28, footerSize: 20, nameY: 510, zoneY: 560, footerY: 600 };
     }
+  };
 
-    // Text settings
-    ctx.fillStyle = '#000000';
-    ctx.textAlign = 'center';
-    
-    // Location Name
-    ctx.font = 'bold 54px "Cormorant Garamond", serif';
-    ctx.fillText(item.name.toUpperCase(), width / 2, 510);
+  const downloadPNG = async (item: DisplayItem) => {
+    return new Promise<void>(async (resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve();
+        return;
+      }
 
-    // Zone
-    ctx.font = '28px "DM Sans", sans-serif'; 
-    ctx.fillStyle = '#444444';
-    ctx.fillText(`${item.zoneIcon} ${ZONES[item.zone].name}`, width / 2, 560);
+      const { width, height, qrSize, nameSize, zoneSize, footerSize, nameY, zoneY, footerY } = getExportDimensions();
+      canvas.width = width;
+      canvas.height = height;
 
-    // Footer
-    ctx.font = '20px "DM Sans", sans-serif';
-    ctx.fillStyle = '#999999';
-    ctx.fillText("D CUBE'S PLACE", width / 2, 600);
+      // White background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, width, height);
 
-    // Download
-    const link = document.createElement('a');
-    link.download = `qr-${item.id}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+      // Create a hidden QR code to generate the data URL
+      const qrContainer = document.createElement('div');
+      qrContainer.style.position = 'absolute';
+      qrContainer.style.visibility = 'hidden';
+      qrContainer.style.left = '-9999px';
+      document.body.appendChild(qrContainer);
+
+      // Create a temporary QRCodeCanvas
+      const { createRoot } = await import('react-dom/client');
+      const root = createRoot(qrContainer);
+      root.render(
+        React.createElement(QRCodeCanvas, {
+          value: item.url,
+          size: qrSize,
+          level: 'H',
+          includeMargin: false,
+          bgColor: '#ffffff',
+          fgColor: '#000000'
+        })
+      );
+
+      // Wait for the QR code to render
+      setTimeout(() => {
+        const qrCanvas = qrContainer.querySelector('canvas') as HTMLCanvasElement;
+        if (!qrCanvas) {
+          document.body.removeChild(qrContainer);
+          root.unmount();
+          resolve();
+          return;
+        }
+
+        const x = (width - qrSize) / 2;
+        const y = height * 0.094;
+        ctx.drawImage(qrCanvas, x, y, qrSize, qrSize);
+
+        // Text settings
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+
+        // Location Name
+        ctx.font = `bold ${nameSize}px "Cormorant Garamond", serif`;
+        ctx.fillText(item.name.toUpperCase(), width / 2, nameY);
+
+        // Zone
+        ctx.font = `${zoneSize}px "DM Sans", sans-serif`;
+        ctx.fillStyle = '#444444';
+        ctx.fillText(`${item.zoneIcon} ${ZONES[item.zone].name}`, width / 2, zoneY);
+
+        // Footer
+        ctx.font = `${footerSize}px "DM Sans", sans-serif`;
+        ctx.fillStyle = '#999999';
+        ctx.fillText("D CUBE'S PLACE", width / 2, footerY);
+
+        // Download
+        const link = document.createElement('a');
+        link.download = `qr-${item.id}-${exportSize}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        // Cleanup
+        document.body.removeChild(qrContainer);
+        root.unmount();
+        resolve();
+      }, 300);
+    });
   };
 
   const downloadAllPNG = async () => {
-    if (!confirm(`Are you sure you want to download ${displayItems.length} individual PNG files? Your browser may prompt you for permission.`)) {
+    const sizeName = exportSize === 'small' ? 'Small' : exportSize === 'medium' ? 'Medium' : exportSize === 'large' ? 'Large' : 'Custom';
+    const sizeInfo = exportSize === 'custom' ? `(${customWidth}x${customHeight})` : '';
+    if (!confirm(`Are you sure you want to download ${displayItems.length} individual PNG files?\n\nSize: ${sizeName} ${sizeInfo}\n\nYour browser may prompt you for permission.`)) {
       return;
     }
     for (const item of displayItems) {
-      downloadPNG(item);
+      await downloadPNG(item);
       // Wait a bit between downloads to not overwhelm the browser
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 400));
     }
   };
 
@@ -371,15 +427,87 @@ export const QRGenerator: React.FC = () => {
         {/* Export Settings */}
         <div className="mt-6 pt-6 border-t border-gold/10">
           <h4 className="text-sm text-white mb-4">Export Settings</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">Individual Card Size</label>
-              <p className="text-gold text-sm font-medium">Standard 3.37&quot; x 2.125&quot; (PNG &amp; Print)</p>
-              <p className="text-cream/40 text-xs mt-1">Formatted for CorelDraw, card printers, and individual PNG export.</p>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Size Selection */}
             <div>
-              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">Options</label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-3">PNG Export Size</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setExportSize('small')}
+                  className={`px-3 py-2 rounded text-xs font-medium transition-colors ${
+                    exportSize === 'small'
+                      ? 'bg-gold text-dark'
+                      : 'bg-dark-3 text-cream hover:bg-dark-4'
+                  }`}
+                >
+                  📱 Small (500x316)
+                </button>
+                <button
+                  onClick={() => setExportSize('medium')}
+                  className={`px-3 py-2 rounded text-xs font-medium transition-colors ${
+                    exportSize === 'medium'
+                      ? 'bg-gold text-dark'
+                      : 'bg-dark-3 text-cream hover:bg-dark-4'
+                  }`}
+                >
+                  🃏 Medium (1011x638)
+                </button>
+                <button
+                  onClick={() => setExportSize('large')}
+                  className={`px-3 py-2 rounded text-xs font-medium transition-colors ${
+                    exportSize === 'large'
+                      ? 'bg-gold text-dark'
+                      : 'bg-dark-3 text-cream hover:bg-dark-4'
+                  }`}
+                >
+                  🖼️ Large (1500x945)
+                </button>
+                <button
+                  onClick={() => setExportSize('custom')}
+                  className={`px-3 py-2 rounded text-xs font-medium transition-colors ${
+                    exportSize === 'custom'
+                      ? 'bg-gold text-dark'
+                      : 'bg-dark-3 text-cream hover:bg-dark-4'
+                  }`}
+                >
+                  ✏️ Custom
+                </button>
+              </div>
+              {exportSize === 'custom' && (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] uppercase text-cream/50 block mb-1">Width (px)</label>
+                    <input
+                      type="number"
+                      value={customWidth}
+                      onChange={(e) => setCustomWidth(parseInt(e.target.value) || 1011)}
+                      min={200}
+                      max={4000}
+                      className="w-full bg-dark-3 border border-gold/20 rounded px-2 py-1.5 text-cream text-xs focus:border-gold focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase text-cream/50 block mb-1">Height (px)</label>
+                    <input
+                      type="number"
+                      value={customHeight}
+                      onChange={(e) => setCustomHeight(parseInt(e.target.value) || 638)}
+                      min={200}
+                      max={4000}
+                      className="w-full bg-dark-3 border border-gold/20 rounded px-2 py-1.5 text-cream text-xs focus:border-gold focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Print Size Info & Options */}
+            <div>
+              <label className="text-xs tracking-wider uppercase text-cream/50 block mb-2">Print Size</label>
+              <p className="text-gold text-sm font-medium">Standard 3.37&quot; x 2.125&quot;</p>
+              <p className="text-cream/40 text-xs mt-1">Print uses fixed standard size. PNG uses selected size above.</p>
+              
+              <label className="flex items-center gap-2 cursor-pointer mt-4">
                 <input
                   type="checkbox"
                   checked={showZoneBadge}
