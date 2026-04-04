@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { LOCATIONS, ZONES, getLocationsByZone } from '@/data/locations';
 import type { ZoneType } from '@/types';
 
